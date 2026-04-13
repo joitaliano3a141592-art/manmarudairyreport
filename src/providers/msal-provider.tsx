@@ -36,15 +36,46 @@ const isTeamsAuthPopup =
   window.opener !== window &&
   (location.search.includes("code=") || location.hash.length > 1);
 
+async function ensureActiveAccount(scopes: string[]): Promise<void> {
+  if (msalInstance.getActiveAccount()) return;
+
+  const existing = msalInstance.getAllAccounts();
+  if (existing.length > 0) {
+    msalInstance.setActiveAccount(existing[0]);
+    return;
+  }
+
+  if (isInIframe) {
+    try {
+      await microsoftTeams.app.initialize();
+      const ctx = await microsoftTeams.app.getContext();
+      if (ctx?.app?.host) {
+        const baseUrl = window.location.origin + import.meta.env.BASE_URL;
+        await microsoftTeams.authentication.authenticate({
+          url: `${baseUrl}teams-auth-start`,
+          width: 600,
+          height: 535,
+        });
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          msalInstance.setActiveAccount(accounts[0]);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to popup login below.
+    }
+  }
+
+  const res = await msalInstance.loginPopup({ scopes });
+  msalInstance.setActiveAccount(res.account);
+}
+
 /** Acquires a Graph API access token silently (falls back to popup in iframe, redirect otherwise). */
 export async function acquireGraphToken(): Promise<string> {
+  await ensureActiveAccount(graphScopes);
   const account = msalInstance.getActiveAccount();
-  if (!account) {
-    // iframe 内ではリダイレクトが使えないのでポップアップを使用
-    const res = await msalInstance.loginPopup({ scopes: graphScopes });
-    msalInstance.setActiveAccount(res.account);
-    return res.accessToken;
-  }
+  if (!account) throw new Error("MSAL account is not available after authentication.");
   try {
     const res = await msalInstance.acquireTokenSilent({
       scopes: graphScopes,
@@ -59,12 +90,9 @@ export async function acquireGraphToken(): Promise<string> {
 
 /** Acquires a token with Teams channel message send permission (for 発報). */
 export async function acquireTeamsToken(): Promise<string> {
+  await ensureActiveAccount(teamsScopes);
   const account = msalInstance.getActiveAccount();
-  if (!account) {
-    const res = await msalInstance.loginPopup({ scopes: teamsScopes });
-    msalInstance.setActiveAccount(res.account);
-    return res.accessToken;
-  }
+  if (!account) throw new Error("MSAL account is not available after authentication.");
   try {
     const res = await msalInstance.acquireTokenSilent({
       scopes: teamsScopes,
