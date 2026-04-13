@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import {
   useCustomers,
@@ -96,6 +97,9 @@ export default function DailyEntryPage() {
     workDescription: "",
     planDate: tomorrow,
   });
+  const [reportDeleteTargetId, setReportDeleteTargetId] = useState<string | null>(null);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [publishTarget, setPublishTarget] = useState<TeamsPublishTarget | null>(null);
 
   const filteredReportSystems = systems.filter(
     (system) => !reportForm.customerId || system.customerId === reportForm.customerId,
@@ -161,8 +165,7 @@ export default function DailyEntryPage() {
   };
 
   const removeReport = (id: string) => {
-    if (!confirm("この作業報告を削除しますか？")) return;
-    deleteReportMutation.mutate(id);
+    setReportDeleteTargetId(id);
   };
 
   const removePlan = (id: string) => {
@@ -176,21 +179,28 @@ export default function DailyEntryPage() {
 
   const [publishing, setPublishing] = useState(false);
 
-  const handlePublish = async () => {
+  const requestPublish = async () => {
     if (reports.length === 0 && plans.length === 0) {
       alert("送信する作業報告・予定がありません。");
       return;
     }
-    const publishTarget = await resolveTeamsPublishTarget();
+    const nextPublishTarget = await resolveTeamsPublishTarget();
 
-    if (!publishTarget.teamId || !publishTarget.channelId) {
+    if (!nextPublishTarget.teamId || !nextPublishTarget.channelId) {
       alert("Teams チャネルが設定されていません。管理者に連絡してください。");
       return;
     }
-    if (!confirm(`本日の作業報告 ${reports.length} 件、明日の予定 ${plans.length} 件を Teams に送信しますか？`)) {
+
+    if (publishing) {
       return;
     }
 
+    setPublishTarget(nextPublishTarget);
+    setPublishConfirmOpen(true);
+  };
+
+  const handlePublish = async () => {
+    if (!publishTarget) return;
     setPublishing(true);
     try {
       const userName = currentUser.name;
@@ -225,6 +235,7 @@ ${planRows}
       alert(`Teams への送信に失敗しました。\n${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setPublishing(false);
+      setPublishTarget(null);
     }
   };
 
@@ -248,7 +259,15 @@ ${planRows}
             <p className="text-muted-foreground">今日の作業報告と明日の予定を入力します。</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={handlePublish} disabled={publishing}>
+            <Button
+              size="lg"
+              onClick={requestPublish}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                void requestPublish();
+              }}
+              disabled={publishing}
+            >
               <CheckCircle2 className="mr-2 h-4 w-4" /> {publishing ? "送信中..." : "発報"}
             </Button>
           </div>
@@ -464,7 +483,15 @@ ${planRows}
                       {report.workDescription}
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="destructive" onClick={() => removeReport(report.id)}>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => removeReport(report.id)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          removeReport(report.id);
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -522,6 +549,35 @@ ${planRows}
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={publishConfirmOpen}
+        onOpenChange={setPublishConfirmOpen}
+        title="Teams に発報しますか？"
+        description={`本日の作業報告 ${reports.length} 件、明日の予定 ${plans.length} 件を Teams に送信します。`}
+        confirmLabel={publishing ? "送信中..." : "発報する"}
+        cancelLabel="キャンセル"
+        onConfirm={() => {
+          void handlePublish();
+        }}
+      />
+
+      <ConfirmDialog
+        open={reportDeleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setReportDeleteTargetId(null);
+        }}
+        title="作業報告を削除しますか？"
+        description="この作業報告を一覧から削除します。元に戻せません。"
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="destructive"
+        onConfirm={() => {
+          if (!reportDeleteTargetId) return;
+          deleteReportMutation.mutate(reportDeleteTargetId);
+          setReportDeleteTargetId(null);
+        }}
+      />
     </div>
   );
 }
