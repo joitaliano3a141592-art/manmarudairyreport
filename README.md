@@ -204,7 +204,7 @@ VS Code の GitHub Copilot Chat で以下のエージェントが使用可能:
 
 | エージェント | 用途 |
 |-------------|------|
-| @ManmaruDairyReport | 本アプリ専用。機能追加・バグ修正・SP設定変更 |
+| @SharePointWebTeamsOps | SharePoint Online、Web システム、Teams アプリ連携の保守運用向け。認証、manifest、UI不具合、配信調整に対応 |
 | @GeekSPApp | SharePoint + MSAL.js アプリ全般 |
 | @TeamsIntranetDeploy | 社内サーバー配信・Teams マニフェスト更新 |
 
