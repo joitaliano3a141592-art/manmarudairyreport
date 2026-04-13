@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:server": "cp .env.production.server .env.production.local && tsc -b && vite build",
+    "build:server": "node -e \"require('node:fs').copyFileSync('.env.production.server','.env.production.local')\" && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
