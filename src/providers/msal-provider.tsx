@@ -10,6 +10,7 @@ import {
   type AuthenticationResult,
 } from "@azure/msal-browser";
 import { msalConfig, graphScopes, teamsScopes } from "@/lib/msalConfig";
+import * as microsoftTeams from "@microsoft/teams-js";
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
@@ -27,6 +28,13 @@ export function getMsalInstance() {
 
 // iframe 内（Teams タブ・Power Apps 埋め込み等）かどうかを検出
 const isInIframe = window.self !== window.top;
+
+// Teams の auth-end ポップアップとして動作しているかを検出
+// （loginRedirect 後に BASE_URL へリダイレクトされた際、window.opener が設定される）
+const isTeamsAuthPopup =
+  window.opener !== null &&
+  window.opener !== window &&
+  (location.search.includes("code=") || location.hash.length > 1);
 
 /** Acquires a Graph API access token silently (falls back to popup in iframe, redirect otherwise). */
 export async function acquireGraphToken(): Promise<string> {
@@ -76,9 +84,40 @@ function AutoLogin({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (inProgress === "none" && !isAuthenticated) {
-      // iframe 内ではポップアップ、通常時はリダイレクト
       if (isInIframe) {
-        instance.loginPopup({ scopes: graphScopes }).catch(() => {});
+        // iframe 内: Teams か否かを判別して認証方法を分岐
+        microsoftTeams.app
+          .initialize()
+          .then(() => microsoftTeams.app.getContext())
+          .then((ctx) => {
+            if (ctx?.app?.host) {
+              // Teams タブ内 → Teams 管理ポップアップ経由で認証
+              const baseUrl =
+                window.location.origin + import.meta.env.BASE_URL;
+              microsoftTeams.authentication
+                .authenticate({
+                  url: `${baseUrl}teams-auth-start`,
+                  width: 600,
+                  height: 535,
+                })
+                .then(() => {
+                  // ポップアップ側の MSAL が localStorage にトークンを保存済み
+                  const accounts = msalInstance.getAllAccounts();
+                  if (accounts.length > 0) {
+                    instance.setActiveAccount(accounts[0]);
+                  }
+                })
+                .catch((err) => {
+                  console.error("Teams auth failed:", err);
+                });
+            } else {
+              // Power Apps などの非 Teams iframe → ポップアップ
+              instance.loginPopup({ scopes: graphScopes }).catch(() => {});
+            }
+          })
+          .catch(() => {
+            instance.loginPopup({ scopes: graphScopes }).catch(() => {});
+          });
       } else {
         instance.loginRedirect({ scopes: graphScopes });
       }
@@ -111,8 +150,27 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    msalInstance.initialize().then(() => {
-      // iframe 内ではリダイレクトハンドリングをスキップ（ポップアップ認証のみ）
+    msalInstance.initialize().then(async () => {
+      // Teams auth-end ポップアップとして動作している場合:
+      // handleRedirectPromise でトークンを処理し、Teams に成功を通知してポップアップを閉じる
+      if (isTeamsAuthPopup) {
+        try {
+          const result = await msalInstance.handleRedirectPromise();
+          if (result?.account) {
+            msalInstance.setActiveAccount(result.account);
+          }
+          await microsoftTeams.app.initialize();
+          microsoftTeams.authentication.notifySuccess("ok");
+        } catch (err) {
+          try {
+            await microsoftTeams.app.initialize();
+            microsoftTeams.authentication.notifyFailure(String(err));
+          } catch { /* ignore */ }
+        }
+        return; // ポップアップはここで終了（setReady しない）
+      }
+
+      // 通常起動: iframe 内ではリダイレクトハンドリングをスキップ
       const promise = isInIframe
         ? Promise.resolve(null)
         : msalInstance.handleRedirectPromise();

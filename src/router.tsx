@@ -4,6 +4,12 @@ import Layout from "@/pages/_layout";
 
 const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
+// Teams チャネルタブ設定ページ
+const TeamsConfigPage = lazy(() => import("@/pages/teams-config"));
+
+// Teams 認証ポップアップ開始ページ（レイアウトなし）
+const TeamsAuthStartPage = lazy(() => import("@/pages/teams-auth-start"));
+
 // ダッシュボード
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 
@@ -49,6 +55,16 @@ if (location.pathname.endsWith("/index.html")) {
 
 export const router = createBrowserRouter(
   [
+    // Teams チャネルタブ設定ページ（レイアウトなし）
+    {
+      path: "/teams-config",
+      element: withSuspense(TeamsConfigPage),
+    },
+    // Teams 認証ポップアップ開始ページ（レイアウトなし）
+    {
+      path: "/teams-auth-start",
+      element: withSuspense(TeamsAuthStartPage),
+    },
     {
       path: "/",
       element: <Layout showHeader={true} />,

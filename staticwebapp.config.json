@@ -5,7 +5,7 @@
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "frame-ancestors 'self' https://teams.microsoft.com https://*.teams.microsoft.com https://*.skype.com https://teams.live.com https://*.microsoft365.com",
     "Referrer-Policy": "strict-origin-when-cross-origin"
   },
   "mimeTypes": {
