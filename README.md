@@ -22,18 +22,19 @@
 
 [認証]
     Microsoft Entra ID (Azure AD)
-    ├── テナント: VITE_MSAL_TENANT_ID
-    ├── クライアント: VITE_MSAL_CLIENT_ID
+    ├── テナント: <VITE_MSAL_TENANT_ID> ※ GitHub Secrets 管理
+    ├── クライアント: <VITE_MSAL_CLIENT_ID> ※ GitHub Secrets 管理
     ├── 認証方式: MSAL.js SPA (PKCE)
     └── スコープ: Sites.ReadWrite.All / Sites.Manage.All / User.Read / ChannelMessage.Send
 
 [データ]
-    SharePoint Online — manmarusystem.sharepoint.com/sites/SP_SITE_ALIAS
+    SharePoint Online (manmarusystem テナント)
     ├── 顧客マスタ (List1)
     ├── システムマスタ (List2)
     ├── 作業種別マスタ (List3)
     ├── 作業報告 (List4)
     └── 作業予定 (List5)
+    ※ サイト ID・リスト ID は GitHub Secrets / .env.production.local で管理
 
 [CI/CD]
     GitHub Actions → GitHub Pages (main ブランチへの push で自動デプロイ)
@@ -41,8 +42,8 @@
 
 [Teams 通知]
     Graph API ChannelMessage.Send
-    ├── グループ ID: VITE_TEAMS_TEAM_ID
-    └── チャネル ID: VITE_TEAMS_CHANNEL_ID
+    ├── グループ ID: <VITE_TEAMS_TEAM_ID> ※ GitHub Secrets 管理
+    └── チャネル ID: <VITE_TEAMS_CHANNEL_ID> ※ GitHub Secrets 管理
 `
 
 ---
@@ -81,15 +82,16 @@
 
 ## SharePoint リスト構成
 
-SharePoint サイト: https://manmarusystem.sharepoint.com/sites/SP_SITE_ALIAS
+SharePoint サイト: manmarusystem テナント内の Teams チャネル専用サイト
+※ サイト URL・リスト ID は機密情報のため `VITE_SP_*` 環境変数で管理
 
-| リスト | 表示名 | リスト ID |
-|--------|--------|----------|
-| 顧客マスタ | 顧客マスタ | VITE_SP_LIST_CUSTOMERS |
-| システムマスタ | システムマスタ | 92d8237-ef04-4afc-b39a-b7bea69b0412 |
-| 作業種別マスタ | 作業種別マスタ | VITE_SP_LIST_WORKTYPES |
-| 作業報告 | 作業報告 | 289a27a-a815-472f-8a12-9297589a5096 |
-| 作業予定 | 作業予定 | VITE_SP_LIST_PLANS |
+| リスト | 環境変数キー |
+|--------|-------------|
+| 顧客マスタ | `VITE_SP_LIST_CUSTOMERS` |
+| システムマスタ | `VITE_SP_LIST_SYSTEMS` |
+| 作業種別マスタ | `VITE_SP_LIST_WORKTYPES` |
+| 作業報告 | `VITE_SP_LIST_REPORTS` |
+| 作業予定 | `VITE_SP_LIST_PLANS` |
 
 ---
 
