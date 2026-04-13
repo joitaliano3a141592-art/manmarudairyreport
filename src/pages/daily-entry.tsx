@@ -133,6 +133,11 @@ export default function DailyEntryPage() {
     deletePlanMutation.mutate(id);
   };
 
+  const removePlanTap = (id: string) => {
+    if (deletePlanMutation.isPending) return;
+    removePlan(id);
+  };
+
   const [publishing, setPublishing] = useState(false);
 
   const handlePublish = async () => {
@@ -454,10 +459,15 @@ ${planRows}
                     <TableCell className="max-w-[16rem] truncate" title={plan.workDescription}>{plan.workDescription}</TableCell>
                     <TableCell>
                       <Button
+                        type="button"
                         size="sm"
                         variant="destructive"
                         disabled={deletePlanMutation.isPending}
-                        onClick={() => removePlan(plan.id)}
+                        onClick={() => removePlanTap(plan.id)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          removePlanTap(plan.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

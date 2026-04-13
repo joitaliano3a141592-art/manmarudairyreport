@@ -209,6 +209,10 @@ export function useDeleteReport() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "reports"] });
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`作業報告の削除に失敗しました。\n${message}`);
+    },
   });
 }
 
@@ -288,6 +292,10 @@ export function useDeletePlan() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "plans"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`作業予定の削除に失敗しました。\n${message}`);
     },
   });
 }

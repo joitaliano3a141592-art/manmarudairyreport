@@ -27,6 +27,11 @@ export default function WorkPlanListPage() {
     deleteMutation.mutate(id);
   };
 
+  const handleDeleteTap = (id: string) => {
+    if (deleteMutation.isPending) return;
+    handleDelete(id);
+  };
+
   const renderPlansTable = (plansToRender: WorkPlan[], emptyLabel: string) => {
     if (plansToRender.length === 0) {
       return <p className="text-muted-foreground">{emptyLabel}</p>;
@@ -52,10 +57,15 @@ export default function WorkPlanListPage() {
               </TableCell>
               <TableCell>
                 <Button
+                  type="button"
                   size="sm"
                   variant="destructive"
                   disabled={deleteMutation.isPending}
-                  onClick={() => handleDelete(plan.id)}
+                  onClick={() => handleDeleteTap(plan.id)}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleDeleteTap(plan.id);
+                  }}
                 >
                   削除
                 </Button>
