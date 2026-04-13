@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function WorkReportListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editWorkTime, setEditWorkTime] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const { data: reports = [], isLoading } = useReports(startDate, endDate);
   const updateMutation = useUpdateReport();
@@ -72,10 +74,32 @@ export default function WorkReportListPage() {
         <Button onClick={() => navigate("/daily-entry")}>日次入力へ戻る</Button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-      </div>
+      <Card className="mb-6">
+        <CardHeader className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-medium">検索条件</div>
+            <Button size="sm" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
+              {filterOpen ? (
+                <>
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  隠す
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-2 h-4 w-4" />
+                  表示
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        {filterOpen && (
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </CardContent>
+        )}
+      </Card>
 
       <Card>
         <CardHeader>

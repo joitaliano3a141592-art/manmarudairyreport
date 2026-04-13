@@ -219,7 +219,7 @@ ${planRows}
 
       {/* ── 入力フォーム ── */}
       <div className="grid gap-6 lg:grid-cols-2 min-w-0">
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>本日の作業報告</CardTitle>
           </CardHeader>
@@ -329,7 +329,7 @@ ${planRows}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>明日の予定</CardTitle>
           </CardHeader>
@@ -370,6 +370,10 @@ ${planRows}
                   </Select>
                 </div>
               </div>
+
+              {/* 本日の作業報告側にある「作業区分/報告日/作業時間」行ぶんの高さを確保 */}
+              <div className="h-[72px]" aria-hidden="true" />
+
               <div className="space-y-1.5">
                 <Label>作業内容</Label>
                 <Textarea
