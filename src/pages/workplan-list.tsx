@@ -24,9 +24,7 @@ export default function WorkPlanListPage() {
   const tomorrowPlans = allPlans.filter((plan: WorkPlan) => plan.planDate === tomorrowString);
 
   const handleDelete = (id: string) => {
-    if (confirm("この作業予定を削除しますか？")) {
-      deleteMutation.mutate(id);
-    }
+    deleteMutation.mutate(id);
   };
 
   const renderPlansTable = (plansToRender: WorkPlan[], emptyLabel: string) => {
@@ -56,6 +54,7 @@ export default function WorkPlanListPage() {
                 <Button
                   size="sm"
                   variant="destructive"
+                  disabled={deleteMutation.isPending}
                   onClick={() => handleDelete(plan.id)}
                 >
                   削除

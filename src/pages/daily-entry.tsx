@@ -130,7 +130,6 @@ export default function DailyEntryPage() {
   };
 
   const removePlan = (id: string) => {
-    if (!confirm("この作業予定を削除しますか？")) return;
     deletePlanMutation.mutate(id);
   };
 
@@ -454,7 +453,12 @@ ${planRows}
                     <TableCell className="whitespace-nowrap">{plan.systemName}</TableCell>
                     <TableCell className="max-w-[16rem] truncate" title={plan.workDescription}>{plan.workDescription}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="destructive" onClick={() => removePlan(plan.id)}>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deletePlanMutation.isPending}
+                        onClick={() => removePlan(plan.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
