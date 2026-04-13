@@ -21,6 +21,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { postTeamsChannelMessage } from "@/lib/graphClient";
 import { TEAMS_CONFIG } from "@/lib/sharepointConfig";
+import * as microsoftTeams from "@microsoft/teams-js";
 
 function toLocalDate(date: Date): string {
   const y = date.getFullYear();
@@ -31,6 +32,34 @@ function toLocalDate(date: Date): string {
 
 const today = toLocalDate(new Date());
 const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return toLocalDate(d); })();
+
+type TeamsPublishTarget = {
+  teamId: string;
+  channelId: string;
+};
+
+async function resolveTeamsPublishTarget(): Promise<TeamsPublishTarget> {
+  try {
+    await microsoftTeams.app.initialize();
+    const context = await microsoftTeams.app.getContext();
+    const teamId = context.team?.groupId?.trim();
+    const channelId = context.channel?.id?.trim();
+
+    if (teamId && channelId) {
+      return {
+        teamId,
+        channelId,
+      };
+    }
+  } catch {
+    // Teams 外では既存の環境変数フォールバックを使う。
+  }
+
+  return {
+    teamId: TEAMS_CONFIG.teamId,
+    channelId: TEAMS_CONFIG.channelId,
+  };
+}
 
 export default function DailyEntryPage() {
   const { data: customers = [] } = useCustomers();
@@ -145,7 +174,9 @@ export default function DailyEntryPage() {
       alert("送信する作業報告・予定がありません。");
       return;
     }
-    if (!TEAMS_CONFIG.teamId || !TEAMS_CONFIG.channelId) {
+    const publishTarget = await resolveTeamsPublishTarget();
+
+    if (!publishTarget.teamId || !publishTarget.channelId) {
       alert("Teams チャネルが設定されていません。管理者に連絡してください。");
       return;
     }
@@ -180,7 +211,7 @@ ${planRows}
 </table>` : "<p>（なし）</p>"}
       `.trim();
 
-      await postTeamsChannelMessage(TEAMS_CONFIG.teamId, TEAMS_CONFIG.channelId, html);
+      await postTeamsChannelMessage(publishTarget.teamId, publishTarget.channelId, html);
       alert("Teams チャネルに送信しました。");
     } catch (err) {
       console.error("Teams 送信エラー:", err);
