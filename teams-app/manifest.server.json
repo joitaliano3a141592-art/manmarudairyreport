@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "2d2b19d7-4c96-461a-982e-8331e11f67c4",
+  "developer": {
+    "name": "株式会社マンマルシステム",
+    "websiteUrl": "https://192.186.101.12/Jo/dairyreport/",
+    "privacyUrl": "https://192.186.101.12/Jo/dairyreport/",
+    "termsOfUseUrl": "https://192.186.101.12/Jo/dairyreport/"
+  },
+  "name": {
+    "short": "業務日報",
+    "full": "業務日報アプリ"
+  },
+  "description": {
+    "short": "業務日報の入力・閲覧・管理",
+    "full": "SharePoint リストをバックエンドとした業務日報管理アプリです。日報入力、予定管理、ダッシュボード、マスタ管理機能を提供します。"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#3B82F6",
+  "staticTabs": [
+    {
+      "entityId": "dailyReport",
+      "name": "業務日報",
+      "contentUrl": "https://192.186.101.12/Jo/dairyreport/",
+      "websiteUrl": "https://192.186.101.12/Jo/dairyreport/",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://192.186.101.12/Jo/dairyreport/teams-config",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupchat"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": [
+    "192.186.101.12",
+    "login.microsoftonline.com"
+  ]
+}

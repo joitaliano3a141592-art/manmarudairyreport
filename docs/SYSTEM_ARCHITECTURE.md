@@ -227,9 +227,10 @@
        │  ① リポジトリをクローン           │
        │     git clone ...              │
        │                               │
-       │  ② 環境設定ファイルを準備          │
-       │     cp .env.production.server   │
-       │        .env.production.local    │
+      │  ② 環境設定ファイルを準備          │
+      │     Windows: Copy-Item          │
+      │     .env.production.server       │
+      │     .env.production.local        │
        │                               │
        │  ③ ビルド                       │
        │     npm run build:server       │
@@ -254,7 +255,7 @@
 | 項目 | GitHub Pages | 社内サーバー |
 |------|-------------|------------|
 | 環境変数 | GitHub Secrets → ビルド時注入 | `.env.production.local` に直書き |
-| ベースパス | `/manmarudairyreport/` | `/`（設定可能） |
+| ベースパス | `/manmarudairyreport/` | `/Jo/dairyreport/` など |
 | ビルド | GitHub Actions 自動 | `npm run build:server` 手動 |
 | HTTPS | 自動 | サーバー側で設定 |
 | 更新方法 | `git push` で自動 | `git pull` → 手動ビルド → 配置 |
@@ -289,6 +290,42 @@
 ```
 
 > **ポイント**: 開発時はマイクロソフトのログイン画面は出ず、裏側で自動的に認証される
+
+---
+
+## 6.5 Teams タブ統合（今回の知見反映）
+
+### Teams タブで必要な構成
+
+1. Teams マニフェストに `configurableTabs` を定義し、`configurationUrl` を設定する
+2. 設定ページ（`/teams-config`）をアプリ側に用意する
+3. Teams 埋め込み先 URL は HTTPS を推奨（社内サーバーでも同様）
+
+### 認証フローの重要ポイント
+
+Teams タブは iframe 内で動くため、通常の popup 認証（`window.open`）がブロックされる場合がある。
+そのため、Teams では次のフローを使う。
+
+1. `microsoftTeams.authentication.authenticate()` で Teams 管理ポップアップを開く
+2. 認証開始ページ（`/teams-auth-start`）で MSAL の `loginRedirect` を実行
+3. リダイレクト先で `handleRedirectPromise` 後に `notifySuccess` を返す
+
+### サーバーヘッダー設定（埋め込み許可）
+
+`X-Frame-Options: DENY` は Teams 表示を阻害するため、以下のように `Content-Security-Policy` の
+`frame-ancestors` で許可する。
+
+- https://teams.microsoft.com
+- https://*.teams.microsoft.com
+- https://*.skype.com
+- https://teams.live.com
+- https://*.microsoft365.com
+
+### Entra ID の追加設定
+
+SPA のリダイレクト URI に、社内 URL を追加する。
+
+- `https://192.186.101.12/Jo/dairyreport/`
 
 ---
 
