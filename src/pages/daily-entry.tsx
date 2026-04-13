@@ -39,6 +39,13 @@ type TeamsPublishTarget = {
 };
 
 async function resolveTeamsPublishTarget(): Promise<TeamsPublishTarget> {
+  if (TEAMS_CONFIG.teamId && TEAMS_CONFIG.channelId) {
+    return {
+      teamId: TEAMS_CONFIG.teamId,
+      channelId: TEAMS_CONFIG.channelId,
+    };
+  }
+
   try {
     await microsoftTeams.app.initialize();
     const context = await microsoftTeams.app.getContext();
