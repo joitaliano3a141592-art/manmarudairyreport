@@ -212,7 +212,8 @@ export default function DailyEntryPage() {
     if (!publishTarget) return;
     setPublishing(true);
     try {
-      const userName = currentUser.name;
+      const [_, month, day] = today.split("-");
+      const monthDay = `${Number(month)}/${Number(day)}`;
       const reportRows = reports
         .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workTypeName}</td><td style="text-align:right">${r.workHours.toFixed(1)}h</td><td>${r.workDescription}</td></tr>`)
         .join("");
@@ -220,17 +221,15 @@ export default function DailyEntryPage() {
         .map((p) => `<tr><td>${p.customerName}</td><td>${p.systemName}</td><td>${p.workDescription}</td></tr>`)
         .join("");
 
-      const totalHours = reports.reduce((sum, r) => sum + r.workHours, 0);
-
       const html = `
-<h3>📋 日次報告 — ${userName}（${today}）</h3>
-<h4>■ 本日の作業報告（${reports.length} 件 / ${totalHours.toFixed(1)}h）</h4>
+    <p>📋 <strong>${monthDay}</strong></p>
+    <p>■ 本日の作業報告</p>
 ${reports.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
 <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>区分</th><th>時間</th><th>作業内容</th></tr>
 ${reportRows}
 </table>` : "<p>（なし）</p>"}
 <br/>
-<h4>■ 次回の作業予定${nextPlanDate ? `（${nextPlanDate} / ${plans.length} 件）` : `（${plans.length} 件）`}</h4>
+    <p>■ 次回の作業予定</p>
 ${plans.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
 <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
 ${planRows}
