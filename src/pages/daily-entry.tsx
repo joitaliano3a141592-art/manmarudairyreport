@@ -34,6 +34,11 @@ function toLocalDate(date: Date): string {
 const today = toLocalDate(new Date());
 const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return toLocalDate(d); })();
 
+function getNearestFuturePlanDate(planDates: string[]): string | null {
+  const futureDates = planDates.filter((date) => date > today).sort();
+  return futureDates[0] ?? null;
+}
+
 type TeamsPublishTarget = {
   teamId: string;
   channelId: string;
@@ -74,7 +79,7 @@ export default function DailyEntryPage() {
   const { data: systems = [] } = useSystems();
   const { data: workTypes = [] } = useWorkTypes();
   const { data: reports = [], isLoading: reportsLoading } = useReports(today, today);
-  const { data: plans = [], isLoading: plansLoading } = usePlans(tomorrow, tomorrow);
+  const { data: allUpcomingPlans = [], isLoading: plansLoading } = usePlans(today);
 
   const addReportMutation = useAddReport();
   const deleteReportMutation = useDeleteReport();
@@ -107,6 +112,10 @@ export default function DailyEntryPage() {
   const filteredPlanSystems = systems.filter(
     (system) => !planForm.customerId || system.customerId === planForm.customerId,
   );
+  const nextPlanDate = getNearestFuturePlanDate(allUpcomingPlans.map((plan) => plan.planDate));
+  const plans = nextPlanDate
+    ? allUpcomingPlans.filter((plan) => plan.planDate === nextPlanDate)
+    : [];
 
   const addReportToStore = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,7 +155,7 @@ export default function DailyEntryPage() {
   const addPlan = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!planForm.customerId || !planForm.systemId || !planForm.workDescription.trim()) {
-      alert("明日の作業予定の必須項目を入力してください。");
+      alert("次回の作業予定の必須項目を入力してください。");
       return;
     }
 
@@ -221,7 +230,7 @@ ${reports.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style=
 ${reportRows}
 </table>` : "<p>（なし）</p>"}
 <br/>
-<h4>■ 明日の作業予定（${plans.length} 件）</h4>
+<h4>■ 次回の作業予定${nextPlanDate ? `（${nextPlanDate} / ${plans.length} 件）` : `（${plans.length} 件）`}</h4>
 ${plans.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
 <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
 ${planRows}
@@ -256,7 +265,7 @@ ${planRows}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">日次入力</h1>
-            <p className="text-muted-foreground">今日の作業報告と明日の予定を入力します。</p>
+            <p className="text-muted-foreground">今日の作業報告と次回予定を入力します。</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button
@@ -388,7 +397,7 @@ ${planRows}
 
         <Card className="h-full">
           <CardHeader>
-            <CardTitle>明日の予定</CardTitle>
+            <CardTitle>次回の予定</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={addPlan} className="space-y-4">
@@ -428,15 +437,24 @@ ${planRows}
                 </div>
               </div>
 
-              {/* 本日の作業報告側にある「作業区分/報告日/作業時間」行ぶんの高さを確保 */}
-              <div className="h-[72px]" aria-hidden="true" />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-1">
+                  <Label>予定日</Label>
+                  <input
+                    type="date"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                    value={planForm.planDate}
+                    onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })}
+                  />
+                </div>
+              </div>
 
               <div className="space-y-1.5">
                 <Label>作業内容</Label>
                 <Textarea
                   value={planForm.workDescription}
                   onChange={(e) => setPlanForm({ ...planForm, workDescription: e.target.value })}
-                  placeholder="明日の予定作業を入力..."
+                  placeholder="次回予定の作業を入力..."
                   rows={3}
                 />
               </div>
@@ -505,11 +523,11 @@ ${planRows}
 
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>明日の予定一覧</CardTitle>
+            <CardTitle>{nextPlanDate ? `次回の予定一覧（${nextPlanDate}）` : "次回の予定一覧"}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {plans.length === 0 ? (
-              <p className="text-sm text-muted-foreground">まだ作業予定がありません。</p>
+              <p className="text-sm text-muted-foreground">今後の作業予定がありません。</p>
             ) : (
             <Table className="min-w-full">
               <TableHeader>
@@ -554,7 +572,7 @@ ${planRows}
         open={publishConfirmOpen}
         onOpenChange={setPublishConfirmOpen}
         title="Teams に発報しますか？"
-        description={`本日の作業報告 ${reports.length} 件、明日の予定 ${plans.length} 件を Teams に送信します。`}
+        description={`本日の作業報告 ${reports.length} 件、次回予定 ${plans.length} 件${nextPlanDate ? `（${nextPlanDate}）` : ""}を Teams に送信します。`}
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {

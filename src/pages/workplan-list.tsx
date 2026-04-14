@@ -12,16 +12,21 @@ function toLocalDate(date: Date): string {
 }
 const today = new Date();
 const todayString = toLocalDate(today);
-const tomorrow = new Date(today);
-tomorrow.setDate(today.getDate() + 1);
-const tomorrowString = toLocalDate(tomorrow);
+
+function getNearestFuturePlanDate(planDates: string[]): string | null {
+  const futureDates = planDates.filter((date) => date > todayString).sort();
+  return futureDates[0] ?? null;
+}
 
 export default function WorkPlanListPage() {
-  const { data: allPlans = [], isLoading } = usePlans(todayString, tomorrowString);
+  const { data: allPlans = [], isLoading } = usePlans(todayString);
   const deleteMutation = useDeletePlan();
 
   const todayPlans = allPlans.filter((plan: WorkPlan) => plan.planDate === todayString);
-  const tomorrowPlans = allPlans.filter((plan: WorkPlan) => plan.planDate === tomorrowString);
+  const nextPlanDate = getNearestFuturePlanDate(allPlans.map((plan) => plan.planDate));
+  const nextPlans = nextPlanDate
+    ? allPlans.filter((plan: WorkPlan) => plan.planDate === nextPlanDate)
+    : [];
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id);
@@ -106,10 +111,10 @@ export default function WorkPlanListPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>明日の作業予定</CardTitle>
+            <CardTitle>{nextPlanDate ? `次回の作業予定（${nextPlanDate}）` : "次回の作業予定"}</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPlansTable(tomorrowPlans, "明日の作業予定はありません")}
+            {renderPlansTable(nextPlans, "今後の作業予定はありません")}
           </CardContent>
         </Card>
       </div>

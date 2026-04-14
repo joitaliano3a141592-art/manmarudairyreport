@@ -228,12 +228,16 @@ export function usePlans(startDate?: string, endDate?: string) {
       return items;
     },
     select: (items): WorkPlan[] => {
-      const filtered = startDate && endDate
-        ? items.filter((item) => {
-            const d = toLocalDateStr(item.fields.PlanDate);
-            return d >= startDate && d <= endDate;
-          })
-        : items;
+      const filtered = items.filter((item) => {
+        const d = toLocalDateStr(item.fields.PlanDate);
+        if (startDate && d < startDate) {
+          return false;
+        }
+        if (endDate && d > endDate) {
+          return false;
+        }
+        return true;
+      });
       return filtered.map((item) => {
         const f = item.fields;
         const custId = String(f.CustomerLookupId ?? "");

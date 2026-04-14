@@ -46,7 +46,7 @@ export default function WorkPlanInputPage() {
     <div className="container mx-auto py-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">作業予定 - 入力</h1>
-        <p className="text-muted-foreground">明日の作業予定を入力してください</p>
+        <p className="text-muted-foreground">日付を指定して次回の作業予定を入力してください</p>
       </div>
 
       <Card className="max-w-2xl">
@@ -105,7 +105,7 @@ export default function WorkPlanInputPage() {
               <Label htmlFor="workDescription">作業内容</Label>
               <Textarea
                 id="workDescription"
-                placeholder="明日の作業内容を記載してください"
+                placeholder="次回予定の作業内容を記載してください"
                 value={formData.workDescription}
                 onChange={(e) => setFormData({ ...formData, workDescription: e.target.value })}
                 required
