@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   });
   const [endDate, setEndDate] = useState(() => {
     const now = new Date();
@@ -21,13 +23,16 @@ export default function WorkReportListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editWorkTime, setEditWorkTime] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(true);
 
   const { data: reports = [], isLoading } = useReports(startDate, endDate);
   const updateMutation = useUpdateReport();
   const deleteMutation = useDeleteReport();
 
-  const filteredReports = useMemo(() => reports, [reports]);
+  const filteredReports = useMemo(
+    () => reports.filter((report) => report.userName === currentUser.name),
+    [currentUser.name, reports],
+  );
 
   const handleEdit = (report: typeof reports[0]) => {
     setEditingId(report.id);
@@ -69,7 +74,7 @@ export default function WorkReportListPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">作業報告 - 一覧</h1>
-          <p className="text-muted-foreground">作業報告を日付範囲で絞り込んで編集・削除できます。</p>
+          <p className="text-muted-foreground">ログインユーザーの作業報告を日付範囲で絞り込んで編集・削除できます。</p>
         </div>
         <Button onClick={() => navigate("/daily-entry")}>日次入力へ戻る</Button>
       </div>
@@ -109,69 +114,73 @@ export default function WorkReportListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>報告日</TableHead>
-                <TableHead>顧客</TableHead>
-                <TableHead>システム</TableHead>
-                <TableHead>作業内容</TableHead>
-                <TableHead>区分</TableHead>
-                <TableHead>時間</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>{report.reportDate}</TableCell>
-                  <TableCell>{report.customerName}</TableCell>
-                  <TableCell>{report.systemName}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={report.workDescription}>
-                    {editingId === report.id ? (
-                      <textarea
-                        className="w-full rounded-md border border-input p-2 text-sm"
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                      />
-                    ) : (
-                      report.workDescription
-                    )}
-                  </TableCell>
-                  <TableCell>{report.workTypeName}</TableCell>
-                  <TableCell>
-                    {editingId === report.id ? (
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        className="w-20 rounded-md border border-input px-2 py-1 text-sm"
-                        value={editWorkTime}
-                        onChange={(e) => setEditWorkTime(e.target.value)}
-                      />
-                    ) : (
-                      `${report.workHours.toFixed(1)}h`
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      {editingId === report.id ? (
-                        <>
-                          <Button size="sm" onClick={() => handleSave(report)}>保存</Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>キャンセル</Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(report)}>編集</Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(report.id)}>削除</Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          {filteredReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground">指定期間にログインユーザーの作業報告はありません。</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>報告日</TableHead>
+                  <TableHead>顧客</TableHead>
+                  <TableHead>システム</TableHead>
+                  <TableHead>作業内容</TableHead>
+                  <TableHead>区分</TableHead>
+                  <TableHead>時間</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredReports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell>{report.reportDate}</TableCell>
+                    <TableCell>{report.customerName}</TableCell>
+                    <TableCell>{report.systemName}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={report.workDescription}>
+                      {editingId === report.id ? (
+                        <textarea
+                          className="w-full rounded-md border border-input p-2 text-sm"
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                        />
+                      ) : (
+                        report.workDescription
+                      )}
+                    </TableCell>
+                    <TableCell>{report.workTypeName}</TableCell>
+                    <TableCell>
+                      {editingId === report.id ? (
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          className="w-20 rounded-md border border-input px-2 py-1 text-sm"
+                          value={editWorkTime}
+                          onChange={(e) => setEditWorkTime(e.target.value)}
+                        />
+                      ) : (
+                        `${report.workHours.toFixed(1)}h`
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        {editingId === report.id ? (
+                          <>
+                            <Button size="sm" onClick={() => handleSave(report)}>保存</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>キャンセル</Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(report)}>編集</Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(report.id)}>削除</Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

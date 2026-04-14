@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCustomers, useSystems, useWorkTypes, useAddReport } from "@/hooks/use-sharepoint";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function WorkReportInputPage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function WorkReportInputPage() {
   const { data: systems = [] } = useSystems();
   const { data: workTypes = [] } = useWorkTypes();
   const addReport = useAddReport();
+  const currentUser = useCurrentUser();
 
   const [formData, setFormData] = useState({
     reportDate: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })(),
@@ -36,6 +38,7 @@ export default function WorkReportInputPage() {
         WorkTypeLookupId: Number(formData.workTypeId),
         WorkDescription: formData.workDescription,
         WorkHours: parseFloat(formData.workTime) || 0,
+        ReporterName: currentUser.name,
       },
       {
         onSuccess: () => navigate("/workreport-list"),
