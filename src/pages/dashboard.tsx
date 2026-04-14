@@ -116,15 +116,15 @@ export default function DashboardPage() {
   }, [customerBreakdown, totalHours]);
 
   const downloadCsv = () => {
-    const headers = ["報告日", "ユーザー", "顧客", "システム", "区分", "作業時間", "作業内容"];
+    const headers = ["報告日", "ユーザー", "顧客", "システム", "作業内容", "区分", "作業時間"];
     const rows = filteredReports.map((report: WorkReport) => [
       report.reportDate,
       report.userName,
       report.customerName,
       report.systemName,
+      report.workDescription,
       report.workTypeName,
       report.workHours,
-      report.workDescription,
     ]);
     const csv = [headers, ...rows]
       .map((row) => row.map((value) => `"${toCsvValue(value)}"`).join(","))
@@ -347,9 +347,9 @@ export default function DashboardPage() {
                 <TableHead>ユーザー</TableHead>
                 <TableHead>顧客</TableHead>
                 <TableHead>システム</TableHead>
+                <TableHead>作業内容</TableHead>
                 <TableHead>区分</TableHead>
                 <TableHead>時間</TableHead>
-                <TableHead>作業内容</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -359,11 +359,11 @@ export default function DashboardPage() {
                   <TableCell>{report.userName}</TableCell>
                   <TableCell>{report.customerName}</TableCell>
                   <TableCell>{report.systemName}</TableCell>
-                  <TableCell>{report.workTypeName}</TableCell>
-                  <TableCell>{report.workHours.toFixed(1)}h</TableCell>
                   <TableCell className="max-w-xs truncate" title={report.workDescription}>
                     {report.workDescription}
                   </TableCell>
+                  <TableCell>{report.workTypeName}</TableCell>
+                  <TableCell>{report.workHours.toFixed(1)}h</TableCell>
                 </TableRow>
               ))}
             </TableBody>
