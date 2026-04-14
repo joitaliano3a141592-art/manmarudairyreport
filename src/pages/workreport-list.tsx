@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -23,6 +24,7 @@ export default function WorkReportListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editWorkTime, setEditWorkTime] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
 
   const { data: reports = [], isLoading } = useReports(startDate, endDate);
@@ -54,8 +56,12 @@ export default function WorkReportListPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("この作業報告を削除しますか？")) return;
-    deleteMutation.mutate(id);
+    setDeleteTargetId(id);
+  };
+
+  const handleDeleteTap = (id: string) => {
+    if (deleteMutation.isPending) return;
+    handleDelete(id);
   };
 
   if (isLoading) {
@@ -171,7 +177,18 @@ export default function WorkReportListPage() {
                         ) : (
                           <>
                             <Button size="sm" variant="outline" onClick={() => handleEdit(report)}>編集</Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(report.id)}>削除</Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteMutation.isPending}
+                              onClick={() => handleDeleteTap(report.id)}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                handleDeleteTap(report.id);
+                              }}
+                            >
+                              削除
+                            </Button>
                           </>
                         )}
                       </div>
@@ -183,6 +200,23 @@ export default function WorkReportListPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
+        title="作業報告を削除しますか？"
+        description="この作業報告を削除します。元に戻せません。"
+        confirmLabel={deleteMutation.isPending ? "削除中..." : "削除する"}
+        cancelLabel="キャンセル"
+        variant="destructive"
+        onConfirm={() => {
+          if (!deleteTargetId) return;
+          deleteMutation.mutate(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+      />
     </div>
   );
 }

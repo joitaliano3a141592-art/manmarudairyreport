@@ -55,6 +55,7 @@ user-invocable: true
 2. Teams タブでは `loginRedirect` 単独運用を避け、Teams SDK の認証導線を優先する
 3. 「Webでは動くが Teams では動かない」場合は、iframe 制約、オーバーレイ被り、クリック取りこぼし、認証状態差分を優先調査する
 4. Teams では無反応に見える失敗があるため、mutation の `onError` やユーザー向けエラー表示を入れる
+5. 削除ボタンや確認操作は `window.confirm()` ではなくアプリ内ダイアログを使い、必要なら `onTouchEnd` と pending 制御を入れる
 
 ### SharePoint / Graph API の制約
 
@@ -74,8 +75,9 @@ user-invocable: true
 
 1. GitHub Pages と社内配信では base path、redirect URI、manifest URL の整合を必ず確認する
 2. Teams manifest 更新時は `contentUrl`, `configurationUrl`, `validDomains`, `supportedChannelTypes` を点検する
-3. 公開リポジトリでは実 ID を README や agent に書かない
-4. 機密値が履歴に入った場合は `git-filter-repo` を優先し、ルールファイルは BOM なし UTF-8 で作る
+3. Teams アプリ ZIP を再作成する時は `manifest.json` / `manifest.server.json` の `id` が再利用や複製で衝突していないか確認する
+4. 公開リポジトリでは実 ID を README や agent に書かない
+5. 機密値が履歴に入った場合は `git-filter-repo` を優先し、ルールファイルは BOM なし UTF-8 で作る
 
 ## 作業ポリシー
 
