@@ -84,6 +84,15 @@ user-invocable: true
 3. 認証、Teams タブ、SharePoint 更新フローは既存導線を壊さない
 4. 変更後は必ず `npm run build` などの検証を実行する
 5. push 時は関係ない未追跡ファイルを含めない
+6. Teams ID、Channel ID、SharePoint Site ID、List ID、テナント ID、クライアント ID に触れた変更後は、必ず機密露出チェックを実施して結果を報告する
+
+## 機密露出チェック
+
+1. `README`, `docs`, `.github`, `teams-app`, `src`, `.env*` に実 ID や URL が混入していないか確認する
+2. 少なくとも `VITE_TEAMS_TEAM_ID|VITE_TEAMS_CHANNEL_ID|VITE_SP_SITE_ID|sharepoint.com/sites|thread\.tacv2|thread\.skype|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}` を対象に検索する
+3. 実値が公開ファイルに入っていたら、プレースホルダーまたは Secrets 参照に直し、必要なら履歴除去も提案する
+4. `.env.production.local` のようなローカル設定は回答で値を引用しない
+5. セキュリティチェックを省略して完了扱いにしない
 
 ## やってはいけないこと
 

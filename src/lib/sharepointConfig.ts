@@ -13,10 +13,7 @@ export const SP_LISTS = {
   plans: import.meta.env.VITE_SP_LIST_PLANS ?? "",
 } as const;
 
-const DEFAULT_TEAMS_TEAM_ID = "eda7e379-69e8-4a6a-8c73-91052212128f";
-const DEFAULT_TEAMS_CHANNEL_ID = "19:a8b3abf429ec4ec7975e7f32aadc2460@thread.skype";
-
 export const TEAMS_CONFIG = {
-  teamId: import.meta.env.VITE_TEAMS_TEAM_ID ?? DEFAULT_TEAMS_TEAM_ID,
-  channelId: import.meta.env.VITE_TEAMS_CHANNEL_ID ?? DEFAULT_TEAMS_CHANNEL_ID,
+  teamId: import.meta.env.VITE_TEAMS_TEAM_ID ?? "",
+  channelId: import.meta.env.VITE_TEAMS_CHANNEL_ID ?? "",
 } as const;
