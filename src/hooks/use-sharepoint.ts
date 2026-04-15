@@ -26,6 +26,35 @@ function toLocalDateStr(utcDateStr?: string): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+function isBrokenDisplayName(value?: string | null): boolean {
+  if (!value) return true;
+  return /^[?\s]+$/.test(value);
+}
+
+function deriveNameFromTitle(title?: string): string {
+  if (!title) return "";
+  const [prefix] = title.split("-");
+  const candidate = prefix?.trim() ?? "";
+  if (!candidate || candidate === "日報" || candidate === "予定" || candidate.startsWith("migrated")) {
+    return "";
+  }
+  return candidate;
+}
+
+function resolveUserDisplayName(primaryName: string | undefined, fallbackTitle: string | undefined, createdByName: string | undefined): string {
+  if (!isBrokenDisplayName(primaryName)) {
+    return primaryName ?? "";
+  }
+
+  const nameFromTitle = deriveNameFromTitle(fallbackTitle);
+  if (nameFromTitle) {
+    return nameFromTitle;
+  }
+
+  return createdByName ?? fallbackTitle ?? "";
+}
+
 import {
   fetchListItems,
   createListItem,
@@ -162,7 +191,7 @@ export function useReports(startDate?: string, endDate?: string) {
           workTypeName: maps.workTypeMap.get(wtId) ?? "",
           workDescription: f.WorkDescription ?? "",
           workHours: f.WorkHours ?? 0,
-          userName: f.ReporterName ?? item.createdByName ?? f.Title,
+          userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
         };
       });
     },
@@ -251,7 +280,7 @@ export function usePlans(startDate?: string, endDate?: string) {
           systemId: sysId,
           systemName: maps.systemMap.get(sysId) ?? "",
           workDescription: f.WorkDescription ?? "",
-          userName: f.AssigneeName ?? item.createdByName ?? f.Title,
+          userName: resolveUserDisplayName(f.AssigneeName, f.Title, item.createdByName),
         };
       });
     },

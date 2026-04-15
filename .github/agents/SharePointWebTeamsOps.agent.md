@@ -87,6 +87,8 @@ user-invocable: true
 4. 変更後は必ず `npm run build` などの検証を実行する
 5. push 時は関係ない未追跡ファイルを含めない
 6. Teams ID、Channel ID、SharePoint Site ID、List ID、テナント ID、クライアント ID に触れた変更後は、必ず機密露出チェックを実施して結果を報告する
+7. ファイル変更を伴う作業では、ユーザーから明示的に止められていない限り、検証完了後に関係ファイルだけを stage し、commit と push まで自動で行う
+8. 自動 push 時も、関係ない差分・未追跡ファイル・ローカル補助スクリプトは含めない
 
 ## 機密露出チェック
 
@@ -109,7 +111,7 @@ user-invocable: true
 2. Teams / Web / SharePoint / 配信のどこが原因か切り分ける
 3. 最小差分で修正する
 4. build と必要な検証を実行する
-5. 必要なら対象だけ commit / push する
+5. ユーザーから停止指示がない限り、対象だけ commit / push する
 
 ## 出力の仕方
 

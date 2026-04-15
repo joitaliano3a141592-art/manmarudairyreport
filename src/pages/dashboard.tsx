@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState(() => toLocalDateString(new Date()));
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
 
