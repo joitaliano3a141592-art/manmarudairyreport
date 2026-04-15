@@ -333,6 +333,7 @@ def main():
     ensure_lookup_column(site_id, report_list_id, "WorkType", "作業種別", worktype_list_id, rpt_cols, required=True)
     ensure_text_column(site_id, report_list_id, "WorkDescription", "作業内容", rpt_cols, required=True, multi_line=True)
     ensure_number_column(site_id, report_list_id, "WorkHours", "作業時間", rpt_cols, required=True)
+    ensure_text_column(site_id, report_list_id, "ReporterName", "報告者名", rpt_cols)
     ensure_person_column(site_id, report_list_id, "Reporter", "報告者", rpt_cols)
 
     # 作業予定
@@ -341,6 +342,7 @@ def main():
     ensure_lookup_column(site_id, plan_list_id, "Customer", "顧客", customer_list_id, plan_cols, required=True)
     ensure_lookup_column(site_id, plan_list_id, "System", "システム", system_list_id, plan_cols, required=True)
     ensure_text_column(site_id, plan_list_id, "WorkDescription", "作業内容", plan_cols, required=True, multi_line=True)
+    ensure_text_column(site_id, plan_list_id, "AssigneeName", "担当者名", plan_cols)
     ensure_person_column(site_id, plan_list_id, "Assignee", "担当者", plan_cols)
     ensure_choice_column(site_id, plan_list_id, "Status", "状態", ["未着手", "進行中", "完了"], plan_cols, required=True)
 
