@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataErrorState } from "@/components/data-error-state";
 import {
   useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer,
   useSystems, useAddSystem, useUpdateSystem, useDeleteSystem,
@@ -13,9 +14,9 @@ import {
 } from "@/hooks/use-sharepoint";
 
 export default function MastersPage() {
-  const { data: customers = [], isLoading: custLoading } = useCustomers();
-  const { data: systems = [], isLoading: sysLoading } = useSystems();
-  const { data: workTypes = [], isLoading: wtLoading } = useWorkTypes();
+  const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers();
+  const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems();
+  const { data: workTypes = [], isLoading: wtLoading, isError: wtError, error: workTypesError } = useWorkTypes();
 
   const addCustomer = useAddCustomer();
   const updateCustomer = useUpdateCustomer();
@@ -91,6 +92,15 @@ export default function MastersPage() {
           <p className="text-sm text-muted-foreground">読み込み中...</p>
         </div>
       </div>
+    );
+  }
+
+  if (custError || sysError || wtError) {
+    return (
+      <DataErrorState
+        title="マスタデータを取得できませんでした"
+        error={customersError ?? systemsError ?? workTypesError}
+      />
     );
   }
 

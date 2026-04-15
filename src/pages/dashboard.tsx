@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DataErrorState } from "@/components/data-error-state";
 import { Download, ChevronDown, ChevronUp } from "lucide-react";
 import { useReports } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
@@ -32,7 +33,7 @@ export default function DashboardPage() {
     setFilterOpen(false);
   }, []);
 
-  const { data: reports = [], isLoading } = useReports(startDate, endDate);
+  const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
 
   const uniqueUsers = useMemo(
     () => Array.from(new Set(reports.map((report) => report.userName))),
@@ -150,6 +151,10 @@ export default function DashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (isError) {
+    return <DataErrorState title="ダッシュボードデータを取得できませんでした" error={error} />;
   }
 
   return (

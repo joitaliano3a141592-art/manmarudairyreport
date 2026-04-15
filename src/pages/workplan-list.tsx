@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataErrorState } from "@/components/data-error-state";
 import { usePlans, useDeletePlan } from "@/hooks/use-sharepoint";
 import type { WorkPlan } from "@/types/sharepoint";
 
@@ -19,7 +20,7 @@ function getNearestFuturePlanDate(planDates: string[]): string | null {
 }
 
 export default function WorkPlanListPage() {
-  const { data: allPlans = [], isLoading } = usePlans(todayString);
+  const { data: allPlans = [], isLoading, isError, error } = usePlans(todayString);
   const deleteMutation = useDeletePlan();
 
   const todayPlans = allPlans.filter((plan: WorkPlan) => plan.planDate === todayString);
@@ -91,6 +92,10 @@ export default function WorkPlanListPage() {
         </div>
       </div>
     );
+  }
+
+  if (isError) {
+    return <DataErrorState title="作業予定を取得できませんでした" error={error} />;
   }
 
   return (

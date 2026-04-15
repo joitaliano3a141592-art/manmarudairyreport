@@ -6,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataErrorState } from "@/components/data-error-state";
 import { useCustomers, useSystems, useWorkTypes, useAddReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function WorkReportInputPage() {
   const navigate = useNavigate();
-  const { data: customers = [] } = useCustomers();
-  const { data: systems = [] } = useSystems();
-  const { data: workTypes = [] } = useWorkTypes();
+  const { data: customers = [], isError: custError, error: customersError } = useCustomers();
+  const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
+  const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const addReport = useAddReport();
   const currentUser = useCurrentUser();
 
@@ -49,6 +50,15 @@ export default function WorkReportInputPage() {
   const filteredSystems = systems.filter(
     (system) => !formData.customerId || system.customerId === formData.customerId
   );
+
+  if (custError || sysError || wtError) {
+    return (
+      <DataErrorState
+        title="入力に必要なマスタデータを取得できませんでした"
+        error={customersError ?? systemsError ?? workTypesError}
+      />
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataErrorState } from "@/components/data-error-state";
 import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import {
   useCustomers,
@@ -75,11 +76,11 @@ async function resolveTeamsPublishTarget(): Promise<TeamsPublishTarget> {
 }
 
 export default function DailyEntryPage() {
-  const { data: customers = [] } = useCustomers();
-  const { data: systems = [] } = useSystems();
-  const { data: workTypes = [] } = useWorkTypes();
-  const { data: reports = [], isLoading: reportsLoading } = useReports(today, today);
-  const { data: allUpcomingPlans = [], isLoading: plansLoading } = usePlans(today);
+  const { data: customers = [], isError: custError, error: customersError } = useCustomers();
+  const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
+  const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
+  const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
+  const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(today);
 
   const addReportMutation = useAddReport();
   const deleteReportMutation = useDeleteReport();
@@ -116,6 +117,15 @@ export default function DailyEntryPage() {
   const plans = nextPlanDate
     ? allUpcomingPlans.filter((plan) => plan.planDate === nextPlanDate)
     : [];
+
+  if (custError || sysError || wtError || reportsErrorState || plansErrorState) {
+    return (
+      <DataErrorState
+        title="日次入力に必要なデータを取得できませんでした"
+        error={customersError ?? systemsError ?? workTypesError ?? reportsError ?? plansError}
+      />
+    );
+  }
 
   const addReportToStore = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

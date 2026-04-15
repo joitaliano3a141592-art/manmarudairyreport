@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataErrorState } from "@/components/data-error-state";
 import { useCustomers, useSystems, useAddPlan } from "@/hooks/use-sharepoint";
 
 export default function WorkPlanInputPage() {
   const navigate = useNavigate();
-  const { data: customers = [] } = useCustomers();
-  const { data: systems = [] } = useSystems();
+  const { data: customers = [], isError: custError, error: customersError } = useCustomers();
+  const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const addPlan = useAddPlan();
 
   const [formData, setFormData] = useState({
@@ -41,6 +42,15 @@ export default function WorkPlanInputPage() {
   const filteredSystems = systems.filter(
     (system) => !formData.customerId || system.customerId === formData.customerId
   );
+
+  if (custError || sysError) {
+    return (
+      <DataErrorState
+        title="入力に必要なマスタデータを取得できませんでした"
+        error={customersError ?? systemsError}
+      />
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">

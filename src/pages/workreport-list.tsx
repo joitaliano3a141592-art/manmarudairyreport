@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataErrorState } from "@/components/data-error-state";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -27,7 +28,7 @@ export default function WorkReportListPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
 
-  const { data: reports = [], isLoading } = useReports(startDate, endDate);
+  const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
   const updateMutation = useUpdateReport();
   const deleteMutation = useDeleteReport();
 
@@ -73,6 +74,10 @@ export default function WorkReportListPage() {
         </div>
       </div>
     );
+  }
+
+  if (isError) {
+    return <DataErrorState title="作業報告を取得できませんでした" error={error} />;
   }
 
   return (
