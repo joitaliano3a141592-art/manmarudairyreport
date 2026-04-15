@@ -110,6 +110,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
   const { instance, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [graphReady, setGraphReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,6 +123,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
 
     if (inProgress === "none" && !isAuthenticated) {
       setGraphReady(false);
+      setAuthError(null);
       if (isInIframe) {
         // iframe 内: Teams か否かを判別して認証方法を分岐
         microsoftTeams.app
@@ -147,17 +149,36 @@ function AutoLogin({ children }: { children: ReactNode }) {
                 })
                 .catch((err) => {
                   console.error("Teams auth failed:", err);
+                  if (!cancelled) {
+                    setAuthError("認証に失敗しました。Teams から再度開き直してください。");
+                  }
                 });
             } else {
               // Power Apps などの非 Teams iframe → ポップアップ
-              instance.loginPopup({ scopes: graphScopes }).catch(() => {});
+              instance.loginPopup({ scopes: graphScopes }).catch((err) => {
+                console.error("Popup auth failed:", err);
+                if (!cancelled) {
+                  setAuthError("認証に失敗しました。もう一度サインインしてください。");
+                }
+              });
             }
           })
-          .catch(() => {
-            instance.loginPopup({ scopes: graphScopes }).catch(() => {});
+          .catch((err) => {
+            console.error("Teams context detection failed:", err);
+            instance.loginPopup({ scopes: graphScopes }).catch((popupErr) => {
+              console.error("Popup auth failed:", popupErr);
+              if (!cancelled) {
+                setAuthError("認証に失敗しました。もう一度サインインしてください。");
+              }
+            });
           });
       } else {
-        instance.loginRedirect({ scopes: graphScopes });
+        instance.loginRedirect({ scopes: graphScopes }).catch((err) => {
+          console.error("Redirect auth failed:", err);
+          if (!cancelled) {
+            setAuthError("認証に失敗しました。ブラウザを再読み込みして再試行してください。");
+          }
+        });
       }
 
       return () => {
@@ -167,6 +188,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
 
     if (isAuthenticated) {
       setGraphReady(false);
+      setAuthError(null);
       acquireGraphToken()
         .then(() => {
           if (!cancelled) {
@@ -175,6 +197,9 @@ function AutoLogin({ children }: { children: ReactNode }) {
         })
         .catch((err) => {
           console.error("Graph token bootstrap failed:", err);
+          if (!cancelled) {
+            setAuthError("認証トークンの取得に失敗しました。再度サインインしてください。");
+          }
         });
     }
 
@@ -187,6 +212,17 @@ function AutoLogin({ children }: { children: ReactNode }) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-muted-foreground">サインイン中…</p>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="flex h-screen items-center justify-center px-6">
+        <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
+          <p className="text-sm font-medium text-foreground">認証エラー</p>
+          <p className="mt-2 text-sm text-muted-foreground">{authError}</p>
+        </div>
       </div>
     );
   }
@@ -211,6 +247,7 @@ const isDev = import.meta.env.DEV;
 
 export function MsalAuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isDev) {
@@ -241,15 +278,34 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
       const promise = isInIframe
         ? Promise.resolve(null)
         : msalInstance.handleRedirectPromise();
-      promise.then(() => {
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) {
-          msalInstance.setActiveAccount(accounts[0]);
-        }
-        setReady(true);
-      });
+      promise
+        .then(() => {
+          const accounts = msalInstance.getAllAccounts();
+          if (accounts.length > 0) {
+            msalInstance.setActiveAccount(accounts[0]);
+          }
+          setReady(true);
+        })
+        .catch((err) => {
+          console.error("MSAL redirect handling failed:", err);
+          setInitError("認証の初期化に失敗しました。ブラウザを再読み込みしてください。");
+        });
+    }).catch((err) => {
+      console.error("MSAL initialization failed:", err);
+      setInitError("認証の初期化に失敗しました。ブラウザを再読み込みしてください。");
     });
   }, []);
+
+  if (initError) {
+    return (
+      <div className="flex h-screen items-center justify-center px-6">
+        <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
+          <p className="text-sm font-medium text-foreground">認証エラー</p>
+          <p className="mt-2 text-sm text-muted-foreground">{initError}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!ready) {
     return (
