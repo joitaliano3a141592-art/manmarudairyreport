@@ -109,9 +109,19 @@ export async function acquireTeamsToken(): Promise<string> {
 function AutoLogin({ children }: { children: ReactNode }) {
   const { instance, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
+  const [graphReady, setGraphReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    if (inProgress !== "none") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     if (inProgress === "none" && !isAuthenticated) {
+      setGraphReady(false);
       if (isInIframe) {
         // iframe 内: Teams か否かを判別して認証方法を分岐
         microsoftTeams.app
@@ -149,13 +159,42 @@ function AutoLogin({ children }: { children: ReactNode }) {
       } else {
         instance.loginRedirect({ scopes: graphScopes });
       }
+
+      return () => {
+        cancelled = true;
+      };
     }
+
+    if (isAuthenticated) {
+      setGraphReady(false);
+      acquireGraphToken()
+        .then(() => {
+          if (!cancelled) {
+            setGraphReady(true);
+          }
+        })
+        .catch((err) => {
+          console.error("Graph token bootstrap failed:", err);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [inProgress, isAuthenticated, instance]);
 
   if (!isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-muted-foreground">サインイン中…</p>
+      </div>
+    );
+  }
+
+  if (!graphReady) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">認証を確認中…</p>
       </div>
     );
   }
