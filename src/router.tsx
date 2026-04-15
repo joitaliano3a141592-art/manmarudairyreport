@@ -46,11 +46,11 @@ const withSuspense = (
   </Suspense>
 );
 
-// IMPORTANT: Do not remove or modify the code below!
-// Normalize basename when hosted in Power Apps
-const BASENAME = new URL(".", location.href).pathname;
+// IMPORTANT: Keep basename aligned with Vite base to avoid route drift on static hosting.
+const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 if (location.pathname.endsWith("/index.html")) {
-  history.replaceState(null, "", BASENAME + location.search + location.hash);
+  const normalizedPath = location.pathname.replace(/\/index\.html$/, "/");
+  history.replaceState(null, "", normalizedPath + location.search + location.hash);
 }
 
 export const router = createBrowserRouter(
@@ -70,7 +70,7 @@ export const router = createBrowserRouter(
       element: <Layout showHeader={true} />,
       errorElement: withSuspense(NotFoundPage),
       children: [
-        { index: true, element: <Navigate to="/dashboard" replace /> },
+        { index: true, element: <Navigate to="dashboard" replace /> },
         { path: "dashboard", element: withSuspense(DashboardPage) },
         { path: "daily-entry", element: withSuspense(DailyEntryPage) },
         { path: "workreport-input", element: withSuspense(WorkReportInputPage) },

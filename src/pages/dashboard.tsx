@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,12 +26,7 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState(() => toLocalDateString(new Date()));
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  useEffect(() => {
-    // Teams タブ復帰時に前回UI状態が残るケースを避ける
-    setFilterOpen(false);
-  }, []);
+  const [filterOpen, setFilterOpen] = useState(true);
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
 
