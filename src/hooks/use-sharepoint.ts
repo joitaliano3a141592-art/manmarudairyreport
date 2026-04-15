@@ -208,6 +208,10 @@ export function useAddReport() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "reports"] });
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`作業報告の登録に失敗しました。\n${message}`);
+    },
   });
 }
 
@@ -296,6 +300,10 @@ export function useAddPlan() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "plans"] });
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`作業予定の登録に失敗しました。\n${message}`);
+    },
   });
 }
 
@@ -369,6 +377,10 @@ export function useDeleteCustomer() {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
       qc.invalidateQueries({ queryKey: ["sp", "systems"] });
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`顧客マスタの削除に失敗しました。\n${message}`);
+    },
   });
 }
 
@@ -415,6 +427,10 @@ export function useDeleteSystem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "systems"] });
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`システムマスタの削除に失敗しました。\n${message}`);
+    },
   });
 }
 
@@ -456,6 +472,10 @@ export function useDeleteWorkType() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "workTypes"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`作業区分マスタの削除に失敗しました。\n${message}`);
     },
   });
 }

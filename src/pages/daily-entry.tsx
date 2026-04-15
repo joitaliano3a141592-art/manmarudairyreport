@@ -103,6 +103,8 @@ export default function DailyEntryPage() {
     workDescription: "",
     planDate: tomorrow,
   });
+  const [reportSubmitError, setReportSubmitError] = useState("");
+  const [planSubmitError, setPlanSubmitError] = useState("");
   const [reportDeleteTargetId, setReportDeleteTargetId] = useState<string | null>(null);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<TeamsPublishTarget | null>(null);
@@ -148,6 +150,7 @@ export default function DailyEntryPage() {
 
     const customer = customers.find((c) => c.id === reportForm.customerId);
 
+    setReportSubmitError("");
     addReportMutation.mutate({
       Title: `日報-${customer?.name ?? ""}`,
       ReportDate: `${reportForm.reportDate}T00:00:00+09:00`,
@@ -157,9 +160,14 @@ export default function DailyEntryPage() {
       WorkDescription: reportForm.workDescription,
       WorkHours: workTime,
       ReporterName: currentUser.name,
+    }, {
+      onSuccess: () => {
+        setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "" });
+      },
+      onError: (error) => {
+        setReportSubmitError(error instanceof Error ? error.message : String(error));
+      },
     });
-
-    setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "" });
   };
 
   const addPlan = (e: FormEvent<HTMLFormElement>) => {
@@ -171,6 +179,7 @@ export default function DailyEntryPage() {
 
     const customer = customers.find((c) => c.id === planForm.customerId);
 
+    setPlanSubmitError("");
     addPlanMutation.mutate({
       Title: `予定-${customer?.name ?? ""}`,
       PlanDate: `${planForm.planDate}T00:00:00+09:00`,
@@ -178,9 +187,14 @@ export default function DailyEntryPage() {
       SystemLookupId: Number(planForm.systemId),
       WorkDescription: planForm.workDescription,
       AssigneeName: currentUser.name,
+    }, {
+      onSuccess: () => {
+        setPlanForm({ ...planForm, customerId: "", systemId: "", workDescription: "" });
+      },
+      onError: (error) => {
+        setPlanSubmitError(error instanceof Error ? error.message : String(error));
+      },
     });
-
-    setPlanForm({ ...planForm, customerId: "", systemId: "", workDescription: "" });
   };
 
   const removeReport = (id: string) => {
@@ -400,6 +414,7 @@ ${planRows}
                   クリア
                 </Button>
               </div>
+              {reportSubmitError && <p className="text-sm text-destructive">登録できませんでした: {reportSubmitError}</p>}
             </form>
           </CardContent>
         </Card>
@@ -473,6 +488,7 @@ ${planRows}
                   クリア
                 </Button>
               </div>
+              {planSubmitError && <p className="text-sm text-destructive">登録できませんでした: {planSubmitError}</p>}
             </form>
           </CardContent>
         </Card>

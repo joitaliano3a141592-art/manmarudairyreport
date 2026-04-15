@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export default function MastersPage() {
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [editingSystem, setEditingSystem] = useState<any>(null);
   const [editingWorkType, setEditingWorkType] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<null | { type: "customer" | "system" | "workType"; id: string; label: string }>(null);
 
   const handleSaveCustomer = (data: { name: string }) => {
     if (editingCustomer) {
@@ -47,7 +49,7 @@ export default function MastersPage() {
   };
 
   const handleDeleteCustomer = (id: string) => {
-    if (confirm("この顧客を削除しますか？")) deleteCustomerMut.mutate(id);
+    setDeleteTarget({ type: "customer", id, label: "この顧客を削除しますか？" });
   };
 
   const handleSaveSystem = (data: { name: string; customerId: string; description: string }) => {
@@ -64,7 +66,7 @@ export default function MastersPage() {
   };
 
   const handleDeleteSystem = (id: string) => {
-    if (confirm("このシステムを削除しますか？")) deleteSystemMut.mutate(id);
+    setDeleteTarget({ type: "system", id, label: "このシステムを削除しますか？" });
   };
 
   const handleSaveWorkType = (data: { name: string; category: string }) => {
@@ -81,7 +83,15 @@ export default function MastersPage() {
   };
 
   const handleDeleteWorkType = (id: string) => {
-    if (confirm("この作業区分を削除しますか？")) deleteWorkTypeMut.mutate(id);
+    setDeleteTarget({ type: "workType", id, label: "この作業区分を削除しますか？" });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === "customer") deleteCustomerMut.mutate(deleteTarget.id);
+    if (deleteTarget.type === "system") deleteSystemMut.mutate(deleteTarget.id);
+    if (deleteTarget.type === "workType") deleteWorkTypeMut.mutate(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   if (custLoading || sysLoading || wtLoading) {
@@ -155,7 +165,16 @@ export default function MastersPage() {
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => { setEditingCustomer(customer); setCustomerDialog(true); }}>編集</Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDeleteCustomer(customer.id)}>削除</Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteCustomerMut.isPending}
+                            onClick={() => handleDeleteCustomer(customer.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleDeleteCustomer(customer.id);
+                            }}
+                          >削除</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -208,7 +227,16 @@ export default function MastersPage() {
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setSystemDialog(true); }}>編集</Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDeleteSystem(system.id)}>削除</Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteSystemMut.isPending}
+                            onClick={() => handleDeleteSystem(system.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleDeleteSystem(system.id);
+                            }}
+                          >削除</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -258,7 +286,16 @@ export default function MastersPage() {
                       <TableCell>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => { setEditingWorkType(workType); setWorkTypeDialog(true); }}>編集</Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDeleteWorkType(workType.id)}>削除</Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteWorkTypeMut.isPending}
+                            onClick={() => handleDeleteWorkType(workType.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleDeleteWorkType(workType.id);
+                            }}
+                          >削除</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -269,6 +306,19 @@ export default function MastersPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="マスタデータを削除しますか？"
+        description={deleteTarget?.label ?? "この操作は元に戻せません。"}
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

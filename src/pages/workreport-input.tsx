@@ -26,9 +26,20 @@ export default function WorkReportInputPage() {
     workTypeId: "",
     workTime: "",
   });
+  const [submitError, setSubmitError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.customerId || !formData.systemId || !formData.workTypeId || !formData.workDescription.trim()) {
+      setSubmitError("必須項目を入力してください。");
+      return;
+    }
+    const workTime = parseFloat(formData.workTime);
+    if (Number.isNaN(workTime) || workTime <= 0) {
+      setSubmitError("正しい作業時間を入力してください。");
+      return;
+    }
+    setSubmitError("");
     const customer = customers.find((c) => c.id === formData.customerId);
     addReport.mutate(
       {
@@ -38,11 +49,14 @@ export default function WorkReportInputPage() {
         SystemLookupId: Number(formData.systemId),
         WorkTypeLookupId: Number(formData.workTypeId),
         WorkDescription: formData.workDescription,
-        WorkHours: parseFloat(formData.workTime) || 0,
+        WorkHours: workTime,
         ReporterName: currentUser.name,
       },
       {
         onSuccess: () => navigate("/workreport-list"),
+        onError: (error) => {
+          setSubmitError(error instanceof Error ? error.message : String(error));
+        },
       }
     );
   };
@@ -168,6 +182,7 @@ export default function WorkReportInputPage() {
                 キャンセル
               </Button>
             </div>
+            {submitError && <p className="text-sm text-destructive">登録できませんでした: {submitError}</p>}
           </form>
         </CardContent>
       </Card>

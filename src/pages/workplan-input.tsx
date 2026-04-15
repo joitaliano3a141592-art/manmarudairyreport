@@ -21,9 +21,15 @@ export default function WorkPlanInputPage() {
     systemId: "",
     workDescription: "",
   });
+  const [submitError, setSubmitError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.customerId || !formData.systemId || !formData.workDescription.trim()) {
+      setSubmitError("必須項目を入力してください。");
+      return;
+    }
+    setSubmitError("");
     const customer = customers.find((c) => c.id === formData.customerId);
     addPlan.mutate(
       {
@@ -35,6 +41,9 @@ export default function WorkPlanInputPage() {
       },
       {
         onSuccess: () => navigate("/workplan-list"),
+        onError: (error) => {
+          setSubmitError(error instanceof Error ? error.message : String(error));
+        },
       }
     );
   };
@@ -129,6 +138,7 @@ export default function WorkPlanInputPage() {
                 キャンセル
               </Button>
             </div>
+            {submitError && <p className="text-sm text-destructive">登録できませんでした: {submitError}</p>}
           </form>
         </CardContent>
       </Card>
