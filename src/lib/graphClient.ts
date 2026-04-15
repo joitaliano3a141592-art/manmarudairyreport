@@ -75,12 +75,16 @@ type GraphListItems<F> = {
   "@odata.nextLink"?: string;
 };
 
+function encodeGraphPathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
 function listItemsPath(listId: string, query = ""): string {
-  return `/sites/${SP_SITE_ID}/lists/${listId}/items?$expand=fields${query ? `&${query}` : ""}`;
+  return `/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items?$expand=fields${query ? `&${query}` : ""}`;
 }
 
 function listItemPath(listId: string, itemId: string): string {
-  return `/sites/${SP_SITE_ID}/lists/${listId}/items/${itemId}`;
+  return `/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items/${encodeGraphPathSegment(itemId)}`;
 }
 
 type ListItem<F> = { id: string; fields: F; createdByName?: string };
@@ -109,7 +113,7 @@ export async function fetchListItems<F>(listId: string, query = ""): Promise<Lis
 }
 
 export async function createListItem<F>(listId: string, fields: Record<string, unknown>): Promise<{ id: string; fields: F }> {
-  return graphPost(`/sites/${SP_SITE_ID}/lists/${listId}/items`, { fields });
+  return graphPost(`/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items`, { fields });
 }
 
 export async function updateListItem(listId: string, itemId: string, fields: Record<string, unknown>): Promise<void> {
