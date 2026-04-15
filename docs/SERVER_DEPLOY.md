@@ -20,6 +20,19 @@ cd daily-work-report
 同梱の `.env.production.server` を `.env.production.local` にコピーします。
 このファイルに MS 認証情報やリスト ID が入っています。
 
+SharePoint の参照先を変更する場合は、共有リンク URL ではなく、対象サイトの Graph site ID と配下 list ID を設定してください。
+変更対象は次の 6 項目です。
+
+- `VITE_SP_SITE_ID`
+- `VITE_SP_LIST_CUSTOMERS`
+- `VITE_SP_LIST_SYSTEMS`
+- `VITE_SP_LIST_WORKTYPES`
+- `VITE_SP_LIST_REPORTS`
+- `VITE_SP_LIST_PLANS`
+
+GitHub Pages 配備時も同じ値を GitHub Actions Secrets に設定します。
+Secret 名も上記と同一です。
+
 ```bash
 cp .env.production.server .env.production.local
 ```
