@@ -5,7 +5,7 @@
  * 開発: デフォルト値を返す
  */
 import { useMemo } from "react";
-import { getMsalInstance } from "@/providers/msal-provider";
+import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 
 const isDev = import.meta.env.DEV;
 
@@ -15,18 +15,26 @@ export type CurrentUser = {
 };
 
 export function useCurrentUser(): CurrentUser {
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+
   return useMemo(() => {
     if (isDev) {
       return { name: "開発ユーザー", email: "dev@localhost" };
     }
-    const instance = getMsalInstance();
-    const account = instance.getActiveAccount();
+
+    if (!isAuthenticated) {
+      return { name: "未ログイン", email: "" };
+    }
+
+    const account = instance.getActiveAccount() ?? accounts[0];
     if (account) {
       return {
         name: account.name ?? account.username ?? "不明",
         email: account.username ?? "",
       };
     }
+
     return { name: "未ログイン", email: "" };
-  }, []);
+  }, [accounts, instance, isAuthenticated]);
 }
