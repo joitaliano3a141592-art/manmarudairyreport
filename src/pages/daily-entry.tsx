@@ -34,10 +34,6 @@ function toLocalDate(date: Date): string {
 }
 
 const today = toLocalDate(new Date());
-const monthStart = (() => {
-  const current = new Date();
-  return `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-01`;
-})();
 const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return toLocalDate(d); })();
 
 type TeamsPublishTarget = {
@@ -80,7 +76,6 @@ export default function DailyEntryPage() {
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
-  const { data: publishReportCandidates = [], isLoading: publishReportsLoading } = useReports(monthStart, today);
   const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
 
   const addReportMutation = useAddReport();
@@ -118,8 +113,8 @@ export default function DailyEntryPage() {
   );
   const plans = allUpcomingPlans;
   const publishReports = useMemo(
-    () => publishReportCandidates.filter((report) => report.userName === currentUser.name),
-    [currentUser.name, publishReportCandidates],
+    () => reports.filter((report) => report.userName === currentUser.name && report.reportDate >= today),
+    [currentUser.name, reports],
   );
   const publishReportGroups = useMemo(() => {
     const groups = new Map<string, typeof publishReports>();
@@ -256,7 +251,7 @@ export default function DailyEntryPage() {
     || deletePlanMutation.isPending;
 
   const requestPublish = async () => {
-    if (publishReportsLoading || plansLoading) {
+    if (reportsLoading || plansLoading) {
       alert("発報対象データを読み込み中です。しばらくしてから再度お試しください。");
       return;
     }
