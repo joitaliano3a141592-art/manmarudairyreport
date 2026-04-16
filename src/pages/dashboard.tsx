@@ -227,7 +227,7 @@ export default function DashboardPage() {
       </div>
 
       <Card className="mb-6 overflow-hidden">
-        <CardHeader className="px-3 py-2.5">
+        <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm font-medium leading-none">検索条件</div>
             <Button size="sm" className="h-8 px-3" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
@@ -246,7 +246,7 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         {filterOpen && (
-          <CardContent className="px-3 pb-3 pt-0 text-sm">
+          <CardContent className="pt-0 text-sm">
             <div className="grid gap-3">
               <div className="space-y-1.5">
                 <div className="font-medium">日付範囲</div>
