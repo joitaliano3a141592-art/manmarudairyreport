@@ -11,11 +11,49 @@ import type { WorkReport } from "@/types/sharepoint";
 
 const toCsvValue = (value: string | number) => String(value).replace(/\"/g, '""');
 
+type CustomerPieSlice = {
+  customer: string;
+  hours: number;
+  percent: number;
+  color: string;
+  startAngle: number;
+  endAngle: number;
+};
+
+type PieTooltipState = {
+  customer: string;
+  hours: number;
+  percent: number;
+  color: string;
+  x: number;
+  y: number;
+};
+
 function toLocalDateString(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
+  return {
+    x: centerX + radius * Math.cos(angleInRadians),
+    y: centerY + radius * Math.sin(angleInRadians),
+  };
+}
+
+function buildPieSlicePath(startAngle: number, endAngle: number) {
+  const start = polarToCartesian(50, 50, 50, endAngle);
+  const end = polarToCartesian(50, 50, 50, startAngle);
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+  return [
+    `M 50 50`,
+    `L ${start.x} ${start.y}`,
+    `A 50 50 0 ${largeArcFlag} 0 ${end.x} ${end.y}`,
+    "Z",
+  ].join(" ");
 }
 
 export default function DashboardPage() {
@@ -27,6 +65,7 @@ export default function DashboardPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [pieTooltip, setPieTooltip] = useState<PieTooltipState | null>(null);
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
 
@@ -70,6 +109,28 @@ export default function DashboardPage() {
     return Array.from(map.entries()).map(([customer, hours]) => ({ customer, hours }));
   }, [filteredReports]);
 
+  const customerPieSlices = useMemo(() => {
+    if (totalHours <= 0 || customerBreakdown.length === 0) {
+      return [] as CustomerPieSlice[];
+    }
+
+    let currentAngle = 0;
+    return customerBreakdown.map((item, index) => {
+      const percent = (item.hours / totalHours) * 100;
+      const angleSpan = (percent / 100) * 360;
+      const slice: CustomerPieSlice = {
+        customer: item.customer,
+        hours: item.hours,
+        percent,
+        color: chartColors[index % chartColors.length],
+        startAngle: currentAngle,
+        endAngle: currentAngle + angleSpan,
+      };
+      currentAngle += angleSpan;
+      return slice;
+    });
+  }, [chartColors, customerBreakdown, totalHours]);
+
   const userColors = useMemo(() => {
     const users = Array.from(new Set(filteredReports.map((r: WorkReport) => r.userName)));
     return new Map(users.map((user, index) => [user, chartColors[index % chartColors.length]]));
@@ -94,22 +155,16 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total);
   }, [filteredReports]);
 
-  const pieGradient = useMemo(() => {
-    if (totalHours <= 0 || customerBreakdown.length === 0) {
-      return "hsl(0 0% 92%)";
-    }
-    let start = 0;
-    return `conic-gradient(${customerBreakdown
-      .map((item, index) => {
-        const percent = (item.hours / totalHours) * 100;
-        const end = start + percent;
-        const color = chartColors[index % chartColors.length];
-        const segment = `${color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
-        start = end;
-        return segment;
-      })
-      .join(", ")})`;
-  }, [customerBreakdown, totalHours]);
+  const handlePieTooltipMove = (event: React.MouseEvent<SVGPathElement>, slice: CustomerPieSlice) => {
+    setPieTooltip({
+      customer: slice.customer,
+      hours: slice.hours,
+      percent: slice.percent,
+      color: slice.color,
+      x: event.clientX + 14,
+      y: event.clientY + 14,
+    });
+  };
 
   const downloadCsv = () => {
     const headers = ["報告日", "ユーザー", "顧客", "システム", "作業内容", "区分", "作業時間"];
@@ -154,6 +209,17 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6">
+      {pieTooltip && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          style={{ left: pieTooltip.x, top: pieTooltip.y }}
+        >
+          <div className="text-sm font-semibold text-slate-950 dark:text-slate-50">{pieTooltip.customer}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {pieTooltip.hours.toFixed(1)}h / {pieTooltip.percent.toFixed(1)}%
+          </div>
+        </div>
+      )}
       <div className="mb-6 flex flex-col gap-2">
         <div>
           <h1 className="text-3xl font-bold">作業実績ダッシュボード</h1>
@@ -248,10 +314,35 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
-              <div
-                className="h-64 w-64 rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"
-                style={{ background: pieGradient }}
-              />
+              <div className="flex h-64 w-64 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                {customerPieSlices.length === 0 ? (
+                  <div className="h-56 w-56 rounded-full bg-slate-200 dark:bg-slate-700" />
+                ) : (
+                  <svg viewBox="0 0 100 100" className="h-56 w-56">
+                    {customerPieSlices.map((slice) => (
+                      slice.percent >= 100 ? (
+                        <circle
+                          key={slice.customer}
+                          cx="50"
+                          cy="50"
+                          r="50"
+                          fill={slice.color}
+                          onMouseMove={(event) => handlePieTooltipMove(event, slice)}
+                          onMouseLeave={() => setPieTooltip(null)}
+                        />
+                      ) : (
+                        <path
+                          key={slice.customer}
+                          d={buildPieSlicePath(slice.startAngle, slice.endAngle)}
+                          fill={slice.color}
+                          onMouseMove={(event) => handlePieTooltipMove(event, slice)}
+                          onMouseLeave={() => setPieTooltip(null)}
+                        />
+                      )
+                    ))}
+                  </svg>
+                )}
+              </div>
               <div className="w-full space-y-2">
                 {customerBreakdown.map((item, index) => {
                   const percent = totalHours > 0 ? (item.hours / totalHours) * 100 : 0;
