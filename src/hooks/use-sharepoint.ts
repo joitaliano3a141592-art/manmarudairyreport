@@ -198,10 +198,6 @@ export function useReports(startDate?: string, endDate?: string) {
         if (dateCompare !== 0) {
           return dateCompare;
         }
-        const customerCompare = left.customerName.localeCompare(right.customerName, "ja");
-        if (customerCompare !== 0) {
-          return customerCompare;
-        }
         return Number(left.id) - Number(right.id);
       });
     },
@@ -300,10 +296,6 @@ export function usePlans(startDate?: string, endDate?: string) {
         const dateCompare = left.planDate.localeCompare(right.planDate);
         if (dateCompare !== 0) {
           return dateCompare;
-        }
-        const customerCompare = left.customerName.localeCompare(right.customerName, "ja");
-        if (customerCompare !== 0) {
-          return customerCompare;
         }
         return Number(left.id) - Number(right.id);
       });
