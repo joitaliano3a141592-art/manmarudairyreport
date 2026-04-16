@@ -4,7 +4,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ShieldAlert,
   LayoutDashboard,
-  Monitor,
   Megaphone,
   Send,
   type LucideIcon,
@@ -55,7 +54,7 @@ export function Sidebar() {
     {
       category: "マスタ管理",
       items: [
-        { icon: Monitor, label: "マスタ管理", path: "masters" },
+        { icon: ShieldAlert, label: "マスタ管理", path: "masters" },
       ],
     },
   ];
