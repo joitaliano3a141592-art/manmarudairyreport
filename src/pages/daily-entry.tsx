@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
-import { Plus, CheckCircle2, Trash2 } from "lucide-react";
+import { Plus, Send, Trash2 } from "lucide-react";
 import {
   useCustomers,
   useSystems,
@@ -310,7 +310,7 @@ ${planRows}
               }}
               disabled={publishing}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" /> {publishing ? "送信中..." : "発報"}
+              <Send className="mr-2 h-4 w-4" /> {publishing ? "送信中..." : "発報"}
             </Button>
           </div>
         </div>
