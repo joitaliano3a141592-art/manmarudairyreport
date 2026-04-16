@@ -35,11 +35,6 @@ function toLocalDate(date: Date): string {
 const today = toLocalDate(new Date());
 const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return toLocalDate(d); })();
 
-function getNearestFuturePlanDate(planDates: string[]): string | null {
-  const futureDates = planDates.filter((date) => date > today).sort();
-  return futureDates[0] ?? null;
-}
-
 type TeamsPublishTarget = {
   teamId: string;
   channelId: string;
@@ -115,10 +110,7 @@ export default function DailyEntryPage() {
   const filteredPlanSystems = systems.filter(
     (system) => !planForm.customerId || system.customerId === planForm.customerId,
   );
-  const nextPlanDate = getNearestFuturePlanDate(allUpcomingPlans.map((plan) => plan.planDate));
-  const plans = nextPlanDate
-    ? allUpcomingPlans.filter((plan) => plan.planDate === nextPlanDate)
-    : [];
+  const plans = allUpcomingPlans;
 
   if (custError || sysError || wtError || reportsErrorState || plansErrorState) {
     return (
@@ -548,7 +540,7 @@ ${planRows}
 
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>{nextPlanDate ? `次回の予定一覧（${nextPlanDate}）` : "次回の予定一覧"}</CardTitle>
+            <CardTitle>今日以降の予定一覧</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {plans.length === 0 ? (
@@ -557,6 +549,7 @@ ${planRows}
             <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
+                  <TableHead>予定日</TableHead>
                   <TableHead>顧客</TableHead>
                   <TableHead>システム</TableHead>
                   <TableHead>作業内容</TableHead>
@@ -566,6 +559,7 @@ ${planRows}
               <TableBody>
                 {plans.map((plan) => (
                   <TableRow key={plan.id}>
+                    <TableCell className="whitespace-nowrap">{plan.planDate}</TableCell>
                     <TableCell className="whitespace-nowrap">{plan.customerName}</TableCell>
                     <TableCell className="whitespace-nowrap">{plan.systemName}</TableCell>
                     <TableCell className="max-w-[16rem] truncate" title={plan.workDescription}>{plan.workDescription}</TableCell>
@@ -597,7 +591,7 @@ ${planRows}
         open={publishConfirmOpen}
         onOpenChange={setPublishConfirmOpen}
         title="Teams に発報しますか？"
-        description={`本日の作業報告 ${reports.length} 件、次回予定 ${plans.length} 件${nextPlanDate ? `（${nextPlanDate}）` : ""}を Teams に送信します。`}
+        description={`本日の作業報告 ${reports.length} 件、今日以降の予定 ${plans.length} 件を Teams に送信します。`}
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {

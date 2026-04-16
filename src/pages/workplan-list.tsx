@@ -14,20 +14,9 @@ function toLocalDate(date: Date): string {
 const today = new Date();
 const todayString = toLocalDate(today);
 
-function getNearestFuturePlanDate(planDates: string[]): string | null {
-  const futureDates = planDates.filter((date) => date > todayString).sort();
-  return futureDates[0] ?? null;
-}
-
 export default function WorkPlanListPage() {
   const { data: allPlans = [], isLoading, isError, error } = usePlans(todayString);
   const deleteMutation = useDeletePlan();
-
-  const todayPlans = allPlans.filter((plan: WorkPlan) => plan.planDate === todayString);
-  const nextPlanDate = getNearestFuturePlanDate(allPlans.map((plan) => plan.planDate));
-  const nextPlans = nextPlanDate
-    ? allPlans.filter((plan: WorkPlan) => plan.planDate === nextPlanDate)
-    : [];
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id);
@@ -47,6 +36,7 @@ export default function WorkPlanListPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>予定日</TableHead>
             <TableHead>顧客</TableHead>
             <TableHead>システム</TableHead>
             <TableHead>作業内容</TableHead>
@@ -56,6 +46,7 @@ export default function WorkPlanListPage() {
         <TableBody>
           {plansToRender.map((plan: WorkPlan) => (
             <TableRow key={plan.id}>
+              <TableCell>{plan.planDate}</TableCell>
               <TableCell>{plan.customerName}</TableCell>
               <TableCell>{plan.systemName}</TableCell>
               <TableCell className="max-w-xs truncate" title={plan.workDescription}>
@@ -107,19 +98,10 @@ export default function WorkPlanListPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>今日の作業予定</CardTitle>
+            <CardTitle>今日以降の作業予定</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPlansTable(todayPlans, "今日の作業予定はありません")}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{nextPlanDate ? `次回の作業予定（${nextPlanDate}）` : "次回の作業予定"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderPlansTable(nextPlans, "今後の作業予定はありません")}
+            {renderPlansTable(allPlans, "今後の作業予定はありません")}
           </CardContent>
         </Card>
       </div>
