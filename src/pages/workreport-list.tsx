@@ -99,7 +99,7 @@ export default function WorkReportListPage() {
       </div>
 
       <Card className="mb-6 gap-0 overflow-hidden py-0">
-        <CardHeader className="px-0 py-0">
+        <CardHeader className="px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm font-medium leading-none">検索条件</div>
             <Button size="sm" className="h-8 px-3" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
@@ -118,7 +118,7 @@ export default function WorkReportListPage() {
           </div>
         </CardHeader>
         {filterOpen && (
-          <CardContent className="grid grid-cols-1 gap-3 px-0 pb-0 pt-0 sm:grid-cols-2">
+          <CardContent className="grid grid-cols-1 gap-3 px-2 pb-2 pt-0 sm:grid-cols-2">
             <Input className="h-8" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             <Input className="h-8" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </CardContent>
