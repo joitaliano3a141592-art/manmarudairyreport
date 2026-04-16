@@ -5,6 +5,7 @@
  * 本番時: MSAL.js でトークン取得 → Graph API 直接呼び出し
  */
 import { SP_SITE_ID } from "./sharepointConfig";
+import { markTeamsSessionReady } from "./teamsAuthSession";
 
 const isDev = import.meta.env.DEV;
 const API_PREFIX = isDev ? "/api/graph" : "https://graph.microsoft.com/v1.0";
@@ -39,6 +40,7 @@ async function graphFetch(path: string, init?: RequestInit, useTeamsScope = fals
     const text = await res.text().catch(() => "");
     throw new Error(`Graph API ${res.status}: ${text.slice(0, 300)}`);
   }
+  markTeamsSessionReady();
   return res;
 }
 

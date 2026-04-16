@@ -10,6 +10,15 @@ import {
   type AuthenticationResult,
 } from "@azure/msal-browser";
 import { msalConfig, graphScopes, teamsScopes } from "@/lib/msalConfig";
+import {
+  TEAMS_SESSION_READY_EVENT,
+  clearTeamsAuthPending,
+  clearTeamsSessionReady,
+  hasTeamsAuthPending,
+  hasTeamsSessionReady,
+  markTeamsAuthPending,
+  markTeamsSessionReady,
+} from "@/lib/teamsAuthSession";
 import * as microsoftTeams from "@microsoft/teams-js";
 
 const msalInstance = new PublicClientApplication(msalConfig);
@@ -34,7 +43,28 @@ const isInIframe = window.self !== window.top;
 const isTeamsAuthPopup =
   window.opener !== null &&
   window.opener !== window &&
-  (location.search.includes("code=") || location.hash.length > 1);
+  (location.search.includes("code=") || location.hash.length > 1 || hasTeamsAuthPending());
+
+async function notifyTeamsAuthSuccess(result = "ok"): Promise<void> {
+  clearTeamsAuthPending();
+  markTeamsSessionReady();
+  try {
+    await microsoftTeams.app.initialize();
+    microsoftTeams.authentication.notifySuccess(result);
+  } catch {
+    window.close();
+  }
+}
+
+async function notifyTeamsAuthFailure(error: unknown): Promise<void> {
+  clearTeamsAuthPending();
+  try {
+    await microsoftTeams.app.initialize();
+    microsoftTeams.authentication.notifyFailure(String(error));
+  } catch {
+    window.close();
+  }
+}
 
 async function ensureActiveAccount(scopes: string[]): Promise<void> {
   if (msalInstance.getActiveAccount()) return;
@@ -51,11 +81,14 @@ async function ensureActiveAccount(scopes: string[]): Promise<void> {
       const ctx = await microsoftTeams.app.getContext();
       if (ctx?.app?.host) {
         const baseUrl = window.location.origin + import.meta.env.BASE_URL;
+        clearTeamsSessionReady();
+        markTeamsAuthPending();
         await microsoftTeams.authentication.authenticate({
           url: `${baseUrl}teams-auth-start`,
           width: 600,
           height: 535,
         });
+        clearTeamsAuthPending();
         const accounts = msalInstance.getAllAccounts();
         if (accounts.length > 0) {
           msalInstance.setActiveAccount(accounts[0]);
@@ -63,6 +96,7 @@ async function ensureActiveAccount(scopes: string[]): Promise<void> {
         }
       }
     } catch {
+      clearTeamsAuthPending();
       // Fall through to popup login below.
     }
   }
@@ -113,6 +147,32 @@ function AutoLogin({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isTeamsAuthPopup) {
+      return;
+    }
+
+    const closePopupIfReady = async () => {
+      if (!hasTeamsSessionReady()) {
+        return;
+      }
+      await notifyTeamsAuthSuccess("session-ready");
+    };
+
+    const handleReady = () => {
+      void closePopupIfReady();
+    };
+
+    void closePopupIfReady();
+    window.addEventListener("storage", handleReady);
+    window.addEventListener(TEAMS_SESSION_READY_EVENT, handleReady as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleReady);
+      window.removeEventListener(TEAMS_SESSION_READY_EVENT, handleReady as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (inProgress !== "none") {
@@ -134,6 +194,8 @@ function AutoLogin({ children }: { children: ReactNode }) {
               // Teams タブ内 → Teams 管理ポップアップ経由で認証
               const baseUrl =
                 window.location.origin + import.meta.env.BASE_URL;
+              clearTeamsSessionReady();
+              markTeamsAuthPending();
               microsoftTeams.authentication
                 .authenticate({
                   url: `${baseUrl}teams-auth-start`,
@@ -141,6 +203,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
                   height: 535,
                 })
                 .then(() => {
+                  clearTeamsAuthPending();
                   // ポップアップ側の MSAL が localStorage にトークンを保存済み
                   const accounts = msalInstance.getAllAccounts();
                   if (accounts.length > 0) {
@@ -148,6 +211,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
                   }
                 })
                 .catch((err) => {
+                  clearTeamsAuthPending();
                   console.error("Teams auth failed:", err);
                   if (!cancelled) {
                     setAuthError("認証に失敗しました。Teams から再度開き直してください。");
@@ -192,6 +256,7 @@ function AutoLogin({ children }: { children: ReactNode }) {
       acquireGraphToken()
         .then(() => {
           if (!cancelled) {
+            markTeamsSessionReady();
             setGraphReady(true);
           }
         })
@@ -263,13 +328,17 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
           if (result?.account) {
             msalInstance.setActiveAccount(result.account);
           }
-          await microsoftTeams.app.initialize();
-          microsoftTeams.authentication.notifySuccess("ok");
+          const accounts = msalInstance.getAllAccounts();
+          if (accounts.length > 0) {
+            msalInstance.setActiveAccount(accounts[0]);
+          }
+          if (result?.account || accounts.length > 0 || hasTeamsSessionReady()) {
+            await notifyTeamsAuthSuccess("ok");
+          } else {
+            setReady(true);
+          }
         } catch (err) {
-          try {
-            await microsoftTeams.app.initialize();
-            microsoftTeams.authentication.notifyFailure(String(err));
-          } catch { /* ignore */ }
+          await notifyTeamsAuthFailure(err);
         }
         return; // ポップアップはここで終了（setReady しない）
       }
@@ -283,6 +352,7 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
           const accounts = msalInstance.getAllAccounts();
           if (accounts.length > 0) {
             msalInstance.setActiveAccount(accounts[0]);
+            markTeamsSessionReady();
           }
           setReady(true);
         })
@@ -294,6 +364,14 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
       console.error("MSAL initialization failed:", err);
       setInitError("認証の初期化に失敗しました。ブラウザを再読み込みしてください。");
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (!isTeamsAuthPopup) {
+        clearTeamsSessionReady();
+      }
+    };
   }, []);
 
   if (initError) {
