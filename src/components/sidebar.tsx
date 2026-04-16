@@ -4,8 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ShieldAlert,
   LayoutDashboard,
+  Monitor,
   Megaphone,
-  Send,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,8 +47,8 @@ export function Sidebar() {
       category: "作業管理",
       items: [
         { icon: Megaphone, label: "日次入力", path: "daily-entry" },
-        { icon: Megaphone, label: "作業実績", path: "workreport-list" },
-        { icon: Send, label: "作業予定", path: "workplan-list" },
+        { icon: Monitor, label: "作業実績", path: "workreport-list" },
+        { icon: Monitor, label: "作業予定", path: "workplan-list" },
       ],
     },
     {
