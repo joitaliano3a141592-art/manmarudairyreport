@@ -277,7 +277,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>システム別 ユーザー別作業時間</CardTitle>
+            <CardTitle>システム ユーザー別作業時間</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {systemStackData.length === 0 ? (
