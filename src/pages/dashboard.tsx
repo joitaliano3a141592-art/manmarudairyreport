@@ -160,11 +160,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader className="p-4">
+      <Card className="mb-6 overflow-hidden">
+        <CardHeader className="px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-medium">検索条件</div>
-            <Button size="sm" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
+            <div className="text-sm font-medium leading-none">検索条件</div>
+            <Button size="sm" className="h-8 px-3" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
               {filterOpen ? (
                 <>
                   <ChevronUp className="mr-2 h-4 w-4" />
@@ -180,20 +180,20 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         {filterOpen && (
-          <CardContent className="p-4 text-sm">
-            <div className="grid gap-4">
-              <div className="space-y-2">
+          <CardContent className="px-3 pb-3 pt-0 text-sm">
+            <div className="grid gap-3">
+              <div className="space-y-1.5">
                 <div className="font-medium">日付範囲</div>
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <Input className="h-9 min-w-0" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                  <Input className="h-8 min-w-0" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                   <span className="text-sm text-muted-foreground">〜</span>
-                  <Input className="h-9 min-w-0" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  <Input className="h-8 min-w-0" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </div>
               </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="space-y-1.5">
                   <div className="font-medium">ユーザー</div>
-                  <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
                   {uniqueUsers.map((user) => (
                     <label
                       key={user}
@@ -213,9 +213,9 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="font-medium">顧客</div>
-                <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
                   {uniqueCustomers.map((customer) => (
                     <label
                       key={customer}

@@ -98,11 +98,11 @@ export default function WorkReportListPage() {
         <Button onClick={() => navigate("/daily-entry")}><Megaphone className="mr-2 h-4 w-4" />日次入力へ戻る</Button>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader className="p-4">
+      <Card className="mb-6 overflow-hidden">
+        <CardHeader className="px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-medium">検索条件</div>
-            <Button size="sm" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
+            <div className="text-sm font-medium leading-none">検索条件</div>
+            <Button size="sm" className="h-8 px-3" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
               {filterOpen ? (
                 <>
                   <ChevronUp className="mr-2 h-4 w-4" />
@@ -118,9 +118,9 @@ export default function WorkReportListPage() {
           </div>
         </CardHeader>
         {filterOpen && (
-          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <CardContent className="grid grid-cols-1 gap-3 px-3 pb-3 pt-0 sm:grid-cols-2">
+            <Input className="h-8" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input className="h-8" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </CardContent>
         )}
       </Card>
