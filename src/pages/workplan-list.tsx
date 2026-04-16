@@ -11,7 +11,7 @@ import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { usePlans, useUpdatePlan, useDeletePlan } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { WorkPlan } from "@/types/sharepoint";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 
 function toLocalDate(date: Date): string {
   const y = date.getFullYear();
@@ -102,7 +102,7 @@ export default function WorkPlanListPage() {
           <h1 className="text-3xl font-bold">作業予定 - 一覧</h1>
           <p className="text-muted-foreground">ログインユーザーの作業予定を日付範囲で絞り込んで編集・削除できます。</p>
         </div>
-        <Button onClick={() => navigate("/daily-entry")}>日次入力へ戻る</Button>
+        <Button onClick={() => navigate("/daily-entry")}><Megaphone className="mr-2 h-4 w-4" />日次入力へ戻る</Button>
       </div>
 
       <Card className="mb-6">

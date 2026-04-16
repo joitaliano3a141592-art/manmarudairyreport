@@ -10,7 +10,7 @@ import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
@@ -95,7 +95,7 @@ export default function WorkReportListPage() {
           <h1 className="text-3xl font-bold">作業実績 - 一覧</h1>
           <p className="text-muted-foreground">ログインユーザーの作業実績を日付範囲で絞り込んで編集・削除できます。</p>
         </div>
-        <Button onClick={() => navigate("/daily-entry")}>日次入力へ戻る</Button>
+        <Button onClick={() => navigate("/daily-entry")}><Megaphone className="mr-2 h-4 w-4" />日次入力へ戻る</Button>
       </div>
 
       <Card className="mb-6">
