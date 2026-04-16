@@ -77,15 +77,15 @@ export default function WorkReportInputPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <ActionLoadingOverlay open={addReport.isPending} message="作業報告を登録しています..." />
+      <ActionLoadingOverlay open={addReport.isPending} message="作業実績を登録しています..." />
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">作業報告 - 入力</h1>
+        <h1 className="text-3xl font-bold">作業実績 - 入力</h1>
         <p className="text-muted-foreground">本日の作業内容を入力してください</p>
       </div>
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>作業報告</CardTitle>
+          <CardTitle>作業実績</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

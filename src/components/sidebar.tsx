@@ -47,7 +47,7 @@ export function Sidebar() {
       category: "作業管理",
       items: [
         { icon: Megaphone, label: "日次入力", path: "daily-entry" },
-        { icon: Megaphone, label: "作業報告", path: "workreport-list" },
+        { icon: Megaphone, label: "作業実績", path: "workreport-list" },
         { icon: Send, label: "作業予定", path: "workplan-list" },
       ],
     },

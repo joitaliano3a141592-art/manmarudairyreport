@@ -33,9 +33,9 @@ export default function WorkReportListPage() {
   const updateMutation = useUpdateReport();
   const deleteMutation = useDeleteReport();
   const actionLoadingMessage = updateMutation.isPending
-    ? "作業報告を更新しています..."
+    ? "作業実績を更新しています..."
     : deleteMutation.isPending
-      ? "作業報告を削除しています..."
+      ? "作業実績を削除しています..."
       : "処理中...";
   const actionLoadingOpen = updateMutation.isPending || deleteMutation.isPending;
 
@@ -84,7 +84,7 @@ export default function WorkReportListPage() {
   }
 
   if (isError) {
-    return <DataErrorState title="作業報告を取得できませんでした" error={error} />;
+    return <DataErrorState title="作業実績を取得できませんでした" error={error} />;
   }
 
   return (
@@ -92,8 +92,8 @@ export default function WorkReportListPage() {
       <ActionLoadingOverlay open={actionLoadingOpen} message={actionLoadingMessage} />
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">作業報告 - 一覧</h1>
-          <p className="text-muted-foreground">ログインユーザーの作業報告を日付範囲で絞り込んで編集・削除できます。</p>
+          <h1 className="text-3xl font-bold">作業実績 - 一覧</h1>
+          <p className="text-muted-foreground">ログインユーザーの作業実績を日付範囲で絞り込んで編集・削除できます。</p>
         </div>
         <Button onClick={() => navigate("/daily-entry")}>日次入力へ戻る</Button>
       </div>
@@ -128,13 +128,13 @@ export default function WorkReportListPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>対象作業報告</CardTitle>
+            <CardTitle>対象作業実績</CardTitle>
             <Badge variant="outline">{filteredReports.length} 件</Badge>
           </div>
         </CardHeader>
         <CardContent>
           {filteredReports.length === 0 ? (
-            <p className="text-sm text-muted-foreground">指定期間にログインユーザーの作業報告はありません。</p>
+            <p className="text-sm text-muted-foreground">指定期間にログインユーザーの作業実績はありません。</p>
           ) : (
             <Table>
               <TableHeader>
@@ -219,8 +219,8 @@ export default function WorkReportListPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTargetId(null);
         }}
-        title="作業報告を削除しますか？"
-        description="この作業報告を削除します。元に戻せません。"
+        title="作業実績を削除しますか？"
+        description="この作業実績を削除します。元に戻せません。"
         confirmLabel={deleteMutation.isPending ? "削除中..." : "削除する"}
         cancelLabel="キャンセル"
         variant="destructive"

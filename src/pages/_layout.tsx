@@ -51,7 +51,7 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
               </Button>
               <div>
                 <h1 className="text-lg font-bold text-primary">
-                  日次作業報告
+                  日次作業実績
                 </h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">
                   Daily Work Report

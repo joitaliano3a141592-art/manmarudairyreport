@@ -210,7 +210,7 @@ export function useAddReport() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業報告の登録に失敗しました。\n${message}`);
+      alert(`作業実績の登録に失敗しました。\n${message}`);
     },
   });
 }
@@ -244,7 +244,7 @@ export function useDeleteReport() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業報告の削除に失敗しました。\n${message}`);
+      alert(`作業実績の削除に失敗しました。\n${message}`);
     },
   });
 }

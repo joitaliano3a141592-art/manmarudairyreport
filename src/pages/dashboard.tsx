@@ -156,7 +156,7 @@ export default function DashboardPage() {
     <div className="container mx-auto py-6">
       <div className="mb-6 flex flex-col gap-2">
         <div>
-          <h1 className="text-3xl font-bold">作業報告ダッシュボード</h1>
+          <h1 className="text-3xl font-bold">作業実績ダッシュボード</h1>
         </div>
       </div>
 

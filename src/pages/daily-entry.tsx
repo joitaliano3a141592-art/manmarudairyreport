@@ -131,7 +131,7 @@ export default function DailyEntryPage() {
       !reportForm.workDescription.trim() ||
       !reportForm.workTime.trim()
     ) {
-      alert("本日の作業報告の必須項目を入力してください。");
+      alert("本日の作業実績の必須項目を入力してください。");
       return;
     }
 
@@ -207,11 +207,11 @@ export default function DailyEntryPage() {
   const actionLoadingMessage = publishing
     ? "Teams に発報しています..."
     : addReportMutation.isPending
-      ? "作業報告を登録しています..."
+      ? "作業実績を登録しています..."
       : addPlanMutation.isPending
         ? "作業予定を登録しています..."
         : deleteReportMutation.isPending
-          ? "作業報告を削除しています..."
+          ? "作業実績を削除しています..."
           : deletePlanMutation.isPending
             ? "作業予定を削除しています..."
             : "処理中...";
@@ -223,7 +223,7 @@ export default function DailyEntryPage() {
 
   const requestPublish = async () => {
     if (reports.length === 0 && plans.length === 0) {
-      alert("送信する作業報告・予定がありません。");
+      alert("送信する作業実績・予定がありません。");
       return;
     }
     const nextPublishTarget = await resolveTeamsPublishTarget();
@@ -256,7 +256,7 @@ export default function DailyEntryPage() {
 
       const html = `
     <p>📋 <strong>${monthDay}</strong></p>
-    <p>■ 本日の作業報告</p>
+    <p>■ 本日の作業実績</p>
 ${reports.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
 <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>区分</th><th>時間</th><th>作業内容</th></tr>
 ${reportRows}
@@ -298,7 +298,7 @@ ${planRows}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">日次入力</h1>
-            <p className="text-muted-foreground">今日の作業報告と次回予定を入力します。</p>
+            <p className="text-muted-foreground">今日の作業実績と次回予定を入力します。</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button
@@ -320,7 +320,7 @@ ${planRows}
       <div className="grid gap-6 lg:grid-cols-2 min-w-0">
         <Card className="h-full">
           <CardHeader>
-            <CardTitle>本日の作業報告</CardTitle>
+            <CardTitle>本日の作業実績</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={addReportToStore} className="space-y-4">
@@ -508,11 +508,11 @@ ${planRows}
       <div className="grid gap-6 lg:grid-cols-2 mt-6 min-w-0">
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>作業報告一覧</CardTitle>
+            <CardTitle>作業実績一覧</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {reports.length === 0 ? (
-              <p className="text-sm text-muted-foreground">まだ作業報告がありません。</p>
+              <p className="text-sm text-muted-foreground">まだ作業実績がありません。</p>
             ) : (
             <Table className="min-w-full">
               <TableHeader>
@@ -609,7 +609,7 @@ ${planRows}
         open={publishConfirmOpen}
         onOpenChange={setPublishConfirmOpen}
         title="Teams に発報しますか？"
-        description={`本日の作業報告 ${reports.length} 件、明日以降の予定 ${plans.length} 件を Teams に送信します。`}
+        description={`本日の作業実績 ${reports.length} 件、明日以降の予定 ${plans.length} 件を Teams に送信します。`}
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {
@@ -622,8 +622,8 @@ ${planRows}
         onOpenChange={(open) => {
           if (!open) setReportDeleteTargetId(null);
         }}
-        title="作業報告を削除しますか？"
-        description="この作業報告を一覧から削除します。元に戻せません。"
+        title="作業実績を削除しますか？"
+        description="この作業実績を一覧から削除します。元に戻せません。"
         confirmLabel="削除する"
         cancelLabel="キャンセル"
         variant="destructive"

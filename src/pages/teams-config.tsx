@@ -4,8 +4,8 @@ import * as microsoftTeams from "@microsoft/teams-js";
 const PAGES = [
   { id: "dashboard",        label: "ダッシュボード" },
   { id: "daily-entry",      label: "日次入力" },
-  { id: "workreport-input", label: "作業報告 入力" },
-  { id: "workreport-list",  label: "作業報告 一覧" },
+  { id: "workreport-input", label: "作業実績 入力" },
+  { id: "workreport-list",  label: "作業実績 一覧" },
   { id: "workplan-input",   label: "作業予定 入力" },
   { id: "workplan-list",    label: "作業予定 一覧" },
 ] as const;
