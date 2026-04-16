@@ -313,12 +313,12 @@ export default function DashboardPage() {
             <CardTitle>顧客別 作業時間割合</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
-            <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
-              <div className="flex h-64 w-64 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+            <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start">
+              <div className="flex h-72 w-72 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
                 {customerPieSlices.length === 0 ? (
-                  <div className="h-56 w-56 rounded-full bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-64 w-64 rounded-full bg-slate-200 dark:bg-slate-700" />
                 ) : (
-                  <svg viewBox="0 0 100 100" className="h-56 w-56">
+                  <svg viewBox="0 0 100 100" className="h-64 w-64">
                     {customerPieSlices.map((slice) => (
                       slice.percent >= 100 ? (
                         <circle
