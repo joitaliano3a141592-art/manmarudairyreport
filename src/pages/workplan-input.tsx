@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
+import { Plus } from "lucide-react";
 import { useCustomers, useSystems, useAddPlan } from "@/hooks/use-sharepoint";
 
 export default function WorkPlanInputPage() {
@@ -135,7 +136,7 @@ export default function WorkPlanInputPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={addPlan.isPending}>保存</Button>
+              <Button type="submit" disabled={addPlan.isPending}><Plus className="mr-2 h-4 w-4" />予定追加</Button>
               <Button type="button" variant="ghost" onClick={() => navigate("/dashboard")}>
                 キャンセル
               </Button>

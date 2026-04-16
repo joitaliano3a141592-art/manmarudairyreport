@@ -412,7 +412,7 @@ ${planRows}
 
               <div className="flex gap-3">
                 <Button type="submit" disabled={addReportMutation.isPending}>
-                  <Plus className="mr-2 h-4 w-4" /> 作業を追加
+                  <Plus className="mr-2 h-4 w-4" /> 実績 追加
                 </Button>
                 <Button
                   type="button"
@@ -493,7 +493,7 @@ ${planRows}
                 />
               </div>
               <div className="flex gap-3">
-                <Button type="submit" disabled={addPlanMutation.isPending}>予定を追加</Button>
+                <Button type="submit" disabled={addPlanMutation.isPending}><Plus className="mr-2 h-4 w-4" />予定追加</Button>
                 <Button type="button" variant="outline" onClick={() => setPlanForm({ ...planForm, customerId: "", systemId: "", workDescription: "" })}>
                   クリア
                 </Button>
