@@ -12,10 +12,12 @@ function toLocalDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 const today = new Date();
-const todayString = toLocalDate(today);
 
 export default function WorkPlanListPage() {
-  const { data: allPlans = [], isLoading, isError, error } = usePlans(todayString);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowString = toLocalDate(tomorrow);
+  const { data: allPlans = [], isLoading, isError, error } = usePlans(tomorrowString);
   const deleteMutation = useDeletePlan();
 
   const handleDelete = (id: string) => {
@@ -98,7 +100,7 @@ export default function WorkPlanListPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>今日以降の作業予定</CardTitle>
+            <CardTitle>明日以降の作業予定</CardTitle>
           </CardHeader>
           <CardContent>
             {renderPlansTable(allPlans, "今後の作業予定はありません")}

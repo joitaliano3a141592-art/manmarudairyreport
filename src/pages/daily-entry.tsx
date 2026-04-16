@@ -75,7 +75,7 @@ export default function DailyEntryPage() {
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
-  const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(today);
+  const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
 
   const addReportMutation = useAddReport();
   const deleteReportMutation = useDeleteReport();
@@ -490,7 +490,7 @@ ${planRows}
       <div className="grid gap-6 lg:grid-cols-2 mt-6 min-w-0">
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>本日の作業報告一覧</CardTitle>
+            <CardTitle>作業報告一覧</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {reports.length === 0 ? (
@@ -540,7 +540,7 @@ ${planRows}
 
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>今日以降の予定一覧</CardTitle>
+            <CardTitle>明日以降の予定一覧</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {plans.length === 0 ? (
@@ -591,7 +591,7 @@ ${planRows}
         open={publishConfirmOpen}
         onOpenChange={setPublishConfirmOpen}
         title="Teams に発報しますか？"
-        description={`本日の作業報告 ${reports.length} 件、今日以降の予定 ${plans.length} 件を Teams に送信します。`}
+        description={`本日の作業報告 ${reports.length} 件、明日以降の予定 ${plans.length} 件を Teams に送信します。`}
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {
