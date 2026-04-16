@@ -193,6 +193,16 @@ export function useReports(startDate?: string, endDate?: string) {
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
         };
+      }).sort((left, right) => {
+        const dateCompare = left.reportDate.localeCompare(right.reportDate);
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+        const customerCompare = left.customerName.localeCompare(right.customerName, "ja");
+        if (customerCompare !== 0) {
+          return customerCompare;
+        }
+        return Number(left.id) - Number(right.id);
       });
     },
 
@@ -286,6 +296,16 @@ export function usePlans(startDate?: string, endDate?: string) {
           workDescription: f.WorkDescription ?? "",
           userName: resolveUserDisplayName(f.AssigneeName, f.Title, item.createdByName),
         };
+      }).sort((left, right) => {
+        const dateCompare = left.planDate.localeCompare(right.planDate);
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+        const customerCompare = left.customerName.localeCompare(right.customerName, "ja");
+        if (customerCompare !== 0) {
+          return customerCompare;
+        }
+        return Number(left.id) - Number(right.id);
       });
     },
   });
