@@ -242,17 +242,17 @@ export default function DashboardPage() {
       </Card>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="flex flex-col lg:h-[36rem]">
           <CardHeader>
             <CardTitle>顧客別 作業時間割合</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-start">
+          <CardContent className="flex-1 overflow-y-auto">
+            <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
               <div
                 className="h-64 w-64 rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"
                 style={{ background: pieGradient }}
               />
-              <div className="space-y-2">
+              <div className="w-full space-y-2">
                 {customerBreakdown.map((item, index) => {
                   const percent = totalHours > 0 ? (item.hours / totalHours) * 100 : 0;
                   return (
@@ -275,11 +275,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col lg:h-[36rem]">
           <CardHeader>
             <CardTitle>システム ユーザー別作業時間</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 space-y-4 overflow-y-auto">
             {systemStackData.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground">フィルタ結果にデータがありません</div>
             ) : (
