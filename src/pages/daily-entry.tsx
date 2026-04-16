@@ -412,7 +412,7 @@ ${planRows}
 
               <div className="flex gap-3">
                 <Button type="submit" disabled={addReportMutation.isPending}>
-                  <Plus className="mr-2 h-4 w-4" /> 実績 追加
+                  <Plus className="mr-2 h-4 w-4" /> 実績追加
                 </Button>
                 <Button
                   type="button"
