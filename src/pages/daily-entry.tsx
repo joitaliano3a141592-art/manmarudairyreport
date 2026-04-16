@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,10 @@ function toLocalDate(date: Date): string {
 }
 
 const today = toLocalDate(new Date());
+const monthStart = (() => {
+  const current = new Date();
+  return `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-01`;
+})();
 const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return toLocalDate(d); })();
 
 type TeamsPublishTarget = {
@@ -76,6 +80,7 @@ export default function DailyEntryPage() {
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
+  const { data: publishReportCandidates = [], isLoading: publishReportsLoading } = useReports(monthStart, today);
   const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
 
   const addReportMutation = useAddReport();
@@ -112,6 +117,35 @@ export default function DailyEntryPage() {
     (system) => !planForm.customerId || system.customerId === planForm.customerId,
   );
   const plans = allUpcomingPlans;
+  const publishReports = useMemo(
+    () => publishReportCandidates.filter((report) => report.userName === currentUser.name),
+    [currentUser.name, publishReportCandidates],
+  );
+  const publishReportGroups = useMemo(() => {
+    const groups = new Map<string, typeof publishReports>();
+    for (const report of publishReports) {
+      const existing = groups.get(report.reportDate);
+      if (existing) {
+        existing.push(report);
+        continue;
+      }
+      groups.set(report.reportDate, [report]);
+    }
+    return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
+  }, [publishReports]);
+  const nextPlanDate = useMemo(
+    () => plans.reduce<string | null>((nearest, plan) => {
+      if (!nearest || plan.planDate < nearest) {
+        return plan.planDate;
+      }
+      return nearest;
+    }, null),
+    [plans],
+  );
+  const publishPlans = useMemo(
+    () => (nextPlanDate ? plans.filter((plan) => plan.planDate === nextPlanDate) : []),
+    [nextPlanDate, plans],
+  );
 
   if (custError || sysError || wtError || reportsErrorState || plansErrorState) {
     return (
@@ -222,7 +256,12 @@ export default function DailyEntryPage() {
     || deletePlanMutation.isPending;
 
   const requestPublish = async () => {
-    if (reports.length === 0 && plans.length === 0) {
+    if (publishReportsLoading || plansLoading) {
+      alert("発報対象データを読み込み中です。しばらくしてから再度お試しください。");
+      return;
+    }
+
+    if (publishReports.length === 0 && publishPlans.length === 0) {
       alert("送信する作業実績・予定がありません。");
       return;
     }
@@ -245,28 +284,41 @@ export default function DailyEntryPage() {
     if (!publishTarget) return;
     setPublishing(true);
     try {
-      const [_, month, day] = today.split("-");
-      const monthDay = `${Number(month)}/${Number(day)}`;
-      const reportRows = reports
-        .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workTypeName}</td><td style="text-align:right">${r.workHours.toFixed(1)}h</td><td>${r.workDescription}</td></tr>`)
-        .join("");
-      const planRows = plans
+      const formatMonthDay = (date: string) => {
+        const [, month, day] = date.split("-");
+        return `${Number(month)}/${Number(day)}`;
+      };
+      const reportSections = publishReportGroups
+        .map(([reportDate, groupedReports]) => {
+          const reportRows = groupedReports
+            .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workTypeName}</td><td style="text-align:right">${r.workHours.toFixed(1)}h</td><td>${r.workDescription}</td></tr>`)
+            .join("");
+
+          return `
+    <p>■ ${formatMonthDay(reportDate)} の作業実績</p>
+    <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
+      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>区分</th><th>時間</th><th>作業内容</th></tr>
+      ${reportRows}
+    </table>`;
+        })
+        .join("<br/>");
+      const planRows = publishPlans
         .map((p) => `<tr><td>${p.customerName}</td><td>${p.systemName}</td><td>${p.workDescription}</td></tr>`)
         .join("");
+      const nextPlanSection = nextPlanDate
+        ? `
+    <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}）</p>
+    ${publishPlans.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
+      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
+      ${planRows}
+    </table>` : "<p>（なし）</p>"}`
+        : "<p>■ 次回の作業予定</p><p>（なし）</p>";
 
       const html = `
-    <p>📋 <strong>${monthDay}</strong></p>
-    <p>■ 本日の作業実績</p>
-${reports.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
-<tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>区分</th><th>時間</th><th>作業内容</th></tr>
-${reportRows}
-</table>` : "<p>（なし）</p>"}
+    <p>📋 <strong>作業報告</strong></p>
+${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
 <br/>
-    <p>■ 次回の作業予定</p>
-${plans.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
-<tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
-${planRows}
-</table>` : "<p>（なし）</p>"}
+${nextPlanSection}
       `.trim();
 
       await postTeamsChannelMessage(publishTarget.teamId, publishTarget.channelId, html);
@@ -609,7 +661,7 @@ ${planRows}
         open={publishConfirmOpen}
         onOpenChange={setPublishConfirmOpen}
         title="Teams に発報しますか？"
-        description={`本日の作業実績 ${reports.length} 件、明日以降の予定 ${plans.length} 件を Teams に送信します。`}
+        description={`作業実績 ${publishReports.length} 件、次回予定 ${publishPlans.length} 件を Teams に送信します。`}
         confirmLabel={publishing ? "送信中..." : "発報する"}
         cancelLabel="キャンセル"
         onConfirm={() => {
