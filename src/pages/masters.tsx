@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import {
   useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer,
   useSystems, useAddSystem, useUpdateSystem, useDeleteSystem,
@@ -37,6 +38,34 @@ export default function MastersPage() {
   const [editingSystem, setEditingSystem] = useState<any>(null);
   const [editingWorkType, setEditingWorkType] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<null | { type: "customer" | "system" | "workType"; id: string; label: string }>(null);
+  const actionLoadingMessage = addCustomer.isPending
+    ? "顧客を登録しています..."
+    : updateCustomer.isPending
+      ? "顧客を更新しています..."
+      : deleteCustomerMut.isPending
+        ? "顧客を削除しています..."
+        : addSystem.isPending
+          ? "システムを登録しています..."
+          : updateSystem.isPending
+            ? "システムを更新しています..."
+            : deleteSystemMut.isPending
+              ? "システムを削除しています..."
+              : addWorkType.isPending
+                ? "作業区分を登録しています..."
+                : updateWorkType.isPending
+                  ? "作業区分を更新しています..."
+                  : deleteWorkTypeMut.isPending
+                    ? "作業区分を削除しています..."
+                    : "処理中...";
+  const actionLoadingOpen = addCustomer.isPending
+    || updateCustomer.isPending
+    || deleteCustomerMut.isPending
+    || addSystem.isPending
+    || updateSystem.isPending
+    || deleteSystemMut.isPending
+    || addWorkType.isPending
+    || updateWorkType.isPending
+    || deleteWorkTypeMut.isPending;
 
   const handleSaveCustomer = (data: { name: string }) => {
     if (editingCustomer) {
@@ -116,6 +145,7 @@ export default function MastersPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ActionLoadingOverlay open={actionLoadingOpen} message={actionLoadingMessage} />
       <div className="mb-6">
         <h1 className="text-3xl font-bold">マスタ管理</h1>
         <p className="text-muted-foreground">顧客・システム・作業区分のマスタデータを管理します</p>

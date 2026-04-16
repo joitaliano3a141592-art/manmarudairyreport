@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -31,6 +32,12 @@ export default function WorkReportListPage() {
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
   const updateMutation = useUpdateReport();
   const deleteMutation = useDeleteReport();
+  const actionLoadingMessage = updateMutation.isPending
+    ? "作業報告を更新しています..."
+    : deleteMutation.isPending
+      ? "作業報告を削除しています..."
+      : "処理中...";
+  const actionLoadingOpen = updateMutation.isPending || deleteMutation.isPending;
 
   const filteredReports = useMemo(
     () => reports.filter((report) => report.userName === currentUser.name),
@@ -82,6 +89,7 @@ export default function WorkReportListPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ActionLoadingOverlay open={actionLoadingOpen} message={actionLoadingMessage} />
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">作業報告 - 一覧</h1>

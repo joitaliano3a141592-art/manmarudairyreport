@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { useCustomers, useSystems, useWorkTypes, useAddReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
@@ -76,6 +77,7 @@ export default function WorkReportInputPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ActionLoadingOverlay open={addReport.isPending} message="作業報告を登録しています..." />
       <div className="mb-6">
         <h1 className="text-3xl font-bold">作業報告 - 入力</h1>
         <p className="text-muted-foreground">本日の作業内容を入力してください</p>

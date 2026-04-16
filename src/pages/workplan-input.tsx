@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { useCustomers, useSystems, useAddPlan } from "@/hooks/use-sharepoint";
 
 export default function WorkPlanInputPage() {
@@ -63,6 +64,7 @@ export default function WorkPlanInputPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ActionLoadingOverlay open={addPlan.isPending} message="作業予定を登録しています..." />
       <div className="mb-6">
         <h1 className="text-3xl font-bold">作業予定 - 入力</h1>
         <p className="text-muted-foreground">日付を指定して次回の作業予定を入力してください</p>

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import {
   useCustomers,
@@ -203,6 +204,22 @@ export default function DailyEntryPage() {
   };
 
   const [publishing, setPublishing] = useState(false);
+  const actionLoadingMessage = publishing
+    ? "Teams に発報しています..."
+    : addReportMutation.isPending
+      ? "作業報告を登録しています..."
+      : addPlanMutation.isPending
+        ? "作業予定を登録しています..."
+        : deleteReportMutation.isPending
+          ? "作業報告を削除しています..."
+          : deletePlanMutation.isPending
+            ? "作業予定を削除しています..."
+            : "処理中...";
+  const actionLoadingOpen = publishing
+    || addReportMutation.isPending
+    || addPlanMutation.isPending
+    || deleteReportMutation.isPending
+    || deletePlanMutation.isPending;
 
   const requestPublish = async () => {
     if (reports.length === 0 && plans.length === 0) {
@@ -276,6 +293,7 @@ ${planRows}
 
   return (
     <div className="container mx-auto max-w-screen-xl py-6 overflow-x-hidden">
+      <ActionLoadingOverlay open={actionLoadingOpen} message={actionLoadingMessage} />
       <div className="mb-6 flex flex-col gap-3 min-w-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>

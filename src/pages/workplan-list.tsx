@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
+import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { usePlans, useUpdatePlan, useDeletePlan } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { WorkPlan } from "@/types/sharepoint";
@@ -35,6 +36,12 @@ export default function WorkPlanListPage() {
   const { data: plans = [], isLoading, isError, error } = usePlans(startDate, endDate || undefined);
   const updateMutation = useUpdatePlan();
   const deleteMutation = useDeletePlan();
+  const actionLoadingMessage = updateMutation.isPending
+    ? "作業予定を更新しています..."
+    : deleteMutation.isPending
+      ? "作業予定を削除しています..."
+      : "処理中...";
+  const actionLoadingOpen = updateMutation.isPending || deleteMutation.isPending;
 
   const filteredPlans = useMemo(
     () => plans.filter((plan) => plan.userName === currentUser.name),
@@ -89,6 +96,7 @@ export default function WorkPlanListPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <ActionLoadingOverlay open={actionLoadingOpen} message={actionLoadingMessage} />
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">作業予定 - 一覧</h1>
