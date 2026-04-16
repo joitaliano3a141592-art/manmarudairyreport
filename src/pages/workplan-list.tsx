@@ -23,11 +23,9 @@ const today = new Date();
 export default function WorkPlanListPage() {
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowString = toLocalDate(tomorrow);
-  const [startDate, setStartDate] = useState(tomorrowString);
-  const [endDate, setEndDate] = useState("");
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [startDate, setStartDate] = useState(toLocalDate(monthStart));
+  const [endDate, setEndDate] = useState(toLocalDate(today));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editPlanDate, setEditPlanDate] = useState("");
