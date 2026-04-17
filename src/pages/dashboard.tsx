@@ -436,9 +436,8 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>📋 作業報告</CardTitle>
+            <CardTitle>フィルタ結果</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xl font-bold">{endDate}</span>
               <Button size="sm" variant="outline" onClick={downloadCsv}>
                 <Download className="w-3.5 h-3.5" /> CSV
               </Button>
@@ -455,6 +454,8 @@ export default function DashboardPage() {
                 <TableHead>顧客</TableHead>
                 <TableHead>システム</TableHead>
                 <TableHead>作業内容</TableHead>
+                <TableHead>区分</TableHead>
+                <TableHead>時間</TableHead>
                 <TableHead>案件</TableHead>
               </TableRow>
             </TableHeader>
@@ -468,6 +469,8 @@ export default function DashboardPage() {
                   <TableCell className="max-w-xs truncate" title={report.workDescription}>
                     {report.workDescription}
                   </TableCell>
+                  <TableCell>{report.workTypeName}</TableCell>
+                  <TableCell>{report.workHours.toFixed(1)}h</TableCell>
                   <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                 </TableRow>
               ))}
