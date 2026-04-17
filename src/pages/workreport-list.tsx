@@ -146,8 +146,8 @@ export default function WorkReportListPage() {
                   <TableHead>システム</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead>区分</TableHead>
-                  <TableHead>案件</TableHead>
                   <TableHead>時間</TableHead>
+                  <TableHead>案件</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -169,18 +169,6 @@ export default function WorkReportListPage() {
                       )}
                     </TableCell>
                     <TableCell>{report.workTypeName}</TableCell>
-                    <TableCell className="text-center">
-                      {editingId === report.id ? (
-                        <input
-                          type="checkbox"
-                          checked={editIsProject}
-                          onChange={(e) => setEditIsProject(e.target.checked)}
-                          className="h-4 w-4"
-                        />
-                      ) : (
-                        report.isProject ? "○" : "―"
-                      )}
-                    </TableCell>
                     <TableCell>
                       {editingId === report.id ? (
                         <input
@@ -193,6 +181,18 @@ export default function WorkReportListPage() {
                         />
                       ) : (
                         `${report.workHours.toFixed(1)}h`
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {editingId === report.id ? (
+                        <input
+                          type="checkbox"
+                          checked={editIsProject}
+                          onChange={(e) => setEditIsProject(e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      ) : (
+                        report.isProject ? "○" : "―"
                       )}
                     </TableCell>
                     <TableCell>
