@@ -53,8 +53,11 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
                 <h1 className="text-lg font-bold text-primary">
                   日次作業実績
                 </h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">
-                  Daily Work Report
+                <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+                  <span>Daily Work Report</span>
+                  <span className="rounded border border-border px-1.5 py-0.5 text-[10px] leading-none">
+                    1.0.0
+                  </span>
                 </p>
               </div>
             </div>
