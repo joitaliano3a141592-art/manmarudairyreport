@@ -312,7 +312,7 @@ export default function DailyEntryPage() {
         : "<p>■ 次回の作業予定</p><p>（なし）</p>";
 
       const html = `
-        <p>📋 <strong>作業報告</strong>　<span style="font-size:1.2em;font-weight:bold;">${today}</span></p>
+        <p><span style="font-size:1.2em;font-weight:bold;">本日: ${formatMonthDay(today)}</span></p>
     ${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
     <br/>
     ${nextPlanSection}
