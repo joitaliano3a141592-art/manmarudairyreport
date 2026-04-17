@@ -288,13 +288,13 @@ export default function DailyEntryPage() {
       const reportSections = publishReportGroups
         .map(([reportDate, groupedReports]) => {
           const reportRows = groupedReports
-            .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workTypeName}</td><td style="text-align:right">${r.workHours.toFixed(1)}h</td><td>${r.workDescription}</td></tr>`)
+            .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workDescription}</td></tr>`)
             .join("");
 
           return `
     <p>■ ${formatMonthDay(reportDate)} の作業実績</p>
     <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
-      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>区分</th><th>時間</th><th>作業内容</th></tr>
+      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
       ${reportRows}
     </table>`;
         })
@@ -312,10 +312,10 @@ export default function DailyEntryPage() {
         : "<p>■ 次回の作業予定</p><p>（なし）</p>";
 
       const html = `
-    <p>📋 <strong>作業報告</strong></p>
-${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
-<br/>
-${nextPlanSection}
+        <p>📋 <strong>作業報告</strong>　<span style="font-size:1.2em;font-weight:bold;">${today}</span></p>
+    ${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
+    <br/>
+    ${nextPlanSection}
       `.trim();
 
       await postTeamsChannelMessage(publishTarget.teamId, publishTarget.channelId, html);
