@@ -373,7 +373,17 @@ ${nextPlanSection}
           </CardHeader>
           <CardContent>
             <form onSubmit={addReportToStore} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-5">
+              <div className="space-y-1.5">
+                <Label>報告日</Label>
+                <input
+                  type="date"
+                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                  value={reportForm.reportDate}
+                  onChange={(e) => setReportForm({ ...reportForm, reportDate: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>顧客</Label>
                   <Select
@@ -407,6 +417,9 @@ ${nextPlanSection}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>作業区分</Label>
                   <Select
@@ -424,12 +437,15 @@ ${nextPlanSection}
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>報告日</Label>
+                  <Label>作業時間</Label>
                   <input
-                    type="date"
+                    type="number"
+                    step="0.25"
+                    min="0"
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                    value={reportForm.reportDate}
-                    onChange={(e) => setReportForm({ ...reportForm, reportDate: e.target.value })}
+                    value={reportForm.workTime}
+                    onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })}
+                    placeholder="8.0"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -446,19 +462,6 @@ ${nextPlanSection}
                     </label>
                   </div>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>作業時間</Label>
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                  value={reportForm.workTime}
-                  onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })}
-                  placeholder="8.0"
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -496,6 +499,16 @@ ${nextPlanSection}
           </CardHeader>
           <CardContent>
             <form onSubmit={addPlan} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>予定日</Label>
+                <input
+                  type="date"
+                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                  value={planForm.planDate}
+                  onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })}
+                />
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>顧客</Label>
@@ -532,15 +545,8 @@ ${nextPlanSection}
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label>予定日</Label>
-                <input
-                  type="date"
-                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                  value={planForm.planDate}
-                  onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })}
-                />
-              </div>
+              {/* 実績側の「作業区分/作業時間/案件」行と高さを揃えるスペーサ */}
+              <div className="h-[3.75rem]" />
 
               <div className="space-y-1.5">
                 <Label>作業内容</Label>
