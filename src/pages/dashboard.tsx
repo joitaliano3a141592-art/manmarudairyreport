@@ -260,7 +260,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <div className="font-medium">案件フィルタ</div>
+                  <div className="font-medium">案件</div>
                   <label className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                     <input
                       type="checkbox"
