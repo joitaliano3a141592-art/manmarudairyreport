@@ -455,8 +455,8 @@ export default function DashboardPage() {
                 <TableHead>システム</TableHead>
                 <TableHead>作業内容</TableHead>
                 <TableHead>区分</TableHead>
-                <TableHead>案件</TableHead>
                 <TableHead>時間</TableHead>
+                <TableHead>案件</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -470,8 +470,8 @@ export default function DashboardPage() {
                     {report.workDescription}
                   </TableCell>
                   <TableCell>{report.workTypeName}</TableCell>
-                  <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                   <TableCell>{report.workHours.toFixed(1)}h</TableCell>
+                  <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
