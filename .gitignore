@@ -56,6 +56,7 @@ __pycache__/
 
 # Debug artifacts
 scripts/*_debug.json
+scripts/*.local.json
 scripts/*sanitize*.ps1
 deploy_log*.txt
 dump_*.txt
