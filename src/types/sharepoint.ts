@@ -29,6 +29,7 @@ export type SPReportFields = {
   WorkHours?: number;
   ReporterLookupId?: number;
   ReporterName?: string;
+  IsProject?: boolean;
 };
 
 export type SPPlanFields = {
@@ -75,6 +76,7 @@ export type WorkReport = {
   workDescription: string;
   workHours: number;
   userName: string;
+  isProject: boolean;
 };
 
 export type WorkPlan = {

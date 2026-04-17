@@ -26,6 +26,7 @@ export default function WorkReportListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editWorkTime, setEditWorkTime] = useState("");
+  const [editIsProject, setEditIsProject] = useState(true);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
 
@@ -48,6 +49,7 @@ export default function WorkReportListPage() {
     setEditingId(report.id);
     setEditDescription(report.workDescription);
     setEditWorkTime(String(report.workHours));
+    setEditIsProject(report.isProject);
   };
 
   const handleSave = (report: typeof reports[0]) => {
@@ -58,7 +60,7 @@ export default function WorkReportListPage() {
     }
     updateMutation.mutate({
       itemId: report.id,
-      fields: { WorkDescription: editDescription, WorkHours: workTime },
+      fields: { WorkDescription: editDescription, WorkHours: workTime, IsProject: editIsProject },
     });
     setEditingId(null);
   };
@@ -144,6 +146,7 @@ export default function WorkReportListPage() {
                   <TableHead>システム</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead>区分</TableHead>
+                  <TableHead>案件</TableHead>
                   <TableHead>時間</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
@@ -166,11 +169,23 @@ export default function WorkReportListPage() {
                       )}
                     </TableCell>
                     <TableCell>{report.workTypeName}</TableCell>
+                    <TableCell className="text-center">
+                      {editingId === report.id ? (
+                        <input
+                          type="checkbox"
+                          checked={editIsProject}
+                          onChange={(e) => setEditIsProject(e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      ) : (
+                        report.isProject ? "○" : "―"
+                      )}
+                    </TableCell>
                     <TableCell>
                       {editingId === report.id ? (
                         <input
                           type="number"
-                          step="0.5"
+                          step="0.25"
                           min="0"
                           className="w-20 rounded-md border border-input px-2 py-1 text-sm"
                           value={editWorkTime}

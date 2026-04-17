@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [projectOnly, setProjectOnly] = useState(false);
   const [pieTooltip, setPieTooltip] = useState<PieTooltipState | null>(null);
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
@@ -83,9 +84,10 @@ export default function DashboardPage() {
     return reports.filter((report: WorkReport) => {
       const isUserMatch = selectedUsers.length === 0 || selectedUsers.includes(report.userName);
       const isCustomerMatch = selectedCustomers.length === 0 || selectedCustomers.includes(report.customerName);
-      return isUserMatch && isCustomerMatch;
+      const isProjectMatch = !projectOnly || report.isProject;
+      return isUserMatch && isCustomerMatch && isProjectMatch;
     });
-  }, [reports, selectedUsers, selectedCustomers]);
+  }, [reports, selectedUsers, selectedCustomers, projectOnly]);
 
   const totalHours = useMemo(
     () => filteredReports.reduce((sum: number, r: WorkReport) => sum + r.workHours, 0),
@@ -248,12 +250,25 @@ export default function DashboardPage() {
         {filterOpen && (
           <CardContent className="px-2 pb-2 pt-0 text-sm">
             <div className="grid gap-3">
-              <div className="space-y-1.5">
-                <div className="font-medium">日付範囲</div>
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <Input className="h-8 min-w-0" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                  <span className="text-sm text-muted-foreground">〜</span>
-                  <Input className="h-8 min-w-0" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="space-y-1.5">
+                  <div className="font-medium">日付範囲</div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <Input className="h-8 min-w-0" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <span className="text-sm text-muted-foreground">〜</span>
+                    <Input className="h-8 min-w-0" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="font-medium">案件フィルタ</div>
+                  <label className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={projectOnly}
+                      onChange={(e) => setProjectOnly(e.target.checked)}
+                    />
+                    案件のみ表示
+                  </label>
                 </div>
               </div>
               <div className="grid gap-3 lg:grid-cols-2">
@@ -440,6 +455,7 @@ export default function DashboardPage() {
                 <TableHead>システム</TableHead>
                 <TableHead>作業内容</TableHead>
                 <TableHead>区分</TableHead>
+                <TableHead>案件</TableHead>
                 <TableHead>時間</TableHead>
               </TableRow>
             </TableHeader>
@@ -454,6 +470,7 @@ export default function DashboardPage() {
                     {report.workDescription}
                   </TableCell>
                   <TableCell>{report.workTypeName}</TableCell>
+                  <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                   <TableCell>{report.workHours.toFixed(1)}h</TableCell>
                 </TableRow>
               ))}

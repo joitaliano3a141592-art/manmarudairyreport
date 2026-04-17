@@ -192,6 +192,7 @@ export function useReports(startDate?: string, endDate?: string) {
           workDescription: f.WorkDescription ?? "",
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
+          isProject: f.IsProject !== false,
         };
       }).sort((left, right) => {
         const dateCompare = left.reportDate.localeCompare(right.reportDate);

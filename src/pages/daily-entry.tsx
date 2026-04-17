@@ -91,6 +91,7 @@ export default function DailyEntryPage() {
     workTypeId: "",
     workDescription: "",
     workTime: "",
+    isProject: true,
   });
 
   const [planForm, setPlanForm] = useState({
@@ -182,9 +183,10 @@ export default function DailyEntryPage() {
       WorkDescription: reportForm.workDescription,
       WorkHours: workTime,
       ReporterName: currentUser.name,
+      IsProject: reportForm.isProject,
     }, {
       onSuccess: () => {
-        setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "" });
+        setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "", isProject: true });
       },
       onError: (error) => {
         setReportSubmitError(error instanceof Error ? error.message : String(error));
@@ -390,20 +392,31 @@ ${nextPlanSection}
                 </div>
                 <div className="space-y-1.5">
                   <Label>システム</Label>
-                  <Select
-                    value={reportForm.systemId}
-                    onValueChange={(value) => setReportForm({ ...reportForm, systemId: value })}
-                    disabled={!reportForm.customerId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="システムを選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredReportSystems.map((system) => (
-                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-3">
+                    <Select
+                      value={reportForm.systemId}
+                      onValueChange={(value) => setReportForm({ ...reportForm, systemId: value })}
+                      disabled={!reportForm.customerId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="システムを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredReportSystems.map((system) => (
+                          <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <label className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm">
+                      <input
+                        type="checkbox"
+                        checked={reportForm.isProject}
+                        onChange={(e) => setReportForm({ ...reportForm, isProject: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      案件
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -437,7 +450,7 @@ ${nextPlanSection}
                   <Label>作業時間</Label>
                   <input
                     type="number"
-                    step="0.5"
+                    step="0.25"
                     min="0"
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
                     value={reportForm.workTime}
@@ -465,7 +478,7 @@ ${nextPlanSection}
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "" })
+                    setReportForm({ ...reportForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "", isProject: true })
                   }
                 >
                   クリア
@@ -568,6 +581,7 @@ ${nextPlanSection}
                   <TableHead>システム</TableHead>
                   <TableHead>区分</TableHead>
                   <TableHead className="text-right">時間</TableHead>
+                  <TableHead>案件</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead className="w-20">操作</TableHead>
                 </TableRow>
@@ -579,6 +593,7 @@ ${nextPlanSection}
                     <TableCell className="whitespace-nowrap">{report.systemName}</TableCell>
                     <TableCell className="whitespace-nowrap">{report.workTypeName}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">{report.workHours.toFixed(1)}h</TableCell>
+                    <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                     <TableCell className="max-w-[16rem] truncate" title={report.workDescription}>
                       {report.workDescription}
                     </TableCell>
