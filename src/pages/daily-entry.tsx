@@ -373,7 +373,7 @@ ${nextPlanSection}
           </CardHeader>
           <CardContent>
             <form onSubmit={addReportToStore} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-5">
                 <div className="space-y-1.5">
                   <Label>顧客</Label>
                   <Select
@@ -392,35 +392,21 @@ ${nextPlanSection}
                 </div>
                 <div className="space-y-1.5">
                   <Label>システム</Label>
-                  <div className="flex items-center gap-3">
-                    <Select
-                      value={reportForm.systemId}
-                      onValueChange={(value) => setReportForm({ ...reportForm, systemId: value })}
-                      disabled={!reportForm.customerId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="システムを選択" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredReportSystems.map((system) => (
-                          <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <label className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm">
-                      <input
-                        type="checkbox"
-                        checked={reportForm.isProject}
-                        onChange={(e) => setReportForm({ ...reportForm, isProject: e.target.checked })}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      案件
-                    </label>
-                  </div>
+                  <Select
+                    value={reportForm.systemId}
+                    onValueChange={(value) => setReportForm({ ...reportForm, systemId: value })}
+                    disabled={!reportForm.customerId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="システムを選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredReportSystems.map((system) => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>作業区分</Label>
                   <Select
@@ -447,17 +433,32 @@ ${nextPlanSection}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>作業時間</Label>
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                    value={reportForm.workTime}
-                    onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })}
-                    placeholder="8.0"
-                  />
+                  <Label>案件</Label>
+                  <div className="flex h-9 items-center">
+                    <label className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm">
+                      <input
+                        type="checkbox"
+                        checked={reportForm.isProject}
+                        onChange={(e) => setReportForm({ ...reportForm, isProject: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      案件
+                    </label>
+                  </div>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>作業時間</Label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                  value={reportForm.workTime}
+                  onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })}
+                  placeholder="8.0"
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -531,16 +532,14 @@ ${nextPlanSection}
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-1.5 sm:col-span-1">
-                  <Label>予定日</Label>
-                  <input
-                    type="date"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                    value={planForm.planDate}
-                    onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>予定日</Label>
+                <input
+                  type="date"
+                  className="flex h-9 w-full max-w-[10rem] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                  value={planForm.planDate}
+                  onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })}
+                />
               </div>
 
               <div className="space-y-1.5">
