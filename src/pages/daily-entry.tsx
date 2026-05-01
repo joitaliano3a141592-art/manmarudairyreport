@@ -102,6 +102,7 @@ export default function DailyEntryPage() {
   });
   const [reportSubmitError, setReportSubmitError] = useState("");
   const [planSubmitError, setPlanSubmitError] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [reportDeleteTargetId, setReportDeleteTargetId] = useState<string | null>(null);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<TeamsPublishTarget | null>(null);
@@ -281,6 +282,13 @@ export default function DailyEntryPage() {
     if (!publishTarget) return;
     setPublishing(true);
     try {
+      const escapeHtml = (value: string) => value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+      const formatMultilineText = (value: string) => escapeHtml(value).replaceAll("\n", "<br/>");
       const formatMonthDay = (date: string) => {
         const [, month, day] = date.split("-");
         return `${Number(month)}/${Number(day)}`;
@@ -288,7 +296,7 @@ export default function DailyEntryPage() {
       const reportSections = publishReportGroups
         .map(([reportDate, groupedReports]) => {
           const reportRows = groupedReports
-            .map((r) => `<tr><td>${r.customerName}</td><td>${r.systemName}</td><td>${r.workDescription}</td></tr>`)
+            .map((r) => `<tr><td>${escapeHtml(r.customerName)}</td><td>${escapeHtml(r.systemName)}</td><td>${formatMultilineText(r.workDescription)}</td></tr>`)
             .join("");
 
           return `
@@ -300,8 +308,14 @@ export default function DailyEntryPage() {
         })
         .join("<br/>");
       const planRows = publishPlans
-        .map((p) => `<tr><td>${p.customerName}</td><td>${p.systemName}</td><td>${p.workDescription}</td></tr>`)
+        .map((p) => `<tr><td>${escapeHtml(p.customerName)}</td><td>${escapeHtml(p.systemName)}</td><td>${formatMultilineText(p.workDescription)}</td></tr>`)
         .join("");
+      const remarksSection = remarks.trim()
+        ? `
+    <br/>
+    <p>■ 備考</p>
+    <p>${formatMultilineText(remarks.trim())}</p>`
+        : "";
       const nextPlanSection = nextPlanDate
         ? `
     <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}）</p>
@@ -316,6 +330,7 @@ export default function DailyEntryPage() {
     ${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
     <br/>
     ${nextPlanSection}
+    ${remarksSection}
       `.trim();
 
       await postTeamsChannelMessage(publishTarget.teamId, publishTarget.channelId, html);
@@ -671,6 +686,25 @@ export default function DailyEntryPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>備考</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1.5">
+            <Label htmlFor="daily-entry-remarks">発報メッセージに含める備考</Label>
+            <Textarea
+              id="daily-entry-remarks"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Teams に一緒に発報したい補足事項を入力..."
+              rows={4}
+            />
+            <p className="text-sm text-muted-foreground">発報時に、作業実績・次回予定の下に備考として追記されます。</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <ConfirmDialog
         open={publishConfirmOpen}
