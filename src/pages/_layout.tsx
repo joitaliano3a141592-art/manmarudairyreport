@@ -56,7 +56,7 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
                 <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
                   <span>Daily Work Report</span>
                   <span className="rounded border border-border px-1.5 py-0.5 text-[10px] leading-none">
-                    1.0.0
+                    1.0.1
                   </span>
                 </p>
               </div>
