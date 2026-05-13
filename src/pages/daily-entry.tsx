@@ -75,7 +75,7 @@ export default function DailyEntryPage() {
   const { data: customers = [], isError: custError, error: customersError } = useCustomers();
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
-  const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
+  const { data: allReports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
   const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
 
   const addReportMutation = useAddReport();
@@ -113,10 +113,18 @@ export default function DailyEntryPage() {
   const filteredPlanSystems = systems.filter(
     (system) => !planForm.customerId || system.customerId === planForm.customerId,
   );
-  const plans = allUpcomingPlans;
+  const currentUserName = currentUser.name.trim();
+  const reports = useMemo(
+    () => allReports.filter((report) => report.userName.trim() === currentUserName),
+    [allReports, currentUserName],
+  );
+  const plans = useMemo(
+    () => allUpcomingPlans.filter((plan) => plan.userName.trim() === currentUserName),
+    [allUpcomingPlans, currentUserName],
+  );
   const publishReports = useMemo(
-    () => reports.filter((report) => report.userName === currentUser.name && report.reportDate >= today),
-    [currentUser.name, reports],
+    () => reports.filter((report) => report.reportDate >= today),
+    [reports],
   );
   const publishReportGroups = useMemo(() => {
     const groups = new Map<string, typeof publishReports>();
