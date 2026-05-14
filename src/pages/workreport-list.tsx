@@ -11,6 +11,7 @@ import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
+import { formatWorkHours } from "@/lib/utils";
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
@@ -180,7 +181,7 @@ export default function WorkReportListPage() {
                           onChange={(e) => setEditWorkTime(e.target.value)}
                         />
                       ) : (
-                        `${report.workHours.toFixed(1)}h`
+                        `${formatWorkHours(report.workHours)}h`
                       )}
                     </TableCell>
                     <TableCell className="text-center">

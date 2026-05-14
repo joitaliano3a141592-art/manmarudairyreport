@@ -24,6 +24,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { postTeamsChannelMessage } from "@/lib/graphClient";
 import { TEAMS_CONFIG } from "@/lib/sharepointConfig";
+import { formatWorkHours } from "@/lib/utils";
 import * as microsoftTeams from "@microsoft/teams-js";
 
 function toLocalDate(date: Date): string {
@@ -620,7 +621,7 @@ export default function DailyEntryPage() {
                     <TableCell className="whitespace-nowrap">{report.customerName}</TableCell>
                     <TableCell className="whitespace-nowrap">{report.systemName}</TableCell>
                     <TableCell className="whitespace-nowrap">{report.workTypeName}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">{report.workHours.toFixed(1)}h</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatWorkHours(report.workHours)}h</TableCell>
                     <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                     <TableCell className="max-w-[16rem] truncate" title={report.workDescription}>
                       {report.workDescription}

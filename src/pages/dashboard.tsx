@@ -8,6 +8,7 @@ import { DataErrorState } from "@/components/data-error-state";
 import { Download, ChevronDown, ChevronUp } from "lucide-react";
 import { useReports } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
+import { formatWorkHours } from "@/lib/utils";
 
 const toCsvValue = (value: string | number) => String(value).replace(/\"/g, '""');
 
@@ -470,7 +471,7 @@ export default function DashboardPage() {
                     {report.workDescription}
                   </TableCell>
                   <TableCell>{report.workTypeName}</TableCell>
-                  <TableCell>{report.workHours.toFixed(1)}h</TableCell>
+                  <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
                   <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                 </TableRow>
               ))}
