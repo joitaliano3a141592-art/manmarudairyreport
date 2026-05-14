@@ -31,7 +31,7 @@ export default function WorkReportInputPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.customerId || !formData.systemId || !formData.workTypeId || !formData.workDescription.trim()) {
+    if (!formData.customerId || !formData.systemId || !formData.workTypeId) {
       setSubmitError("必須項目を入力してください。");
       return;
     }
@@ -173,7 +173,6 @@ export default function WorkReportInputPage() {
                 placeholder="作業内容を詳細に記載してください"
                 value={formData.workDescription}
                 onChange={(e) => setFormData({ ...formData, workDescription: e.target.value })}
-                required
                 rows={4}
               />
             </div>
