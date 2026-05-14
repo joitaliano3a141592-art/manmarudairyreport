@@ -172,14 +172,17 @@ export default function WorkReportListPage() {
                     <TableCell>{report.workTypeName}</TableCell>
                     <TableCell>
                       {editingId === report.id ? (
-                        <input
-                          type="number"
-                          step="0.25"
-                          min="0"
-                          className="w-20 rounded-md border border-input px-2 py-1 text-sm"
-                          value={editWorkTime}
-                          onChange={(e) => setEditWorkTime(e.target.value)}
-                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.25"
+                            min="0"
+                            className="w-16 rounded-md border border-input px-2 py-1 text-sm"
+                            value={editWorkTime}
+                            onChange={(e) => setEditWorkTime(e.target.value)}
+                          />
+                          <span>h</span>
+                        </div>
                       ) : (
                         `${formatWorkHours(report.workHours)}h`
                       )}
