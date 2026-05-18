@@ -81,10 +81,13 @@ export function useCustomers(): UseQueryResult<Customer[]> {
     queryKey: ["sp", "customers"],
     queryFn: async () => {
       const items = await fetchListItems<SPCustomerFields>(SP_LISTS.customers);
-      return items.map((item) => ({
-        id: item.id,
-        name: item.fields.Title,
-      }));
+      return items
+        .map((item) => ({
+          id: item.id,
+          name: item.fields.Title,
+          sortOrder: item.fields.SortOrder ?? 10,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
   });
 }
@@ -104,13 +107,16 @@ export function useSystems(): UseQueryResult<System[]> {
       const custMap = new Map(
         (customers ?? []).map((c) => [c.id, c.name])
       );
-      return items.map((item) => ({
-        id: item.id,
-        name: item.fields.Title,
-        customerId: String(item.fields.CustomerLookupId ?? ""),
-        customerName: custMap.get(String(item.fields.CustomerLookupId ?? "")) ?? "",
-        description: item.fields.Description ?? "",
-      }));
+      return items
+        .map((item) => ({
+          id: item.id,
+          name: item.fields.Title,
+          customerId: String(item.fields.CustomerLookupId ?? ""),
+          customerName: custMap.get(String(item.fields.CustomerLookupId ?? "")) ?? "",
+          description: item.fields.Description ?? "",
+          sortOrder: item.fields.SortOrder ?? 10,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
     enabled: !!customers,
   });
@@ -123,11 +129,14 @@ export function useWorkTypes(): UseQueryResult<WorkType[]> {
     queryKey: ["sp", "workTypes"],
     queryFn: async () => {
       const items = await fetchListItems<SPWorkTypeFields>(SP_LISTS.workTypes);
-      return items.map((item) => ({
-        id: item.id,
-        name: item.fields.Title,
-        category: item.fields.Category ?? "",
-      }));
+      return items
+        .map((item) => ({
+          id: item.id,
+          name: item.fields.Title,
+          category: item.fields.Category ?? "",
+          sortOrder: item.fields.SortOrder ?? 10,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
   });
 }
@@ -359,8 +368,8 @@ export function useDeletePlan() {
 export function useAddCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => {
-      return createListItem(SP_LISTS.customers, { Title: name });
+    mutationFn: async ({ name, sortOrder }: { name: string; sortOrder: number }) => {
+      return createListItem(SP_LISTS.customers, { Title: name, SortOrder: sortOrder });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
@@ -371,8 +380,8 @@ export function useAddCustomer() {
 export function useUpdateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ itemId, name }: { itemId: string; name: string }) => {
-      return updateListItem(SP_LISTS.customers, itemId, { Title: name });
+    mutationFn: async ({ itemId, name, sortOrder }: { itemId: string; name: string; sortOrder: number }) => {
+      return updateListItem(SP_LISTS.customers, itemId, { Title: name, SortOrder: sortOrder });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
@@ -404,6 +413,7 @@ export function useAddSystem() {
       Title: string;
       CustomerLookupId: number;
       Description?: string;
+      SortOrder?: number;
     }) => {
       return createListItem(SP_LISTS.systems, fields);
     },
@@ -450,7 +460,7 @@ export function useDeleteSystem() {
 export function useAddWorkType() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { Title: string; Category?: string }) => {
+    mutationFn: async (fields: { Title: string; Category?: string; SortOrder?: number }) => {
       return createListItem(SP_LISTS.workTypes, fields);
     },
     onSuccess: () => {

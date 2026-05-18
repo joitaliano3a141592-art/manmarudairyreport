@@ -67,11 +67,11 @@ export default function MastersPage() {
     || updateWorkType.isPending
     || deleteWorkTypeMut.isPending;
 
-  const handleSaveCustomer = (data: { name: string }) => {
+  const handleSaveCustomer = (data: { name: string; sortOrder: number }) => {
     if (editingCustomer) {
-      updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name });
+      updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name, sortOrder: data.sortOrder });
     } else {
-      addCustomer.mutate(data.name);
+      addCustomer.mutate({ name: data.name, sortOrder: data.sortOrder });
     }
     setCustomerDialog(false);
     setEditingCustomer(null);
@@ -81,14 +81,14 @@ export default function MastersPage() {
     setDeleteTarget({ type: "customer", id, label: "この顧客を削除しますか？" });
   };
 
-  const handleSaveSystem = (data: { name: string; customerId: string; description: string }) => {
+  const handleSaveSystem = (data: { name: string; customerId: string; description: string; sortOrder: number }) => {
     if (editingSystem) {
       updateSystem.mutate({
         itemId: editingSystem.id,
-        fields: { Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description },
+        fields: { Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder },
       });
     } else {
-      addSystem.mutate({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description });
+      addSystem.mutate({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder });
     }
     setSystemDialog(false);
     setEditingSystem(null);
@@ -98,14 +98,14 @@ export default function MastersPage() {
     setDeleteTarget({ type: "system", id, label: "このシステムを削除しますか？" });
   };
 
-  const handleSaveWorkType = (data: { name: string; category: string }) => {
+  const handleSaveWorkType = (data: { name: string; category: string; sortOrder: number }) => {
     if (editingWorkType) {
       updateWorkType.mutate({
         itemId: editingWorkType.id,
-        fields: { Title: data.name, Category: data.category },
+        fields: { Title: data.name, Category: data.category, SortOrder: data.sortOrder },
       });
     } else {
-      addWorkType.mutate({ Title: data.name, Category: data.category });
+      addWorkType.mutate({ Title: data.name, Category: data.category, SortOrder: data.sortOrder });
     }
     setWorkTypeDialog(false);
     setEditingWorkType(null);
@@ -184,6 +184,7 @@ export default function MastersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">表示順</TableHead>
                     <TableHead>顧客名</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
@@ -191,6 +192,7 @@ export default function MastersPage() {
                 <TableBody>
                   {customers.map((customer) => (
                     <TableRow key={customer.id}>
+                      <TableCell className="text-center">{customer.sortOrder}</TableCell>
                       <TableCell>{customer.name}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -242,6 +244,7 @@ export default function MastersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">表示順</TableHead>
                     <TableHead>システム名</TableHead>
                     <TableHead>所有顧客</TableHead>
                     <TableHead>説明</TableHead>
@@ -251,6 +254,7 @@ export default function MastersPage() {
                 <TableBody>
                   {systems.map((system) => (
                     <TableRow key={system.id}>
+                      <TableCell className="text-center">{system.sortOrder}</TableCell>
                       <TableCell>{system.name}</TableCell>
                       <TableCell>{system.customerName}</TableCell>
                       <TableCell>{system.description}</TableCell>
@@ -303,6 +307,7 @@ export default function MastersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">表示順</TableHead>
                     <TableHead>区分名</TableHead>
                     <TableHead>カテゴリ</TableHead>
                     <TableHead>操作</TableHead>
@@ -311,6 +316,7 @@ export default function MastersPage() {
                 <TableBody>
                   {workTypes.map((workType) => (
                     <TableRow key={workType.id}>
+                      <TableCell className="text-center">{workType.sortOrder}</TableCell>
                       <TableCell>{workType.name}</TableCell>
                       <TableCell>{workType.category}</TableCell>
                       <TableCell>
@@ -355,11 +361,16 @@ export default function MastersPage() {
 
 function CustomerForm({ customer, onSave, onCancel }: any) {
   const [name, setName] = useState(customer?.name || "");
+  const [sortOrder, setSortOrder] = useState<number>(customer?.sortOrder ?? 10);
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave({ name }); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, sortOrder }); }} className="space-y-4">
       <div>
         <Label htmlFor="name">顧客名</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+      <div>
+        <Label htmlFor="custSortOrder">表示順（小さいほど上位。99=最下位）</Label>
+        <Input id="custSortOrder" type="number" min={1} max={999} value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} required />
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
@@ -374,6 +385,7 @@ function SystemForm({ system, customers, onSave, onCancel }: any) {
     name: system?.name || "",
     customerId: system?.customerId || "",
     description: system?.description || "",
+    sortOrder: system?.sortOrder ?? 10,
   });
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
@@ -392,6 +404,10 @@ function SystemForm({ system, customers, onSave, onCancel }: any) {
         <Label htmlFor="desc">説明</Label>
         <Input id="desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
       </div>
+      <div>
+        <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
+        <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
+      </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
         <Button type="submit">保存</Button>
@@ -404,6 +420,7 @@ function WorkTypeForm({ workType, onSave, onCancel }: any) {
   const [formData, setFormData] = useState({
     name: workType?.name || "",
     category: workType?.category || "",
+    sortOrder: workType?.sortOrder ?? 10,
   });
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
@@ -414,6 +431,10 @@ function WorkTypeForm({ workType, onSave, onCancel }: any) {
       <div>
         <Label htmlFor="wtCat">カテゴリ</Label>
         <Input id="wtCat" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
+      </div>
+      <div>
+        <Label htmlFor="wtSortOrder">表示順（小さいほど上位。99=最下位）</Label>
+        <Input id="wtSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>

@@ -6,17 +6,20 @@
 
 export type SPCustomerFields = {
   Title: string;
+  SortOrder?: number;
 };
 
 export type SPSystemFields = {
   Title: string;
   CustomerLookupId?: number;
   Description?: string;
+  SortOrder?: number;
 };
 
 export type SPWorkTypeFields = {
   Title: string;
   Category?: string;
+  SortOrder?: number;
 };
 
 export type SPReportFields = {
@@ -47,6 +50,7 @@ export type SPPlanFields = {
 export type Customer = {
   id: string;
   name: string;
+  sortOrder: number;
 };
 
 export type System = {
@@ -55,12 +59,14 @@ export type System = {
   customerId: string;
   customerName: string;
   description: string;
+  sortOrder: number;
 };
 
 export type WorkType = {
   id: string;
   name: string;
   category: string;
+  sortOrder: number;
 };
 
 export type WorkReport = {
