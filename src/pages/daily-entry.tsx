@@ -168,7 +168,6 @@ export default function DailyEntryPage() {
       !reportForm.customerId ||
       !reportForm.systemId ||
       !reportForm.workTypeId ||
-      !reportForm.workDescription.trim() ||
       !reportForm.workTime.trim()
     ) {
       alert("本日の作業実績の必須項目を入力してください。");
