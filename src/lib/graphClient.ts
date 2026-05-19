@@ -32,6 +32,9 @@ async function graphFetch(path: string, init?: RequestInit, useTeamsScope = fals
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      // SharePoint list columns may be temporarily non-indexed in some tenants.
+      // This Prefer header allows filter/orderby queries to run with warning semantics.
+      Prefer: "HonorNonIndexedQueriesWarningMayFailRandomly",
       ...authHeaders,
       ...init?.headers,
     },
