@@ -13,7 +13,7 @@ import { formatWorkHours } from "@/lib/utils";
 const toCsvValue = (value: string | number) => String(value).replace(/\"/g, '""');
 
 type CustomerPieSlice = {
-  customer: string;
+  label: string;
   hours: number;
   percent: number;
   color: string;
@@ -22,13 +22,15 @@ type CustomerPieSlice = {
 };
 
 type PieTooltipState = {
-  customer: string;
+  label: string;
   hours: number;
   percent: number;
   color: string;
   x: number;
   y: number;
 };
+
+type PieGroupBy = "customer" | "workType";
 
 function toLocalDateString(date: Date): string {
   const y = date.getFullYear();
@@ -68,6 +70,7 @@ export default function DashboardPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [projectOnly, setProjectOnly] = useState(false);
   const [pieTooltip, setPieTooltip] = useState<PieTooltipState | null>(null);
+  const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
 
@@ -104,25 +107,30 @@ export default function DashboardPage() {
     "#EAB308",
   ];
 
-  const customerBreakdown = useMemo(() => {
+  const pieBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     filteredReports.forEach((report: WorkReport) => {
-      map.set(report.customerName, (map.get(report.customerName) || 0) + report.workHours);
+      const label = pieGroupBy === "customer"
+        ? (report.customerName || "(未設定)")
+        : (report.workTypeName || "(未設定)");
+      map.set(label, (map.get(label) || 0) + report.workHours);
     });
-    return Array.from(map.entries()).map(([customer, hours]) => ({ customer, hours }));
-  }, [filteredReports]);
+    return Array.from(map.entries())
+      .map(([label, hours]) => ({ label, hours }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [filteredReports, pieGroupBy]);
 
   const customerPieSlices = useMemo(() => {
-    if (totalHours <= 0 || customerBreakdown.length === 0) {
+    if (totalHours <= 0 || pieBreakdown.length === 0) {
       return [] as CustomerPieSlice[];
     }
 
     let currentAngle = 0;
-    return customerBreakdown.map((item, index) => {
+    return pieBreakdown.map((item, index) => {
       const percent = (item.hours / totalHours) * 100;
       const angleSpan = (percent / 100) * 360;
       const slice: CustomerPieSlice = {
-        customer: item.customer,
+        label: item.label,
         hours: item.hours,
         percent,
         color: chartColors[index % chartColors.length],
@@ -132,7 +140,7 @@ export default function DashboardPage() {
       currentAngle += angleSpan;
       return slice;
     });
-  }, [chartColors, customerBreakdown, totalHours]);
+  }, [chartColors, pieBreakdown, totalHours]);
 
   const userColors = useMemo(() => {
     const users = Array.from(new Set(filteredReports.map((r: WorkReport) => r.userName)));
@@ -160,7 +168,7 @@ export default function DashboardPage() {
 
   const handlePieTooltipMove = (event: React.MouseEvent<SVGPathElement>, slice: CustomerPieSlice) => {
     setPieTooltip({
-      customer: slice.customer,
+      label: slice.label,
       hours: slice.hours,
       percent: slice.percent,
       color: slice.color,
@@ -217,7 +225,7 @@ export default function DashboardPage() {
           className="pointer-events-none fixed z-50 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
           style={{ left: pieTooltip.x, top: pieTooltip.y }}
         >
-          <div className="text-sm font-semibold text-slate-950 dark:text-slate-50">{pieTooltip.customer}</div>
+          <div className="text-sm font-semibold text-slate-950 dark:text-slate-50">{pieTooltip.label}</div>
           <div className="mt-1 text-xs text-muted-foreground">
             {pieTooltip.hours.toFixed(1)}h / {pieTooltip.percent.toFixed(1)}%
           </div>
@@ -326,7 +334,26 @@ export default function DashboardPage() {
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col lg:h-[36rem]">
           <CardHeader>
-            <CardTitle>顧客別 作業時間割合</CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>{pieGroupBy === "customer" ? "顧客別 作業時間割合" : "区分別 作業時間割合"}</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={pieGroupBy === "customer" ? "default" : "outline"}
+                  onClick={() => setPieGroupBy("customer")}
+                >
+                  顧客別
+                </Button>
+                <Button
+                  size="sm"
+                  variant={pieGroupBy === "workType" ? "default" : "outline"}
+                  onClick={() => setPieGroupBy("workType")}
+                >
+                  区分別
+                </Button>
+                <Badge variant="outline">合計 {totalHours.toFixed(1)}h</Badge>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start">
@@ -338,7 +365,7 @@ export default function DashboardPage() {
                     {customerPieSlices.map((slice) => (
                       slice.percent >= 100 ? (
                         <circle
-                          key={slice.customer}
+                          key={slice.label}
                           cx="50"
                           cy="50"
                           r="50"
@@ -348,7 +375,7 @@ export default function DashboardPage() {
                         />
                       ) : (
                         <path
-                          key={slice.customer}
+                          key={slice.label}
                           d={buildPieSlicePath(slice.startAngle, slice.endAngle)}
                           fill={slice.color}
                           onMouseMove={(event) => handlePieTooltipMove(event, slice)}
@@ -360,16 +387,16 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="w-full space-y-2">
-                {customerBreakdown.map((item, index) => {
+                {pieBreakdown.map((item, index) => {
                   const percent = totalHours > 0 ? (item.hours / totalHours) * 100 : 0;
                   return (
-                    <div key={item.customer} className="flex items-center gap-3">
+                    <div key={item.label} className="flex items-center gap-3">
                       <span
                         className="inline-block h-3 w-3 rounded-full"
                         style={{ backgroundColor: chartColors[index % chartColors.length] }}
                       />
                       <div className="min-w-0 flex-1 text-sm">
-                        <div className="font-medium">{item.customer}</div>
+                        <div className="font-medium">{item.label}</div>
                         <div className="text-muted-foreground text-xs">
                           {item.hours.toFixed(1)}h / {percent.toFixed(1)}%
                         </div>
