@@ -27,14 +27,18 @@ function toLocalDateStr(utcDateStr?: string): string {
   return `${y}-${m}-${day}`;
 }
 
-function toUtcIsoAtStartOfDay(localDate: string): string {
-  const [y, m, d] = localDate.split("-").map((v) => Number(v));
-  return new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0, 0)).toISOString();
+function toJstIsoAtStartOfDay(localDate: string): string {
+  return `${localDate}T00:00:00+09:00`;
 }
 
-function toUtcIsoAtStartOfNextDay(localDate: string): string {
+function toJstIsoAtStartOfNextDay(localDate: string): string {
   const [y, m, d] = localDate.split("-").map((v) => Number(v));
-  return new Date(Date.UTC(y, (m || 1) - 1, (d || 1) + 1, 0, 0, 0, 0)).toISOString();
+  const nextDay = new Date(y, (m || 1) - 1, d || 1);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextYear = nextDay.getFullYear();
+  const nextMonth = String(nextDay.getMonth() + 1).padStart(2, "0");
+  const nextDate = String(nextDay.getDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDate}T00:00:00+09:00`;
 }
 
 function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate", startDate?: string, endDate?: string): string {
@@ -42,10 +46,10 @@ function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate", startDate?: s
   const filters: string[] = [];
 
   if (startDate) {
-    filters.push(`fields/${fieldName} ge '${toUtcIsoAtStartOfDay(startDate)}'`);
+    filters.push(`fields/${fieldName} ge '${toJstIsoAtStartOfDay(startDate)}'`);
   }
   if (endDate) {
-    filters.push(`fields/${fieldName} lt '${toUtcIsoAtStartOfNextDay(endDate)}'`);
+    filters.push(`fields/${fieldName} lt '${toJstIsoAtStartOfNextDay(endDate)}'`);
   }
 
   if (filters.length > 0) {
