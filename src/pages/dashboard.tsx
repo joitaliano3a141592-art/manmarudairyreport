@@ -241,7 +241,15 @@ export default function DashboardPage() {
         <CardHeader className="px-2 py-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm font-medium leading-none">検索条件</div>
-            <Button size="sm" className="h-8 px-3" variant="outline" onClick={() => setFilterOpen((prev) => !prev)}>
+            <Button
+              size="sm"
+              className="h-8 px-3"
+              variant="outline"
+              onClick={(event) => {
+                event.preventDefault();
+                setFilterOpen((prev) => !prev);
+              }}
+            >
               {filterOpen ? (
                 <>
                   <ChevronUp className="mr-2 h-4 w-4" />
@@ -340,14 +348,20 @@ export default function DashboardPage() {
                 <Button
                   size="sm"
                   variant={pieGroupBy === "customer" ? "default" : "outline"}
-                  onClick={() => setPieGroupBy("customer")}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setPieGroupBy("customer");
+                  }}
                 >
                   顧客別
                 </Button>
                 <Button
                   size="sm"
                   variant={pieGroupBy === "workType" ? "default" : "outline"}
-                  onClick={() => setPieGroupBy("workType")}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setPieGroupBy("workType");
+                  }}
                 >
                   作業別
                 </Button>
