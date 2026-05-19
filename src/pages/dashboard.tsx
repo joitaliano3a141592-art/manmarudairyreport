@@ -335,7 +335,7 @@ export default function DashboardPage() {
         <Card className="flex flex-col lg:h-[36rem]">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{pieGroupBy === "customer" ? "顧客別 作業時間割合" : "区分別 作業時間割合"}</CardTitle>
+              <CardTitle>{pieGroupBy === "customer" ? "顧客別 作業時間割合" : "作業別 作業時間割合"}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                   variant={pieGroupBy === "workType" ? "default" : "outline"}
                   onClick={() => setPieGroupBy("workType")}
                 >
-                  区分別
+                  作業別
                 </Button>
                 <Badge variant="outline">合計 {totalHours.toFixed(1)}h</Badge>
               </div>
