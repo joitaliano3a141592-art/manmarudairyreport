@@ -297,27 +297,41 @@ export default function DailyEntryPage() {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
       const formatMultilineText = (value: string) => escapeHtml(value).replaceAll("\n", "<br/>");
+      const normalizeInlineText = (value: string) => value.replaceAll(/\s+/g, " ").trim();
       const formatMonthDay = (date: string) => {
         const [, month, day] = date.split("-");
         return `${Number(month)}/${Number(day)}`;
       };
+      const buildCustomerLines = (
+        items: Array<{ customerName: string; workDescription: string }>,
+      ) => {
+        const customerMap = new Map<string, string[]>();
+
+        for (const item of items) {
+          const customerName = item.customerName.trim() || "未設定";
+          const descriptions = customerMap.get(customerName) ?? [];
+          const description = normalizeInlineText(item.workDescription);
+          if (description) {
+            descriptions.push(description);
+          }
+          customerMap.set(customerName, descriptions);
+        }
+
+        return Array.from(customerMap.entries()).map(([customerName, descriptions]) => {
+          const body = descriptions.length > 0 ? escapeHtml(descriptions.join("、")) : "（内容なし）";
+          return `<p>【${escapeHtml(customerName)}】：${body}</p>`;
+        }).join("");
+      };
       const reportSections = publishReportGroups
         .map(([reportDate, groupedReports]) => {
-          const reportRows = groupedReports
-            .map((r) => `<tr><td>${escapeHtml(r.customerName)}</td><td>${escapeHtml(r.systemName)}</td><td>${formatMultilineText(r.workDescription)}</td></tr>`)
-            .join("");
+          const reportLines = buildCustomerLines(groupedReports);
 
           return `
     <p>■ ${formatMonthDay(reportDate)} の作業実績</p>
-    <table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
-      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
-      ${reportRows}
-    </table>`;
+    ${reportLines || "<p>（なし）</p>"}`;
         })
         .join("<br/>");
-      const planRows = publishPlans
-        .map((p) => `<tr><td>${escapeHtml(p.customerName)}</td><td>${escapeHtml(p.systemName)}</td><td>${formatMultilineText(p.workDescription)}</td></tr>`)
-        .join("");
+      const planLines = buildCustomerLines(publishPlans);
       const remarksSection = remarks.trim()
         ? `
     <br/>
@@ -327,10 +341,7 @@ export default function DailyEntryPage() {
       const nextPlanSection = nextPlanDate
         ? `
     <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}）</p>
-    ${publishPlans.length > 0 ? `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%">
-      <tr style="background:#f0f0f0"><th>顧客</th><th>システム</th><th>作業内容</th></tr>
-      ${planRows}
-    </table>` : "<p>（なし）</p>"}`
+    ${publishPlans.length > 0 ? planLines : "<p>（なし）</p>"}`
         : "<p>■ 次回の作業予定</p><p>（なし）</p>";
 
       const html = `
