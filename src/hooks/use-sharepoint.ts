@@ -27,6 +27,35 @@ function toLocalDateStr(utcDateStr?: string): string {
   return `${y}-${m}-${day}`;
 }
 
+function toUtcIsoAtStartOfDay(localDate: string): string {
+  const [y, m, d] = localDate.split("-").map((v) => Number(v));
+  return new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0, 0)).toISOString();
+}
+
+function toUtcIsoAtStartOfNextDay(localDate: string): string {
+  const [y, m, d] = localDate.split("-").map((v) => Number(v));
+  return new Date(Date.UTC(y, (m || 1) - 1, (d || 1) + 1, 0, 0, 0, 0)).toISOString();
+}
+
+function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate", startDate?: string, endDate?: string): string {
+  const params = new URLSearchParams();
+  const filters: string[] = [];
+
+  if (startDate) {
+    filters.push(`fields/${fieldName} ge '${toUtcIsoAtStartOfDay(startDate)}'`);
+  }
+  if (endDate) {
+    filters.push(`fields/${fieldName} lt '${toUtcIsoAtStartOfNextDay(endDate)}'`);
+  }
+
+  if (filters.length > 0) {
+    params.set("$filter", filters.join(" and "));
+  }
+  params.set("$orderby", `fields/${fieldName} desc`);
+  params.set("$top", "999");
+  return params.toString();
+}
+
 function isBrokenDisplayName(value?: string | null): boolean {
   if (!value) return true;
   return /^[?\s]+$/.test(value);
@@ -172,7 +201,8 @@ export function useReports(startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: ["sp", "reports", startDate, endDate],
     queryFn: async () => {
-      const items = await fetchListItems<SPReportFields>(SP_LISTS.reports);
+      const query = buildDateRangeQuery("ReportDate", startDate, endDate);
+      const items = await fetchListItems<SPReportFields>(SP_LISTS.reports, query);
       return items;
     },
     select: (items): WorkReport[] => {
@@ -273,7 +303,8 @@ export function usePlans(startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: ["sp", "plans", startDate, endDate],
     queryFn: async () => {
-      const items = await fetchListItems<SPPlanFields>(SP_LISTS.plans);
+      const query = buildDateRangeQuery("PlanDate", startDate, endDate);
+      const items = await fetchListItems<SPPlanFields>(SP_LISTS.plans, query);
       return items;
     },
     select: (items): WorkPlan[] => {

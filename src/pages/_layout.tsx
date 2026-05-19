@@ -20,6 +20,36 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
     return () => window.removeEventListener("resize", updateIsMobile)
   }, [])
 
+  useEffect(() => {
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const day = now.getDate()
+
+    // 1月末（25日〜31日）は、前年データの年次移行を必ず案内する。
+    if (month !== 1 || day < 25) {
+      return
+    }
+
+    const key = `annual-archive-reminder-${now.getFullYear()}-${day}`
+    if (sessionStorage.getItem(key) === "shown") {
+      return
+    }
+    sessionStorage.setItem(key, "shown")
+
+    const prevYear = now.getFullYear() - 1
+    alert(
+      [
+        "【年次データ移行のご案内】",
+        `前年度（${prevYear}年）の作業実績・予定データを年別テーブルへ移行してください。`,
+        "本システムでは自動実行は行いません。必ず手動実行をお願いします。",
+        "",
+        "手順（安全確認 → 移行）",
+        `1) python scripts/migrate_previous_year_data.py --year ${prevYear} --export-only`,
+        `2) python scripts/migrate_previous_year_data.py --year ${prevYear} --delete-source`,
+      ].join("\n")
+    )
+  }, [])
+
   const handleMenuToggle = () => {
     if (isMobileView) {
       toggleMobile()

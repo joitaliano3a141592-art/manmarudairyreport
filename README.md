@@ -222,6 +222,48 @@ VS Code の GitHub Copilot Chat で以下のエージェントが使用可能:
 
 ---
 
+## 運用: SharePoint リスト肥大化対策
+
+詳細手順は運用ランブックを参照してください。
+
+- [年次アーカイブ運用ランブック](./docs/ARCHIVE_OPERATION_RUNBOOK.md)
+
+作業実績（`VITE_SP_LIST_REPORTS`）と作業予定（`VITE_SP_LIST_PLANS`）は、
+件数増加時に性能劣化しやすいため、以下の方針で運用します。
+
+- 保持方針: 直近24か月を現役リストに保持
+- 年次移行: 1月末に前年度分を年別テーブルへ移行
+- 実行方式: 自動実行は行わず、必ずユーザーへアラート表示して手動実行
+- SharePoint 側インデックス: `ReportDate` / `PlanDate`（必須）
+
+本アプリは日付条件付き取得時、Graph API のサーバー側フィルタを使うため、
+全件取得より負荷を下げられます。
+
+### 年別テーブルへの手動移行
+
+`scripts/migrate_previous_year_data.py` は前年度データを以下へ移行します。
+
+- DB: `archives/sharepoint_yearly_archive.db`
+- テーブル: `reports_YYYY` / `plans_YYYY`
+
+安全確認後に削除を有効化してください。
+
+```bash
+# 1) まず安全確認（移行のみ）
+python scripts/migrate_previous_year_data.py --year 2025 --export-only
+
+# 2) 確認後、元リストから削除まで実施
+python scripts/migrate_previous_year_data.py --year 2025 --delete-source
+```
+
+件数確認のみ:
+
+```bash
+python scripts/migrate_previous_year_data.py --year 2025 --dry-run
+```
+
+---
+
 ## リポジトリ構造
 
 `
@@ -235,6 +277,7 @@ VS Code の GitHub Copilot Chat で以下のエージェントが使用可能:
 │   └── workflows/
 │       └── deploy.yml                   # GitHub Pages 自動デプロイ
 ├── docs/                                # アーキテクチャ・設計ドキュメント
+│   └── ARCHIVE_OPERATION_RUNBOOK.md     # 年次アーカイブ運用手順
 ├── src/
 │   ├── components/                      # 共通 UI コンポーネント
 │   ├── hooks/                           # カスタムフック (use-sharepoint 等)
