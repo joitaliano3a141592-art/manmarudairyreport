@@ -318,8 +318,12 @@ export default function DailyEntryPage() {
         }
 
         return Array.from(customerMap.entries()).map(([customerName, descriptions]) => {
-          const body = descriptions.length > 0 ? escapeHtml(descriptions.join("、")) : "（内容なし）";
-          return `<p>【${escapeHtml(customerName)}】：${body}</p>`;
+          if (descriptions.length === 0) {
+            return `<p>【${escapeHtml(customerName)}】：（内容なし）</p>`;
+          }
+          return descriptions.map((description) => {
+            return `<p>【${escapeHtml(customerName)}】：${escapeHtml(description)}</p>`;
+          }).join("");
         }).join("");
       };
       const reportSections = publishReportGroups
