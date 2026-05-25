@@ -25,6 +25,7 @@ export type SPWorkTypeFields = {
 export type SPReportFields = {
   Title: string;
   ReportDate?: string;
+  RegistrationDate?: string;
   CustomerLookupId?: number;
   SystemLookupId?: number;
   WorkTypeLookupId?: number;
@@ -73,6 +74,7 @@ export type WorkReport = {
   id: string;
   title: string;
   reportDate: string;
+  registrationDate: string;
   customerId: string;
   customerName: string;
   systemId: string;

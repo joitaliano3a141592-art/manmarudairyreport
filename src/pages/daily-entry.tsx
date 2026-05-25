@@ -14,7 +14,7 @@ import {
   useCustomers,
   useSystems,
   useWorkTypes,
-  useReports,
+  useReportsByDateField,
   useAddReport,
   useDeleteReport,
   usePlans,
@@ -76,7 +76,7 @@ export default function DailyEntryPage() {
   const { data: customers = [], isError: custError, error: customersError } = useCustomers();
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
-  const { data: allReports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(today, today);
+  const { data: allReports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReportsByDateField("RegistrationDate", today, today);
   const { data: allUpcomingPlans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
 
   const addReportMutation = useAddReport();
@@ -124,7 +124,7 @@ export default function DailyEntryPage() {
     [allUpcomingPlans, currentUserName],
   );
   const publishReports = useMemo(
-    () => reports.filter((report) => report.reportDate >= today),
+    () => reports,
     [reports],
   );
   const publishReportGroups = useMemo(() => {
@@ -186,6 +186,7 @@ export default function DailyEntryPage() {
     addReportMutation.mutate({
       Title: `日報-${customer?.name ?? ""}`,
       ReportDate: `${reportForm.reportDate}T00:00:00+09:00`,
+      RegistrationDate: `${today}T00:00:00+09:00`,
       CustomerLookupId: Number(reportForm.customerId),
       SystemLookupId: Number(reportForm.systemId),
       WorkTypeLookupId: Number(reportForm.workTypeId),

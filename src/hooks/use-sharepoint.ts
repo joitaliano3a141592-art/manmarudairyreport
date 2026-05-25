@@ -41,7 +41,7 @@ function toJstIsoAtStartOfNextDay(localDate: string): string {
   return `${nextYear}-${nextMonth}-${nextDate}T00:00:00+09:00`;
 }
 
-function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate", startDate?: string, endDate?: string): string {
+function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate" | "RegistrationDate", startDate?: string, endDate?: string): string {
   const params = new URLSearchParams();
   const filters: string[] = [];
 
@@ -200,20 +200,37 @@ export function useLookupMaps(): LookupMaps {
 // ==================== 作業報告 ====================
 
 export function useReports(startDate?: string, endDate?: string) {
+  return useReportsByDateField("ReportDate", startDate, endDate);
+}
+
+function resolveReportFilterDate(
+  item: { fields: SPReportFields; createdDateTime?: string },
+  dateField: "ReportDate" | "RegistrationDate",
+): string {
+  if (dateField === "RegistrationDate") {
+    return toLocalDateStr(item.fields.RegistrationDate) || toLocalDateStr(item.createdDateTime);
+  }
+  return toLocalDateStr(item.fields.ReportDate);
+}
+
+export function useReportsByDateField(
+  dateField: "ReportDate" | "RegistrationDate",
+  startDate?: string,
+  endDate?: string,
+) {
   const maps = useLookupMaps();
 
   return useQuery({
-    queryKey: ["sp", "reports", startDate, endDate],
+    queryKey: ["sp", "reports", dateField, startDate, endDate],
     queryFn: async () => {
-      const query = buildDateRangeQuery("ReportDate", startDate, endDate);
+      const query = buildDateRangeQuery(dateField, startDate, endDate);
       const items = await fetchListItems<SPReportFields>(SP_LISTS.reports, query);
       return items;
     },
     select: (items): WorkReport[] => {
-      // クライアント側で日付フィルタリング
       const filtered = startDate && endDate
         ? items.filter((item) => {
-            const d = toLocalDateStr(item.fields.ReportDate);
+            const d = resolveReportFilterDate(item, dateField);
             return d >= startDate && d <= endDate;
           })
         : items;
@@ -226,6 +243,7 @@ export function useReports(startDate?: string, endDate?: string) {
           id: item.id,
           title: f.Title,
           reportDate: toLocalDateStr(f.ReportDate),
+          registrationDate: toLocalDateStr(f.RegistrationDate) || toLocalDateStr(item.createdDateTime),
           customerId: custId,
           customerName: maps.customerMap.get(custId) ?? "",
           systemId: sysId,
@@ -245,7 +263,6 @@ export function useReports(startDate?: string, endDate?: string) {
         return Number(left.id) - Number(right.id);
       });
     },
-
   });
 }
 

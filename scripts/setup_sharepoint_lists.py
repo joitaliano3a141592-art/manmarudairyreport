@@ -328,6 +328,7 @@ def main():
     # 作業報告
     rpt_cols = get_columns(site_id, report_list_id)
     ensure_datetime_column(site_id, report_list_id, "ReportDate", "作業日", rpt_cols, required=True)
+    ensure_datetime_column(site_id, report_list_id, "RegistrationDate", "登録日", rpt_cols, required=False)
     ensure_lookup_column(site_id, report_list_id, "Customer", "顧客", customer_list_id, rpt_cols, required=True)
     ensure_lookup_column(site_id, report_list_id, "System", "システム", system_list_id, rpt_cols, required=True)
     ensure_lookup_column(site_id, report_list_id, "WorkType", "作業種別", worktype_list_id, rpt_cols, required=True)
@@ -406,6 +407,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
         add_item(site_id, report_list_id, {
             "Title": "日報-機能開発",
             "ReportDate": today,
+            "RegistrationDate": today,
             "CustomerLookupId": customer_map.get("ABC 株式会社"),
             "SystemLookupId": system_map.get("システムA"),
             "WorkTypeLookupId": worktype_map.get("機能開発"),
@@ -415,6 +417,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
         add_item(site_id, report_list_id, {
             "Title": "日報-テスト",
             "ReportDate": today,
+            "RegistrationDate": today,
             "CustomerLookupId": customer_map.get("XYZ 工業"),
             "SystemLookupId": system_map.get("システムC"),
             "WorkTypeLookupId": worktype_map.get("テスト"),
@@ -424,6 +427,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
         add_item(site_id, report_list_id, {
             "Title": "日報-定例会議",
             "ReportDate": today,
+            "RegistrationDate": today,
             "CustomerLookupId": customer_map.get("テックス合同会社"),
             "SystemLookupId": system_map.get("システムD"),
             "WorkTypeLookupId": worktype_map.get("定例会議"),

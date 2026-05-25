@@ -42,10 +42,13 @@ export default function WorkReportInputPage() {
     }
     setSubmitError("");
     const customer = customers.find((c) => c.id === formData.customerId);
+    const now = new Date();
+    const registrationDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     addReport.mutate(
       {
         Title: `日報-${customer?.name ?? ""}`,
         ReportDate: `${formData.reportDate}T00:00:00+09:00`,
+        RegistrationDate: `${registrationDate}T00:00:00+09:00`,
         CustomerLookupId: Number(formData.customerId),
         SystemLookupId: Number(formData.systemId),
         WorkTypeLookupId: Number(formData.workTypeId),

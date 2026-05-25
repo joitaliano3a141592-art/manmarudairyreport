@@ -126,6 +126,7 @@ Ensure-ChoiceField -ListTitle "作業種別マスタ" -InternalName "Category" -
 
 Write-Host "[STEP] Ensure columns: 作業報告"
 Ensure-Field -ListTitle "作業報告" -InternalName "ReportDate" -DisplayName "作業日" -Type "DateTime" -Required $true
+Ensure-Field -ListTitle "作業報告" -InternalName "RegistrationDate" -DisplayName "登録日" -Type "DateTime"
 Ensure-LookupField -ListTitle "作業報告" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes -Required $true
@@ -204,6 +205,7 @@ if ($SeedDemoData) {
     Add-PnPListItem -List "作業報告" -Values @{
       Title = "日報-機能開発"
       ReportDate = $today
+      RegistrationDate = $today
       Customer = $customerMap["ABC 株式会社"]
       System = $systemMap["システムA"]
       WorkType = $workTypeMap["機能開発"]
@@ -214,6 +216,7 @@ if ($SeedDemoData) {
     Add-PnPListItem -List "作業報告" -Values @{
       Title = "日報-テスト"
       ReportDate = $today
+      RegistrationDate = $today
       Customer = $customerMap["XYZ 工業"]
       System = $systemMap["システムC"]
       WorkType = $workTypeMap["テスト"]

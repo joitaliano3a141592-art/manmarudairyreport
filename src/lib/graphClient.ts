@@ -76,7 +76,7 @@ async function graphDelete(path: string): Promise<void> {
 // --------------- List helpers ---------------
 
 type GraphListItems<F> = {
-  value: Array<{ id: string; fields: F; createdBy?: { user?: { displayName?: string; email?: string } } }>;
+  value: Array<{ id: string; fields: F; createdDateTime?: string; createdBy?: { user?: { displayName?: string; email?: string } } }>;
   "@odata.nextLink"?: string;
 };
 
@@ -92,7 +92,7 @@ function listItemPath(listId: string, itemId: string): string {
   return `/sites/${encodeGraphPathSegment(SP_SITE_ID)}/lists/${encodeGraphPathSegment(listId)}/items/${encodeGraphPathSegment(itemId)}`;
 }
 
-type ListItem<F> = { id: string; fields: F; createdByName?: string };
+type ListItem<F> = { id: string; fields: F; createdByName?: string; createdDateTime?: string };
 
 export async function fetchListItems<F>(listId: string, query = ""): Promise<ListItem<F>[]> {
   const all: ListItem<F>[] = [];
@@ -105,6 +105,7 @@ export async function fetchListItems<F>(listId: string, query = ""): Promise<Lis
         id: item.id,
         fields: item.fields,
         createdByName: item.createdBy?.user?.displayName,
+        createdDateTime: item.createdDateTime,
       });
     }
     const next: string | undefined = data["@odata.nextLink"];
