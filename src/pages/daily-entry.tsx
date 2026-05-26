@@ -332,7 +332,7 @@ export default function DailyEntryPage() {
           const reportLines = buildCustomerLines(groupedReports);
 
           return `
-    <p>■ ${formatMonthDay(reportDate)} の作業実績</p>
+    <p>■ ${formatMonthDay(reportDate)}</p>
     ${reportLines || "<p>（なし）</p>"}`;
         })
         .join("<br/>");
