@@ -14,16 +14,35 @@ const TOKEN_TTL_MS = 50 * 60 * 1000; // 50 min
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
 
+function runGetTokenScript(): string {
+  const commands = [
+    "python3 scripts/get_token.py",
+    "py -3 scripts/get_token.py",
+    "python scripts/get_token.py",
+  ];
+
+  let lastError: unknown = null;
+  for (const command of commands) {
+    try {
+      return execSync(command, {
+        encoding: "utf-8",
+        timeout: 30_000,
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error("Graph token unavailable");
+}
+
 function getGraphToken(): string {
   const now = Date.now();
   if (cachedToken && now < tokenExpiresAt) return cachedToken;
 
   try {
-    const token = execSync("python3 scripts/get_token.py", {
-      encoding: "utf-8",
-      timeout: 30_000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim();
+    const token = runGetTokenScript();
     cachedToken = token;
     tokenExpiresAt = now + TOKEN_TTL_MS;
     return token;
@@ -49,7 +68,7 @@ export function graphProxy(): Plugin {
           token = getGraphToken();
         } catch {
           res.writeHead(503, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Token unavailable. Run: python3 scripts/get_token.py" }));
+          res.end(JSON.stringify({ error: "Token unavailable. Run one of: python scripts/get_token.py / py -3 scripts/get_token.py / python3 scripts/get_token.py" }));
           return;
         }
 
@@ -62,6 +81,7 @@ export function graphProxy(): Plugin {
           const headers: Record<string, string> = {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
+            Prefer: (req.headers.prefer as string) || "HonorNonIndexedQueriesWarningMayFailRandomly",
           };
           if (body && body.length > 0) {
             headers["Content-Type"] = req.headers["content-type"] || "application/json";

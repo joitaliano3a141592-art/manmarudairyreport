@@ -30,7 +30,14 @@ type PieTooltipState = {
   y: number;
 };
 
-type PieGroupBy = "customer" | "workType";
+type BarTooltipState = {
+  label: string;
+  hours: number;
+  x: number;
+  y: number;
+};
+
+type PieGroupBy = "customer" | "workType" | "project";
 
 function toLocalDateString(date: Date): string {
   const y = date.getFullYear();
@@ -70,6 +77,7 @@ export default function DashboardPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [projectOnly, setProjectOnly] = useState(false);
   const [pieTooltip, setPieTooltip] = useState<PieTooltipState | null>(null);
+  const [barTooltip, setBarTooltip] = useState<BarTooltipState | null>(null);
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
@@ -92,6 +100,14 @@ export default function DashboardPage() {
       return isUserMatch && isCustomerMatch && isProjectMatch;
     });
   }, [reports, selectedUsers, selectedCustomers, projectOnly]);
+
+  const reportsWithoutProjectFilter = useMemo(() => {
+    return reports.filter((report: WorkReport) => {
+      const isUserMatch = selectedUsers.length === 0 || selectedUsers.includes(report.userName);
+      const isCustomerMatch = selectedCustomers.length === 0 || selectedCustomers.includes(report.customerName);
+      return isUserMatch && isCustomerMatch;
+    });
+  }, [reports, selectedUsers, selectedCustomers]);
 
   const totalHours = useMemo(
     () => filteredReports.reduce((sum: number, r: WorkReport) => sum + r.workHours, 0),
@@ -142,6 +158,57 @@ export default function DashboardPage() {
     });
   }, [chartColors, pieBreakdown, totalHours]);
 
+  const projectRatioTotalHours = useMemo(
+    () => reportsWithoutProjectFilter.reduce((sum: number, r: WorkReport) => sum + r.workHours, 0),
+    [reportsWithoutProjectFilter],
+  );
+
+  const projectRatioBreakdown = useMemo(() => {
+    const projectHours = reportsWithoutProjectFilter
+      .filter((report: WorkReport) => report.isProject)
+      .reduce((sum, report) => sum + report.workHours, 0);
+    const internalHours = reportsWithoutProjectFilter
+      .filter((report: WorkReport) => !report.isProject)
+      .reduce((sum, report) => sum + report.workHours, 0);
+
+    return [
+      { label: "案件", hours: projectHours, color: "#0EA5E9" },
+      { label: "社内事", hours: internalHours, color: "#F97316" },
+    ];
+  }, [reportsWithoutProjectFilter]);
+
+  const projectRatioPieSlices = useMemo(() => {
+    if (projectRatioTotalHours <= 0) {
+      return [] as CustomerPieSlice[];
+    }
+
+    let currentAngle = 0;
+    return projectRatioBreakdown.map((item) => {
+      const percent = (item.hours / projectRatioTotalHours) * 100;
+      const angleSpan = (percent / 100) * 360;
+      const slice: CustomerPieSlice = {
+        label: item.label,
+        hours: item.hours,
+        percent,
+        color: item.color,
+        startAngle: currentAngle,
+        endAngle: currentAngle + angleSpan,
+      };
+      currentAngle += angleSpan;
+      return slice;
+    });
+  }, [projectRatioBreakdown, projectRatioTotalHours]);
+
+  const activePieTitle = pieGroupBy === "customer"
+    ? "顧客別 作業時間割合"
+    : pieGroupBy === "workType"
+      ? "作業別 作業時間割合"
+      : "案件別 作業時間割合";
+
+  const activePieTotalHours = pieGroupBy === "project" ? projectRatioTotalHours : totalHours;
+  const activePieBreakdown = pieGroupBy === "project" ? projectRatioBreakdown : pieBreakdown;
+  const activePieSlices = pieGroupBy === "project" ? projectRatioPieSlices : customerPieSlices;
+
   const userColors = useMemo(() => {
     const users = Array.from(new Set(filteredReports.map((r: WorkReport) => r.userName)));
     return new Map(users.map((user, index) => [user, chartColors[index % chartColors.length]]));
@@ -166,12 +233,99 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total);
   }, [filteredReports]);
 
+  const systemMaxTotal = useMemo(
+    () => systemStackData.reduce((max, item) => Math.max(max, item.total), 0),
+    [systemStackData],
+  );
+
+  const systemChartUsers = useMemo(() => {
+    const users = new Set<string>();
+    systemStackData.forEach((item) => {
+      item.users.forEach((userItem) => users.add(userItem.user));
+    });
+    return Array.from(users);
+  }, [systemStackData]);
+
+  const systemChartLayout = useMemo(() => {
+    const width = 760;
+    const height = 260;
+    const margin = { top: 10, right: 10, bottom: 52, left: 36 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const count = systemStackData.length;
+
+    if (count === 0) {
+      return { width, height, margin, plotWidth, plotHeight, bars: [], labelStep: 1 };
+    }
+
+    const gap = Math.max(1, Math.min(4, Math.floor(plotWidth / (count * 10))));
+    const barWidth = Math.max(2, (plotWidth - gap * (count - 1)) / count);
+    const labelStep = Math.max(1, Math.ceil(count / 8));
+
+    const bars = systemStackData.map((item, index) => {
+      const x = margin.left + index * (barWidth + gap);
+      const userHoursMap = new Map(item.users.map((userItem) => [userItem.user, userItem.hours]));
+      let accumulated = 0;
+      const segments = systemChartUsers.flatMap((user) => {
+        const userHours = userHoursMap.get(user) || 0;
+        if (userHours <= 0 || systemMaxTotal <= 0) {
+          return [] as Array<{ user: string; y: number; h: number; color: string; hours: number }>;
+        }
+        const h = (userHours / systemMaxTotal) * plotHeight;
+        const y = margin.top + plotHeight - accumulated - h;
+        accumulated += h;
+        return [{
+          user,
+          y,
+          h,
+          color: userColors.get(user) ?? "#CBD5E1",
+          hours: userHours,
+        }];
+      });
+
+      return {
+        system: item.system,
+        total: item.total,
+        x,
+        barWidth,
+        segments,
+      };
+    });
+
+    return { width, height, margin, plotWidth, plotHeight, bars, labelStep };
+  }, [systemChartUsers, systemMaxTotal, systemStackData, userColors]);
+
+  const systemYAxisTicks = useMemo(() => {
+    const tickCount = 4;
+    const maxHours = systemMaxTotal;
+    return Array.from({ length: tickCount + 1 }, (_, i) => {
+      const ratio = i / tickCount;
+      const value = maxHours * ratio;
+      const y = systemChartLayout.margin.top + systemChartLayout.plotHeight - (systemChartLayout.plotHeight * ratio);
+      return {
+        key: i,
+        value,
+        y,
+      };
+    });
+  }, [systemChartLayout.margin.top, systemChartLayout.plotHeight, systemMaxTotal]);
+
   const handlePieTooltipMove = (event: React.MouseEvent<SVGPathElement>, slice: CustomerPieSlice) => {
     setPieTooltip({
       label: slice.label,
       hours: slice.hours,
       percent: slice.percent,
       color: slice.color,
+      x: event.clientX + 14,
+      y: event.clientY + 14,
+    });
+  };
+
+  const handleBarTooltipMove = (event: React.MouseEvent<SVGRectElement>, label: string, hours: number, systemName?: string) => {
+    const title = systemName ? `${systemName} / ${label}` : label;
+    setBarTooltip({
+      label: title,
+      hours,
       x: event.clientX + 14,
       y: event.clientY + 14,
     });
@@ -228,6 +382,17 @@ export default function DashboardPage() {
           <div className="text-sm font-semibold text-slate-950 dark:text-slate-50">{pieTooltip.label}</div>
           <div className="mt-1 text-xs text-muted-foreground">
             {pieTooltip.hours.toFixed(1)}h / {pieTooltip.percent.toFixed(1)}%
+          </div>
+        </div>
+      )}
+      {barTooltip && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          style={{ left: barTooltip.x, top: barTooltip.y }}
+        >
+          <div className="text-sm font-semibold text-slate-950 dark:text-slate-50">{barTooltip.label}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {barTooltip.hours.toFixed(1)}h
           </div>
         </div>
       )}
@@ -343,7 +508,7 @@ export default function DashboardPage() {
         <Card className="flex flex-col lg:h-[36rem]">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{pieGroupBy === "customer" ? "顧客別 作業時間割合" : "作業別 作業時間割合"}</CardTitle>
+              <CardTitle>{activePieTitle}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
@@ -365,18 +530,28 @@ export default function DashboardPage() {
                 >
                   作業別
                 </Button>
-                <Badge variant="outline">合計 {totalHours.toFixed(1)}h</Badge>
+                <Button
+                  size="sm"
+                  variant={pieGroupBy === "project" ? "default" : "outline"}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setPieGroupBy("project");
+                  }}
+                >
+                  案件
+                </Button>
+                <Badge variant="outline">合計 {activePieTotalHours.toFixed(1)}h</Badge>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center gap-4 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start">
               <div className="flex h-72 w-72 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
-                {customerPieSlices.length === 0 ? (
+                {activePieSlices.length === 0 ? (
                   <div className="h-64 w-64 rounded-full bg-slate-200 dark:bg-slate-700" />
                 ) : (
                   <svg viewBox="0 0 100 100" className="h-64 w-64">
-                    {customerPieSlices.map((slice) => (
+                    {activePieSlices.map((slice) => (
                       slice.percent >= 100 ? (
                         <circle
                           key={slice.label}
@@ -401,13 +576,16 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="w-full space-y-2">
-                {pieBreakdown.map((item, index) => {
-                  const percent = totalHours > 0 ? (item.hours / totalHours) * 100 : 0;
+                {activePieBreakdown.map((item, index) => {
+                  const percent = activePieTotalHours > 0 ? (item.hours / activePieTotalHours) * 100 : 0;
+                  const color = pieGroupBy === "project"
+                    ? (projectRatioBreakdown.find((projectItem) => projectItem.label === item.label)?.color ?? "#CBD5E1")
+                    : chartColors[index % chartColors.length];
                   return (
                     <div key={item.label} className="flex items-center gap-3">
                       <span
                         className="inline-block h-3 w-3 rounded-full"
-                        style={{ backgroundColor: chartColors[index % chartColors.length] }}
+                        style={{ backgroundColor: color }}
                       />
                       <div className="min-w-0 flex-1 text-sm">
                         <div className="font-medium">{item.label}</div>
@@ -420,55 +598,102 @@ export default function DashboardPage() {
                 })}
               </div>
             </div>
+            {pieGroupBy === "project" && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                ※ このグラフは「案件のみ表示」の影響を受けません。
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col lg:h-[36rem]">
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>システム ユーザー別作業時間</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 space-y-4 overflow-y-auto">
+          <CardContent className="space-y-3">
             {systemStackData.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground">フィルタ結果にデータがありません</div>
             ) : (
-              <div className="space-y-4">
-                {systemStackData.map((systemItem) => (
-                  <div key={systemItem.system} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm font-medium">
-                      <span>{systemItem.system}</span>
-                      <span>{systemItem.total.toFixed(1)}h</span>
-                    </div>
-                    <div className="h-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                      <div className="flex h-full">
-                        {systemItem.users.map((userItem) => {
-                          const width = systemItem.total > 0 ? (userItem.hours / systemItem.total) * 100 : 0;
-                          return (
-                            <div
-                              key={`${systemItem.system}-${userItem.user}`}
-                              className="h-full"
-                              style={{
-                                width: `${width}%`,
-                                backgroundColor: userColors.get(userItem.user) ?? "#CBD5E1",
-                              }}
-                              title={`${userItem.user}: ${userItem.hours.toFixed(1)}h`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      {systemItem.users.map((userItem) => (
-                        <span key={`${systemItem.system}-label-${userItem.user}`} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: userColors.get(userItem.user) ?? "#CBD5E1" }}
-                          />
-                          {userItem.user} {userItem.hours.toFixed(1)}h
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <div className="rounded-md border border-slate-200 p-2 dark:border-slate-700">
+                  <svg viewBox={`0 0 ${systemChartLayout.width} ${systemChartLayout.height}`} className="h-44 w-full">
+                    {systemYAxisTicks.map((tick) => (
+                      <g key={`y-tick-${tick.key}`}>
+                        <line
+                          x1={systemChartLayout.margin.left}
+                          y1={tick.y}
+                          x2={systemChartLayout.margin.left + systemChartLayout.plotWidth}
+                          y2={tick.y}
+                          stroke="#E2E8F0"
+                          strokeWidth="1"
+                        />
+                        <text
+                          x={systemChartLayout.margin.left - 4}
+                          y={tick.y + 3}
+                          textAnchor="end"
+                          fontSize="8"
+                          fill="#64748B"
+                        >
+                          {tick.value.toFixed(1)}h
+                        </text>
+                      </g>
+                    ))}
+                    <line
+                      x1={systemChartLayout.margin.left}
+                      y1={systemChartLayout.margin.top}
+                      x2={systemChartLayout.margin.left}
+                      y2={systemChartLayout.margin.top + systemChartLayout.plotHeight}
+                      stroke="#94A3B8"
+                      strokeWidth="1"
+                    />
+                    <line
+                      x1={systemChartLayout.margin.left}
+                      y1={systemChartLayout.margin.top + systemChartLayout.plotHeight}
+                      x2={systemChartLayout.margin.left + systemChartLayout.plotWidth}
+                      y2={systemChartLayout.margin.top + systemChartLayout.plotHeight}
+                      stroke="#94A3B8"
+                      strokeWidth="1"
+                    />
+                    {systemChartLayout.bars.map((bar, index) => (
+                      <g key={bar.system}>
+                        {bar.segments.map((segment) => (
+                          <rect
+                            key={`${bar.system}-${segment.user}`}
+                            x={bar.x}
+                            y={segment.y}
+                            width={bar.barWidth}
+                            height={segment.h}
+                            fill={segment.color}
+                            onMouseMove={(event) => handleBarTooltipMove(event, segment.user, segment.hours, bar.system)}
+                            onMouseLeave={() => setBarTooltip(null)}
+                          >
+                            <title>{`${bar.system} / ${segment.user}: ${segment.hours.toFixed(1)}h`}</title>
+                          </rect>
+                        ))}
+                        <text
+                          x={bar.x + bar.barWidth / 2}
+                          y={systemChartLayout.margin.top + systemChartLayout.plotHeight + 10}
+                          textAnchor="middle"
+                          fontSize="8"
+                          fill="#475569"
+                        >
+                          {index % systemChartLayout.labelStep === 0 ? bar.system : ""}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                  {systemChartUsers.map((user) => (
+                    <span key={`legend-${user}`} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ backgroundColor: userColors.get(user) ?? "#CBD5E1" }}
+                      />
+                      {user}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>

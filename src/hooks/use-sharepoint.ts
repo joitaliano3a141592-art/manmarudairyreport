@@ -60,6 +60,15 @@ function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate" | "Registratio
   return params.toString();
 }
 
+function isNonIndexedQueryError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes("cannot be referenced in filter or orderby") ||
+    error.message.includes("HonorNonIndexedQueriesWarningMayFailRandomly") ||
+    error.message.includes("invalidRequest")
+  );
+}
+
 function isBrokenDisplayName(value?: string | null): boolean {
   if (!value) return true;
   return /^[?\s]+$/.test(value);
@@ -224,8 +233,15 @@ export function useReportsByDateField(
     queryKey: ["sp", "reports", dateField, startDate, endDate],
     queryFn: async () => {
       const query = buildDateRangeQuery(dateField, startDate, endDate);
-      const items = await fetchListItems<SPReportFields>(SP_LISTS.reports, query);
-      return items;
+      try {
+        return await fetchListItems<SPReportFields>(SP_LISTS.reports, query);
+      } catch (error) {
+        if (!isNonIndexedQueryError(error)) {
+          throw error;
+        }
+        console.warn("[useReportsByDateField] Non-indexed query fallback: fetch all then filter client-side", error);
+        return fetchListItems<SPReportFields>(SP_LISTS.reports);
+      }
     },
     select: (items): WorkReport[] => {
       const filtered = startDate && endDate
@@ -325,8 +341,15 @@ export function usePlans(startDate?: string, endDate?: string) {
     queryKey: ["sp", "plans", startDate, endDate],
     queryFn: async () => {
       const query = buildDateRangeQuery("PlanDate", startDate, endDate);
-      const items = await fetchListItems<SPPlanFields>(SP_LISTS.plans, query);
-      return items;
+      try {
+        return await fetchListItems<SPPlanFields>(SP_LISTS.plans, query);
+      } catch (error) {
+        if (!isNonIndexedQueryError(error)) {
+          throw error;
+        }
+        console.warn("[usePlans] Non-indexed query fallback: fetch all then filter client-side", error);
+        return fetchListItems<SPPlanFields>(SP_LISTS.plans);
+      }
     },
     select: (items): WorkPlan[] => {
       const filtered = items.filter((item) => {
