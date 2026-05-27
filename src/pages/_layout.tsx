@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from "react"
+﻿import { useEffect, useMemo, useRef, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Sidebar } from "@/components/sidebar"
 import { SidebarProvider, useSidebarContext } from "@/components/sidebar-layout"
 import { Menu } from "lucide-react"
-import { useCurrentUser } from "@/hooks/use-current-user"
+import { useCurrentUser, clearCurrentUserNameOverride, setCurrentUserNameOverride } from "@/hooks/use-current-user"
+import { useReports } from "@/hooks/use-sharepoint"
 
 type LayoutProps = { showHeader?: boolean }
 
@@ -59,6 +60,24 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
   }
 
   const currentUser = useCurrentUser();
+  const { data: allReports = [] } = useReports();
+  const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
+  const userPickerRef = useRef<HTMLDivElement | null>(null)
+
+  const reportUserNames = useMemo(() => {
+    return Array.from(new Set(allReports.map((report) => report.userName.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja"))
+  }, [allReports])
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!userPickerRef.current) return
+      if (!userPickerRef.current.contains(event.target as Node)) {
+        setIsUserPickerOpen(false)
+      }
+    }
+    window.addEventListener("mousedown", onPointerDown)
+    return () => window.removeEventListener("mousedown", onPointerDown)
+  }, [])
 
   return (
     <div className="min-h-dvh flex flex-col bg-background">
@@ -95,8 +114,51 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
             {/* 右側: テーマ切替とユーザー */}
             <div className="flex items-center gap-3">
               <ModeToggle />
-              <div className="rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
-                {currentUser.name}
+              <div className="relative" ref={userPickerRef}>
+                <button
+                  type="button"
+                  className="rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground"
+                  onClick={() => setIsUserPickerOpen((current) => !current)}
+                  title="ユーザーを切り替え"
+                >
+                  {currentUser.name}
+                </button>
+                {isUserPickerOpen && (
+                  <div className="absolute right-0 z-40 mt-2 w-64 rounded-md border border-border bg-background p-2 shadow-lg">
+                    <div className="mb-1 px-1 text-xs text-muted-foreground">実績登録ユーザー</div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {reportUserNames.length === 0 ? (
+                        <p className="px-2 py-1 text-xs text-muted-foreground">実績データがありません</p>
+                      ) : (
+                        reportUserNames.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            className={`block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted ${name === currentUser.name ? "bg-muted font-medium" : ""}`}
+                            onClick={() => {
+                              setCurrentUserNameOverride(name)
+                              setIsUserPickerOpen(false)
+                            }}
+                          >
+                            {name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    <div className="mt-2 border-t border-border pt-2">
+                      <button
+                        type="button"
+                        className="w-full rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted"
+                        onClick={() => {
+                          clearCurrentUserNameOverride()
+                          setIsUserPickerOpen(false)
+                        }}
+                      >
+                        ログインユーザーに戻す
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

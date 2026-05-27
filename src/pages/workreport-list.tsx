@@ -61,7 +61,12 @@ export default function WorkReportListPage() {
     }
     updateMutation.mutate({
       itemId: report.id,
-      fields: { WorkDescription: editDescription, WorkHours: workTime, IsProject: editIsProject },
+      fields: {
+        WorkDescription: editDescription,
+        WorkHours: workTime,
+        IsProject: editIsProject,
+        ReporterName: currentUser.name,
+      },
     });
     setEditingId(null);
   };

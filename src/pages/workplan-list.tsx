@@ -67,6 +67,7 @@ export default function WorkPlanListPage() {
       fields: {
         PlanDate: `${editPlanDate}T00:00:00+09:00`,
         WorkDescription: editDescription,
+        AssigneeName: currentUser.name,
       },
     });
     setEditingId(null);
