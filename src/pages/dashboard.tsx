@@ -164,17 +164,30 @@ export default function DashboardPage() {
   );
 
   const projectRatioBreakdown = useMemo(() => {
-    const projectHours = reportsWithoutProjectFilter
-      .filter((report: WorkReport) => report.isProject)
-      .reduce((sum, report) => sum + report.workHours, 0);
-    const internalHours = reportsWithoutProjectFilter
-      .filter((report: WorkReport) => !report.isProject)
-      .reduce((sum, report) => sum + report.workHours, 0);
+    const map = new Map<string, number>();
 
-    return [
-      { label: "案件", hours: projectHours, color: "#0EA5E9" },
-      { label: "社内事", hours: internalHours, color: "#F97316" },
-    ];
+    reportsWithoutProjectFilter.forEach((report: WorkReport) => {
+      let label = "";
+      if (report.isProject) {
+        label = "案件";
+      } else {
+        label = report.customerName || "社内事";
+      }
+      map.set(label, (map.get(label) || 0) + report.workHours);
+    });
+
+    return Array.from(map.entries())
+      .map(([label, hours]) => ({
+        label,
+        hours,
+        color: label === "案件" ? "#0EA5E9" : "" // 後で動的に割り当てるか、固定色を使う
+      }))
+      .sort((a, b) => {
+        // "案件"を一番上に、それ以外を時間順にする
+        if (a.label === "案件") return -1;
+        if (b.label === "案件") return 1;
+        return b.hours - a.hours;
+      });
   }, [reportsWithoutProjectFilter]);
 
   const projectRatioPieSlices = useMemo(() => {
@@ -183,21 +196,27 @@ export default function DashboardPage() {
     }
 
     let currentAngle = 0;
-    return projectRatioBreakdown.map((item) => {
+    return projectRatioBreakdown.map((item, index) => {
       const percent = (item.hours / projectRatioTotalHours) * 100;
       const angleSpan = (percent / 100) * 360;
+      
+      // 案件以外は chartColors から割り当て（案件と色が被らないように調整）
+      const color = item.label === "案件" 
+        ? "#0EA5E9" 
+        : chartColors[(index + 2) % chartColors.length]; // +2して案件色(#0EA5E9)との重複を避ける
+
       const slice: CustomerPieSlice = {
         label: item.label,
         hours: item.hours,
         percent,
-        color: item.color,
+        color: color,
         startAngle: currentAngle,
         endAngle: currentAngle + angleSpan,
       };
       currentAngle += angleSpan;
       return slice;
     });
-  }, [projectRatioBreakdown, projectRatioTotalHours]);
+  }, [chartColors, projectRatioBreakdown, projectRatioTotalHours]);
 
   const activePieTitle = pieGroupBy === "customer"
     ? "顧客別 作業時間割合"
@@ -579,7 +598,7 @@ export default function DashboardPage() {
                 {activePieBreakdown.map((item, index) => {
                   const percent = activePieTotalHours > 0 ? (item.hours / activePieTotalHours) * 100 : 0;
                   const color = pieGroupBy === "project"
-                    ? (projectRatioBreakdown.find((projectItem) => projectItem.label === item.label)?.color ?? "#CBD5E1")
+                    ? (activePieSlices.find((slice) => slice.label === item.label)?.color ?? "#CBD5E1")
                     : chartColors[index % chartColors.length];
                   return (
                     <div key={item.label} className="flex items-center gap-3">
