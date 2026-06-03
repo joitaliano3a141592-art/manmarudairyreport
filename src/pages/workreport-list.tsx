@@ -46,6 +46,11 @@ export default function WorkReportListPage() {
     [currentUser.name, reports],
   );
 
+  const totalWorkHours = useMemo(
+    () => filteredReports.reduce((sum, r) => sum + r.workHours, 0),
+    [filteredReports],
+  );
+
   const handleEdit = (report: typeof reports[0]) => {
     setEditingId(report.id);
     setEditDescription(report.workDescription);
@@ -137,7 +142,10 @@ export default function WorkReportListPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle>対象作業実績</CardTitle>
-            <Badge variant="outline">{filteredReports.length} 件</Badge>
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
+              <Badge variant="outline">{filteredReports.length} 件</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

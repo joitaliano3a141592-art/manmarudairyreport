@@ -119,6 +119,10 @@ export default function DailyEntryPage() {
     () => allReports.filter((report) => report.userName.trim() === currentUserName),
     [allReports, currentUserName],
   );
+  const totalWorkHours = useMemo(
+    () => reports.reduce((sum, r) => sum + r.workHours, 0),
+    [reports]
+  );
   const plans = useMemo(
     () => allUpcomingPlans.filter((plan) => plan.userName.trim() === currentUserName),
     [allUpcomingPlans, currentUserName],
@@ -612,7 +616,12 @@ export default function DailyEntryPage() {
       <div className="grid gap-6 lg:grid-cols-2 mt-6 min-w-0">
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>作業実績一覧</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>作業実績一覧</CardTitle>
+              {reports.length > 0 && (
+                <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {reports.length === 0 ? (
