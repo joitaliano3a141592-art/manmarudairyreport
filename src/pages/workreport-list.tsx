@@ -60,8 +60,8 @@ export default function WorkReportListPage() {
 
   const handleSave = (report: typeof reports[0]) => {
     const workTime = parseFloat(editWorkTime);
-    if (!editDescription.trim() || Number.isNaN(workTime) || workTime <= 0) {
-      alert("作業内容と正しい作業時間を入力してください。");
+    if (Number.isNaN(workTime) || workTime <= 0) {
+      alert("正しい作業時間を入力してください。");
       return;
     }
     updateMutation.mutate({
