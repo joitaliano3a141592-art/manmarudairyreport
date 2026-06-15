@@ -26,6 +26,7 @@ import { postTeamsChannelMessage } from "@/lib/graphClient";
 import { TEAMS_CONFIG } from "@/lib/sharepointConfig";
 import { formatWorkHours } from "@/lib/utils";
 import * as microsoftTeams from "@microsoft/teams-js";
+import { toast } from "sonner";
 
 function toLocalDate(date: Date): string {
   const y = date.getFullYear();
@@ -98,7 +99,10 @@ export default function DailyEntryPage() {
   const [planForm, setPlanForm] = useState({
     customerId: "",
     systemId: "",
+    workTypeId: "",
     workDescription: "",
+    workTime: "",
+    isProject: true,
     planDate: tomorrow,
   });
   const [reportSubmitError, setReportSubmitError] = useState("");
@@ -174,13 +178,13 @@ export default function DailyEntryPage() {
       !reportForm.workTypeId ||
       !reportForm.workTime.trim()
     ) {
-      alert("本日の作業実績の必須項目を入力してください。");
+      toast.error("本日の作業実績の必須項目を入力してください。");
       return;
     }
 
     const workTime = parseFloat(reportForm.workTime);
     if (Number.isNaN(workTime) || workTime <= 0) {
-      alert("正しい作業時間を入力してください。");
+      toast.error("正しい作業時間を入力してください。");
       return;
     }
 
@@ -211,9 +215,12 @@ export default function DailyEntryPage() {
   const addPlan = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!planForm.customerId || !planForm.systemId || !planForm.workDescription.trim()) {
-      alert("次回の作業予定の必須項目を入力してください。");
+      toast.error("次回の作業予定の必須項目を入力してください。");
       return;
     }
+
+    const planHours = parseFloat(planForm.workTime);
+    const validPlanHours = !Number.isNaN(planHours) && planHours > 0 ? planHours : undefined;
 
     const customer = customers.find((c) => c.id === planForm.customerId);
 
@@ -223,11 +230,14 @@ export default function DailyEntryPage() {
       PlanDate: `${planForm.planDate}T00:00:00+09:00`,
       CustomerLookupId: Number(planForm.customerId),
       SystemLookupId: Number(planForm.systemId),
+      WorkTypeLookupId: planForm.workTypeId ? Number(planForm.workTypeId) : undefined,
       WorkDescription: planForm.workDescription,
+      PlannedHours: validPlanHours,
+      IsProject: planForm.isProject,
       AssigneeName: currentUser.name,
     }, {
       onSuccess: () => {
-        setPlanForm({ ...planForm, customerId: "", systemId: "", workDescription: "" });
+        setPlanForm({ ...planForm, customerId: "", systemId: "", workTypeId: "", workDescription: "", workTime: "", isProject: true });
       },
       onError: (error) => {
         setPlanSubmitError(error instanceof Error ? error.message : String(error));
@@ -268,18 +278,18 @@ export default function DailyEntryPage() {
 
   const requestPublish = async () => {
     if (reportsLoading || plansLoading) {
-      alert("発報対象データを読み込み中です。しばらくしてから再度お試しください。");
+      toast.error("発報対象データを読み込み中です。しばらくしてから再度お試しください。");
       return;
     }
 
     if (publishReports.length === 0 && publishPlans.length === 0) {
-      alert("送信する作業実績・予定がありません。");
+      toast.error("送信する作業実績・予定がありません。");
       return;
     }
     const nextPublishTarget = await resolveTeamsPublishTarget();
 
     if (!nextPublishTarget.teamId || !nextPublishTarget.channelId) {
-      alert("Teams チャネルが設定されていません。管理者に連絡してください。");
+      toast.error("Teams チャネルが設定されていません。管理者に連絡してください。");
       return;
     }
 
@@ -362,10 +372,10 @@ export default function DailyEntryPage() {
       `.trim();
 
       await postTeamsChannelMessage(publishTarget.teamId, publishTarget.channelId, html);
-      alert("Teams チャネルに送信しました。");
+      toast.success("Teams チャネルに送信しました。");
     } catch (err) {
       console.error("Teams 送信エラー:", err);
-      alert(`Teams への送信に失敗しました。\n${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Teams への送信に失敗しました。\n${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setPublishing(false);
       setPublishTarget(null);
@@ -588,8 +598,50 @@ export default function DailyEntryPage() {
                 </div>
               </div>
 
-              {/* 実績側の「作業区分/作業時間/案件」行と高さを揃えるスペーサ */}
-              <div className="h-[3.75rem]" />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label>作業区分</Label>
+                  <Select
+                    value={planForm.workTypeId}
+                    onValueChange={(value) => setPlanForm({ ...planForm, workTypeId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="区分を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workTypes.map((wt) => (
+                        <SelectItem key={wt.id} value={wt.id}>{wt.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>予定時間 (h)</Label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="2.5"
+                    value={planForm.workTime}
+                    onChange={(e) => setPlanForm({ ...planForm, workTime: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col space-y-2 pt-1.5 sm:pt-0">
+                  <Label>案件</Label>
+                  <div className="flex items-center h-9">
+                    <input
+                      type="checkbox"
+                      id="plan-is-project"
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={planForm.isProject}
+                      onChange={(e) => setPlanForm({ ...planForm, isProject: e.target.checked })}
+                    />
+                    <Label htmlFor="plan-is-project" className="ml-2 font-normal cursor-pointer">
+                      案件
+                    </Label>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-1.5">
                 <Label>作業内容</Label>
@@ -685,6 +737,9 @@ export default function DailyEntryPage() {
                   <TableHead>予定日</TableHead>
                   <TableHead>顧客</TableHead>
                   <TableHead>システム</TableHead>
+                  <TableHead>区分</TableHead>
+                  <TableHead className="text-right">時間</TableHead>
+                  <TableHead>案件</TableHead>
                   <TableHead>作業内容</TableHead>
                   <TableHead className="w-20">操作</TableHead>
                 </TableRow>
@@ -695,6 +750,11 @@ export default function DailyEntryPage() {
                     <TableCell className="whitespace-nowrap">{plan.planDate}</TableCell>
                     <TableCell className="whitespace-nowrap">{plan.customerName}</TableCell>
                     <TableCell className="whitespace-nowrap">{plan.systemName}</TableCell>
+                    <TableCell className="whitespace-nowrap">{plan.workTypeName}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {plan.plannedHours > 0 ? `${formatWorkHours(plan.plannedHours)}h` : "―"}
+                    </TableCell>
+                    <TableCell className="text-center">{plan.isProject ? "○" : "―"}</TableCell>
                     <TableCell className="max-w-[16rem] truncate" title={plan.workDescription}>{plan.workDescription}</TableCell>
                     <TableCell>
                       <Button

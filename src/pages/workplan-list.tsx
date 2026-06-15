@@ -12,6 +12,7 @@ import { usePlans, useUpdatePlan, useDeletePlan } from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { WorkPlan } from "@/types/sharepoint";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
+import { toast } from "sonner";
 
 function toLocalDate(date: Date): string {
   const y = date.getFullYear();
@@ -58,7 +59,7 @@ export default function WorkPlanListPage() {
 
   const handleSave = (plan: WorkPlan) => {
     if (!editDescription.trim() || !editPlanDate) {
-      alert("予定日と作業内容を入力してください。");
+      toast.warning("予定日と作業内容を入力してください。");
       return;
     }
 

@@ -12,6 +12,7 @@ import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharep
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 import { formatWorkHours } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function WorkReportListPage() {
   const handleSave = (report: typeof reports[0]) => {
     const workTime = parseFloat(editWorkTime);
     if (Number.isNaN(workTime) || workTime <= 0) {
-      alert("正しい作業時間を入力してください。");
+      toast.error("正しい作業時間を入力してください。");
       return;
     }
     updateMutation.mutate({

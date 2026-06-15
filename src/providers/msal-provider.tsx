@@ -105,38 +105,63 @@ async function ensureActiveAccount(scopes: string[]): Promise<void> {
   msalInstance.setActiveAccount(res.account);
 }
 
+async function acquireTokenInternal(scopes: string[]): Promise<string> {
+  const account = msalInstance.getActiveAccount();
+  if (account) {
+    try {
+      const res = await msalInstance.acquireTokenSilent({
+        scopes,
+        account,
+      });
+      return res.accessToken;
+    } catch (err) {
+      console.warn("Silent token acquisition failed, attempting interaction:", err);
+    }
+  }
+
+  if (isInIframe) {
+    try {
+      await microsoftTeams.app.initialize();
+      const ctx = await microsoftTeams.app.getContext();
+      if (ctx?.app?.host) {
+        const baseUrl = window.location.origin + import.meta.env.BASE_URL;
+        clearTeamsSessionReady();
+        markTeamsAuthPending();
+        await microsoftTeams.authentication.authenticate({
+          url: `${baseUrl}teams-auth-start`,
+          width: 600,
+          height: 535,
+        });
+        clearTeamsAuthPending();
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          msalInstance.setActiveAccount(accounts[0]);
+          const res = await msalInstance.acquireTokenSilent({
+            scopes,
+            account: accounts[0],
+          });
+          return res.accessToken;
+        }
+      }
+    } catch (err) {
+      clearTeamsAuthPending();
+      throw err;
+    }
+  }
+
+  const res = await msalInstance.acquireTokenPopup({ scopes });
+  msalInstance.setActiveAccount(res.account);
+  return res.accessToken;
+}
+
 /** Acquires a Graph API access token silently (falls back to popup in iframe, redirect otherwise). */
 export async function acquireGraphToken(): Promise<string> {
-  await ensureActiveAccount(graphScopes);
-  const account = msalInstance.getActiveAccount();
-  if (!account) throw new Error("MSAL account is not available after authentication.");
-  try {
-    const res = await msalInstance.acquireTokenSilent({
-      scopes: graphScopes,
-      account,
-    });
-    return res.accessToken;
-  } catch {
-    const res = await msalInstance.acquireTokenPopup({ scopes: graphScopes });
-    return res.accessToken;
-  }
+  return acquireTokenInternal(graphScopes);
 }
 
 /** Acquires a token with Teams channel message send permission (for 発報). */
 export async function acquireTeamsToken(): Promise<string> {
-  await ensureActiveAccount(teamsScopes);
-  const account = msalInstance.getActiveAccount();
-  if (!account) throw new Error("MSAL account is not available after authentication.");
-  try {
-    const res = await msalInstance.acquireTokenSilent({
-      scopes: teamsScopes,
-      account,
-    });
-    return res.accessToken;
-  } catch {
-    const res = await msalInstance.acquireTokenPopup({ scopes: teamsScopes });
-    return res.accessToken;
-  }
+  return acquireTokenInternal(teamsScopes);
 }
 
 /** Auto-login wrapper shown while MSAL initializes / user is unauthenticated */

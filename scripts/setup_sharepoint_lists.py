@@ -242,6 +242,20 @@ def ensure_person_column(site_id: str, list_id: str, name: str, display_name: st
     print(f"[CREATE] Column: {name} (personOrGroup)")
 
 
+def ensure_boolean_column(site_id: str, list_id: str, name: str, display_name: str, cols: dict, *, default_value: bool = True):
+    if name in cols:
+        print(f"[SKIP] Column exists: {name}")
+        return
+    body = {
+        "name": name,
+        "displayName": display_name,
+        "boolean": {},
+        "defaultValue": {"value": "true" if default_value else "false"},
+    }
+    graph_post(f"/sites/{site_id}/lists/{list_id}/columns", body)
+    print(f"[CREATE] Column: {name} (boolean)")
+
+
 def ensure_lookup_column(site_id: str, list_id: str, name: str, display_name: str, lookup_list_id: str, cols: dict, *, required: bool = False):
     if name in cols:
         print(f"[SKIP] Column exists: {name}")
@@ -342,7 +356,10 @@ def main():
     ensure_datetime_column(site_id, plan_list_id, "PlanDate", "予定日", plan_cols, required=True)
     ensure_lookup_column(site_id, plan_list_id, "Customer", "顧客", customer_list_id, plan_cols, required=True)
     ensure_lookup_column(site_id, plan_list_id, "System", "システム", system_list_id, plan_cols, required=True)
+    ensure_lookup_column(site_id, plan_list_id, "WorkType", "作業種別", worktype_list_id, plan_cols, required=False)
     ensure_text_column(site_id, plan_list_id, "WorkDescription", "作業内容", plan_cols, required=True, multi_line=True)
+    ensure_number_column(site_id, plan_list_id, "PlannedHours", "作業予定時間", plan_cols, required=False)
+    ensure_boolean_column(site_id, plan_list_id, "IsProject", "案件", plan_cols, default_value=True)
     ensure_text_column(site_id, plan_list_id, "AssigneeName", "担当者名", plan_cols)
     ensure_person_column(site_id, plan_list_id, "Assignee", "担当者", plan_cols)
     ensure_choice_column(site_id, plan_list_id, "Status", "状態", ["未着手", "進行中", "完了"], plan_cols, required=True)

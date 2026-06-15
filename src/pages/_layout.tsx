@@ -7,6 +7,7 @@ import { SidebarProvider, useSidebarContext } from "@/components/sidebar-layout"
 import { Menu } from "lucide-react"
 import { useCurrentUser, clearCurrentUserNameOverride, setCurrentUserNameOverride } from "@/hooks/use-current-user"
 import { useReports } from "@/hooks/use-sharepoint"
+import { toast } from "sonner"
 
 type LayoutProps = { showHeader?: boolean }
 
@@ -38,17 +39,17 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
     sessionStorage.setItem(key, "shown")
 
     const prevYear = now.getFullYear() - 1
-    alert(
-      [
-        "【年次データ移行のご案内】",
+    toast("【年次データ移行のご案内】", {
+      description: [
         `前年度（${prevYear}年）の作業実績・予定データを年別テーブルへ移行してください。`,
         "本システムでは自動実行は行いません。必ず手動実行をお願いします。",
         "",
         "手順（安全確認 → 移行）",
         `1) python scripts/migrate_previous_year_data.py --year ${prevYear} --export-only`,
         `2) python scripts/migrate_previous_year_data.py --year ${prevYear} --delete-source`,
-      ].join("\n")
-    )
+      ].join("\n"),
+      duration: 10000,
+    })
   }, [])
 
   const handleMenuToggle = () => {

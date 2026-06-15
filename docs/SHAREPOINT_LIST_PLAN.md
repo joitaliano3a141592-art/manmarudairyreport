@@ -31,12 +31,14 @@
 
 - Title（既定）: 件名
 - ReportDate（日付）: 作業日
+- RegistrationDate（日付）: 登録日
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - System（Lookup -> システムマスタ.Title）: システム
 - WorkType（Lookup -> 作業種別マスタ.Title）: 作業種別
 - WorkDescription（複数行テキスト）: 作業内容
 - WorkHours（数値）: 作業時間
 - Reporter（ユーザー）: 報告者
+- IsProject（はい/いいえ）: 案件
 
 ### 作業予定
 
@@ -44,7 +46,10 @@
 - PlanDate（日付）: 予定日
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - System（Lookup -> システムマスタ.Title）: システム
+- WorkType（Lookup -> 作業種別マスタ.Title）: 作業種別
 - WorkDescription（複数行テキスト）: 作業内容
+- PlannedHours（数値）: 作業予定時間
+- IsProject（はい/いいえ）: 案件
 - Assignee（ユーザー）: 担当者
 - Status（Choice）: 未着手 / 進行中 / 完了
 

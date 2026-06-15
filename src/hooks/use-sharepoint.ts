@@ -103,6 +103,7 @@ import {
   updateListItem,
   deleteListItem,
 } from "@/lib/graphClient";
+import { toast } from "sonner";
 import type {
   SPCustomerFields,
   SPSystemFields,
@@ -293,7 +294,7 @@ export function useAddReport() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業実績の登録に失敗しました。\n${message}`);
+      toast.error(`作業実績の登録に失敗しました。\n${message}`);
     },
   });
 }
@@ -327,7 +328,7 @@ export function useDeleteReport() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業実績の削除に失敗しました。\n${message}`);
+      toast.error(`作業実績の削除に失敗しました。\n${message}`);
     },
   });
 }
@@ -366,6 +367,7 @@ export function usePlans(startDate?: string, endDate?: string) {
         const f = item.fields;
         const custId = String(f.CustomerLookupId ?? "");
         const sysId = String(f.SystemLookupId ?? "");
+        const workTypeId = String(f.WorkTypeLookupId ?? "");
         return {
           id: item.id,
           title: f.Title,
@@ -374,7 +376,11 @@ export function usePlans(startDate?: string, endDate?: string) {
           customerName: maps.customerMap.get(custId) ?? "",
           systemId: sysId,
           systemName: maps.systemMap.get(sysId) ?? "",
+          workTypeId: workTypeId,
+          workTypeName: maps.workTypeMap.get(workTypeId) ?? "",
           workDescription: f.WorkDescription ?? "",
+          plannedHours: f.PlannedHours ?? 0,
+          isProject: f.IsProject ?? true,
           userName: resolveUserDisplayName(f.AssigneeName, f.Title, item.createdByName),
         };
       }).sort((left, right) => {
@@ -399,7 +405,7 @@ export function useAddPlan() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業予定の登録に失敗しました。\n${message}`);
+      toast.error(`作業予定の登録に失敗しました。\n${message}`);
     },
   });
 }
@@ -433,7 +439,7 @@ export function useDeletePlan() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      alert(`作業予定の削除に失敗しました。\n${message}`);
+      toast.error(`作業予定の削除に失敗しました。\n${message}`);
     },
   });
 }

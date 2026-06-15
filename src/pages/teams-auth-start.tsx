@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { getMsalInstance } from "@/providers/msal-provider";
-import { graphScopes } from "@/lib/msalConfig";
+import { teamsScopes } from "@/lib/msalConfig";
 
 /**
  * Teams チャネルタブ認証ポップアップの開始ページ。
@@ -14,7 +14,7 @@ export default function TeamsAuthStart() {
       .initialize()
       .then(() => {
         getMsalInstance().loginRedirect({
-          scopes: graphScopes,
+          scopes: teamsScopes,
           // Azure AD に登録済みの redirectUri (BASE_URL) へ戻す
           redirectUri: window.location.origin + import.meta.env.BASE_URL,
         });

@@ -41,7 +41,10 @@ export type SPPlanFields = {
   PlanDate?: string;
   CustomerLookupId?: number;
   SystemLookupId?: number;
+  WorkTypeLookupId?: number;
   WorkDescription?: string;
+  PlannedHours?: number;
+  IsProject?: boolean;
   AssigneeLookupId?: number;
   AssigneeName?: string;
 };
@@ -95,6 +98,10 @@ export type WorkPlan = {
   customerName: string;
   systemId: string;
   systemName: string;
+  workTypeId: string;
+  workTypeName: string;
   workDescription: string;
+  plannedHours: number;
+  isProject: boolean;
   userName: string;
 };
