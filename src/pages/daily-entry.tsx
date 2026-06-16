@@ -550,7 +550,7 @@ export default function DailyEntryPage() {
   };
 
   const saveReport = async () => {
-    if (!reportForm.customerId || !reportForm.systemId || !reportForm.workTypeId || !reportForm.workDescription.trim()) {
+    if (!reportForm.customerId || !reportForm.systemId || !reportForm.workTypeId) {
       setReportSubmitError("必須項目を入力してください。");
       return;
     }
@@ -597,7 +597,7 @@ export default function DailyEntryPage() {
   };
 
   const savePlan = async () => {
-    if (!planForm.customerId || !planForm.systemId || !planForm.workTypeId || !planForm.workDescription.trim()) {
+    if (!planForm.customerId || !planForm.systemId || !planForm.workTypeId) {
       setPlanSubmitError("必須項目を入力してください。");
       return;
     }
@@ -1089,7 +1089,7 @@ export default function DailyEntryPage() {
           if (!open) closeReportModal();
         }}
         title={reportEditingId ? "作業実績を編集" : "作業実績を登録"}
-        description="システム、作業区分、作業内容を表示し、予定時間は表示のみ、作業時間を入力します。"
+        description=""
         onCancel={closeReportModal}
         onSave={() => {
           void saveReport();
@@ -1136,7 +1136,7 @@ export default function DailyEntryPage() {
               </Select>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>作業区分</Label>
               <Select value={reportForm.workTypeId} onValueChange={(value) => setReportForm({ ...reportForm, workTypeId: value })}>
@@ -1154,6 +1154,8 @@ export default function DailyEntryPage() {
               <Label>作業時間</Label>
               <Input type="number" min="0" step="0.25" value={reportForm.workTime} onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })} />
             </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>案件</Label>
               <div className="flex h-10 items-center gap-2">
@@ -1161,12 +1163,12 @@ export default function DailyEntryPage() {
                 <span className="text-sm">案件</span>
               </div>
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>完了</Label>
-            <div className="flex h-10 items-center gap-2">
-              <Checkbox checked={reportForm.isComplete} onCheckedChange={(checked) => setReportForm({ ...reportForm, isComplete: checked === true })} />
-              <span className="text-sm">完了</span>
+            <div className="space-y-1.5">
+              <Label>完了</Label>
+              <div className="flex h-10 items-center gap-2">
+                <Checkbox checked={reportForm.isComplete} onCheckedChange={(checked) => setReportForm({ ...reportForm, isComplete: checked === true })} />
+                <span className="text-sm">完了</span>
+              </div>
             </div>
           </div>
           <div className="space-y-1.5">
@@ -1183,7 +1185,7 @@ export default function DailyEntryPage() {
           if (!open) closePlanModal();
         }}
         title={planEditingId ? "作業予定を編集" : "作業予定を登録"}
-        description="予定一覧の登録と編集をここで行います。"
+        description=""
         onCancel={closePlanModal}
         onSave={() => {
           void savePlan();
@@ -1198,7 +1200,7 @@ export default function DailyEntryPage() {
               <Input type="date" value={planForm.planDate} onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label>予定時間 (h)</Label>
+              <Label>予定作業時間 (h)</Label>
               <Input type="number" min="0" step="0.25" value={planForm.plannedHours} onChange={(e) => setPlanForm({ ...planForm, plannedHours: e.target.value })} />
             </div>
           </div>
