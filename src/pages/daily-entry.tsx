@@ -281,14 +281,12 @@ export default function DailyEntryPage() {
     [nextPlanDate, plans],
   );
   const reportTableRows = useMemo<ReportTableRow[]>(() => {
-    const normalizeForMatch = (value: string) => value.replaceAll(/\s+/g, " ").trim();
     const convertedPlanKeys = new Set(
       reports.map((report) => [
         report.reportDate,
         report.customerId,
         report.systemId,
         report.workTypeId,
-        normalizeForMatch(report.workDescription),
       ].join("|")),
     );
     const visibleTodayPlans = todayPlans.filter((plan) => {
@@ -297,7 +295,6 @@ export default function DailyEntryPage() {
         plan.customerId,
         plan.systemId,
         plan.workTypeId,
-        normalizeForMatch(plan.workDescription),
       ].join("|");
       return !convertedPlanKeys.has(key);
     });
