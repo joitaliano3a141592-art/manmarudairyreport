@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/form-modal";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
-import { CalendarPlus, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { Pencil, Plus, Send, Trash2 } from "lucide-react";
 import {
   useCustomers,
   useSystems,
@@ -86,6 +86,50 @@ type WorkDayFormState = {
   todayNote: string;
 };
 
+type ReportTableRow = {
+  rowKey: string;
+  source: "report" | "today-plan";
+  sourceId: string;
+  reportDate: string;
+  customerId: string;
+  customerName: string;
+  systemId: string;
+  systemName: string;
+  workTypeId: string;
+  workTypeName: string;
+  plannedHours: number;
+  workHours: number;
+  isComplete: boolean;
+  isProject: boolean;
+  workDescription: string;
+};
+
+type InlineEditState = {
+  rowKey: string;
+  source: "report" | "today-plan";
+  sourceId: string;
+  reportDate: string;
+  customerId: string;
+  systemId: string;
+  workTypeId: string;
+  plannedHours: string;
+  workTime: string;
+  isComplete: boolean;
+  isProject: boolean;
+  workDescription: string;
+};
+
+type InlinePlanEditState = {
+  planId: string;
+  planDate: string;
+  customerId: string;
+  systemId: string;
+  workTypeId: string;
+  plannedHours: string;
+  isProject: boolean;
+  workDescription: string;
+};
+
 function emptyReportForm(): ReportFormState {
   return {
     reportDate: today,
@@ -147,6 +191,7 @@ export default function DailyEntryPage() {
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reportItems = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReportsByDateField("RegistrationDate", today, today);
+  const { data: todayPlanItems = [], isLoading: todayPlansLoading, isError: todayPlansErrorState, error: todayPlansError } = usePlans(today, today);
   const { data: planItems = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(tomorrow);
   const { data: workDayItems = [], isLoading: workDaysLoading, isError: workDaysErrorState, error: workDaysError } = useWorkDays(today, today);
 
@@ -177,6 +222,8 @@ export default function DailyEntryPage() {
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<TeamsPublishTarget | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
+  const [inlinePlanEdit, setInlinePlanEdit] = useState<InlinePlanEditState | null>(null);
 
   const currentUserName = currentUser.name.trim();
   const reports = useMemo(
@@ -186,6 +233,10 @@ export default function DailyEntryPage() {
   const plans = useMemo(
     () => planItems.filter((plan) => plan.userName.trim() === currentUserName),
     [planItems, currentUserName],
+  );
+  const todayPlans = useMemo(
+    () => todayPlanItems.filter((plan) => plan.userName.trim() === currentUserName),
+    [todayPlanItems, currentUserName],
   );
   const currentWorkDay = useMemo(
     () => workDayItems.find((item) => item.workDate === today) ?? null,
@@ -218,6 +269,49 @@ export default function DailyEntryPage() {
     () => (nextPlanDate ? plans.filter((plan) => plan.planDate === nextPlanDate) : []),
     [nextPlanDate, plans],
   );
+  const reportTableRows = useMemo<ReportTableRow[]>(() => {
+    const reportRows: ReportTableRow[] = reports.map((report) => ({
+      rowKey: `report-${report.id}`,
+      source: "report",
+      sourceId: report.id,
+      reportDate: report.reportDate,
+      customerId: report.customerId,
+      customerName: report.customerName,
+      systemId: report.systemId,
+      systemName: report.systemName,
+      workTypeId: report.workTypeId,
+      workTypeName: report.workTypeName,
+      plannedHours: report.plannedHours,
+      workHours: report.workHours,
+      isComplete: report.isComplete,
+      isProject: report.isProject,
+      workDescription: report.workDescription,
+    }));
+    const planRows: ReportTableRow[] = todayPlans.map((plan) => ({
+      rowKey: `today-plan-${plan.id}`,
+      source: "today-plan",
+      sourceId: plan.id,
+      reportDate: plan.planDate,
+      customerId: plan.customerId,
+      customerName: plan.customerName,
+      systemId: plan.systemId,
+      systemName: plan.systemName,
+      workTypeId: plan.workTypeId,
+      workTypeName: plan.workTypeName,
+      plannedHours: plan.plannedHours,
+      workHours: 0,
+      isComplete: false,
+      isProject: plan.isProject,
+      workDescription: plan.workDescription,
+    }));
+    return [...reportRows, ...planRows].sort((left, right) => {
+      const dateCompare = left.reportDate.localeCompare(right.reportDate);
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+      return left.rowKey.localeCompare(right.rowKey);
+    });
+  }, [reports, todayPlans]);
   const publishReportGroups = useMemo(() => {
     const groups = new Map<string, typeof reports>();
     for (const report of reports) {
@@ -231,11 +325,11 @@ export default function DailyEntryPage() {
     return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
   }, [reports]);
 
-  if (custError || sysError || wtError || reportsErrorState || plansErrorState || workDaysErrorState) {
+  if (custError || sysError || wtError || reportsErrorState || todayPlansErrorState || plansErrorState || workDaysErrorState) {
     return (
       <DataErrorState
         title="日次入力に必要なデータを取得できませんでした"
-        error={customersError ?? systemsError ?? workTypesError ?? reportsError ?? plansError ?? workDaysError}
+        error={customersError ?? systemsError ?? workTypesError ?? reportsError ?? todayPlansError ?? plansError ?? workDaysError}
       />
     );
   }
@@ -262,6 +356,140 @@ export default function DailyEntryPage() {
     || updateWorkDayMutation.isPending
     || deleteReportMutation.isPending
     || deletePlanMutation.isPending;
+
+  const beginInlineEdit = (row: ReportTableRow) => {
+    setInlineEdit({
+      rowKey: row.rowKey,
+      source: row.source,
+      sourceId: row.sourceId,
+      reportDate: row.reportDate || today,
+      customerId: row.customerId,
+      systemId: row.systemId,
+      workTypeId: row.workTypeId,
+      plannedHours: String(row.plannedHours ?? 0),
+      workTime: String(row.workHours ?? 0),
+      isComplete: row.isComplete,
+      isProject: row.isProject,
+      workDescription: row.workDescription,
+    });
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEdit(null);
+  };
+
+  const saveInlineEdit = async () => {
+    if (!inlineEdit) return;
+    if (!inlineEdit.customerId || !inlineEdit.systemId || !inlineEdit.workTypeId || !inlineEdit.workDescription.trim()) {
+      toast.error("必須項目を入力してください。", { duration: 2200 });
+      return;
+    }
+
+    const plannedHours = Number(inlineEdit.plannedHours);
+    const workHours = Number(inlineEdit.workTime);
+    if (Number.isNaN(plannedHours) || plannedHours < 0 || Number.isNaN(workHours) || workHours < 0) {
+      toast.error("時間は 0 以上で入力してください。", { duration: 2200 });
+      return;
+    }
+
+    const customer = customers.find((item) => item.id === inlineEdit.customerId);
+
+    try {
+      if (inlineEdit.source === "report") {
+        await updateReportMutation.mutateAsync({
+          itemId: inlineEdit.sourceId,
+          fields: {
+            Title: `日報-${customer?.name ?? ""}`,
+            ReportDate: `${inlineEdit.reportDate}T00:00:00+09:00`,
+            RegistrationDate: `${today}T00:00:00+09:00`,
+            PlannedHours: plannedHours,
+            CustomerLookupId: Number(inlineEdit.customerId),
+            SystemLookupId: Number(inlineEdit.systemId),
+            WorkTypeLookupId: Number(inlineEdit.workTypeId),
+            WorkDescription: inlineEdit.workDescription,
+            WorkHours: workHours,
+            ReporterName: currentUser.name,
+            IsProject: inlineEdit.isProject,
+            IsComplete: inlineEdit.isComplete,
+          },
+        });
+        toast.success("作業実績を更新しました。", { duration: 2200 });
+      } else {
+        await addReportMutation.mutateAsync({
+          Title: `日報-${customer?.name ?? ""}`,
+          ReportDate: `${inlineEdit.reportDate}T00:00:00+09:00`,
+          RegistrationDate: `${today}T00:00:00+09:00`,
+          PlannedHours: plannedHours,
+          CustomerLookupId: Number(inlineEdit.customerId),
+          SystemLookupId: Number(inlineEdit.systemId),
+          WorkTypeLookupId: Number(inlineEdit.workTypeId),
+          WorkDescription: inlineEdit.workDescription,
+          WorkHours: workHours,
+          ReporterName: currentUser.name,
+          IsProject: inlineEdit.isProject,
+          IsComplete: inlineEdit.isComplete,
+        });
+        toast.success("本日予定から作業実績を登録しました。", { duration: 2200 });
+      }
+      setInlineEdit(null);
+    } catch (error) {
+      toast.error(`保存に失敗しました。${error instanceof Error ? error.message : String(error)}`, { duration: 2500 });
+    }
+  };
+
+  const beginInlinePlanEdit = (plan: WorkPlan) => {
+    setInlinePlanEdit({
+      planId: plan.id,
+      planDate: plan.planDate,
+      customerId: plan.customerId,
+      systemId: plan.systemId,
+      workTypeId: plan.workTypeId,
+      plannedHours: String(plan.plannedHours ?? 0),
+      isProject: plan.isProject,
+      workDescription: plan.workDescription,
+    });
+  };
+
+  const cancelInlinePlanEdit = () => {
+    setInlinePlanEdit(null);
+  };
+
+  const saveInlinePlanEdit = async () => {
+    if (!inlinePlanEdit) return;
+    if (!inlinePlanEdit.customerId || !inlinePlanEdit.systemId || !inlinePlanEdit.workTypeId || !inlinePlanEdit.workDescription.trim()) {
+      toast.error("必須項目を入力してください。", { duration: 2200 });
+      return;
+    }
+
+    const plannedHours = Number(inlinePlanEdit.plannedHours);
+    if (Number.isNaN(plannedHours) || plannedHours < 0) {
+      toast.error("予定時間は 0 以上で入力してください。", { duration: 2200 });
+      return;
+    }
+
+    const customer = customers.find((item) => item.id === inlinePlanEdit.customerId);
+
+    try {
+      await updatePlanMutation.mutateAsync({
+        itemId: inlinePlanEdit.planId,
+        fields: {
+          Title: `予定-${customer?.name ?? ""}`,
+          PlanDate: `${inlinePlanEdit.planDate}T00:00:00+09:00`,
+          CustomerLookupId: Number(inlinePlanEdit.customerId),
+          SystemLookupId: Number(inlinePlanEdit.systemId),
+          WorkTypeLookupId: Number(inlinePlanEdit.workTypeId),
+          WorkDescription: inlinePlanEdit.workDescription,
+          PlannedHours: plannedHours,
+          IsProject: inlinePlanEdit.isProject,
+          AssigneeName: currentUser.name,
+        },
+      });
+      toast.success("作業予定を更新しました。", { duration: 2200 });
+      setInlinePlanEdit(null);
+    } catch (error) {
+      toast.error(`保存に失敗しました。${error instanceof Error ? error.message : String(error)}`, { duration: 2500 });
+    }
+  };
 
   const closeReportModal = () => {
     setReportModalOpen(false);
@@ -412,64 +640,11 @@ export default function DailyEntryPage() {
     setReportModalOpen(true);
   };
 
-  const openReportEditor = (reportId: string) => {
-    const report = reports.find((item) => item.id === reportId);
-    if (!report) return;
-    setReportEditingId(report.id);
-    setReportForm({
-      reportDate: report.reportDate,
-      customerId: report.customerId,
-      systemId: report.systemId,
-      workTypeId: report.workTypeId,
-      workDescription: report.workDescription,
-      plannedHours: String(report.plannedHours),
-      workTime: String(report.workHours),
-      isProject: report.isProject,
-      isComplete: report.isComplete,
-    });
-    setReportSubmitError("");
-    setReportModalOpen(true);
-  };
-
   const openNewPlanModal = () => {
     setPlanEditingId(null);
     setPlanForm(emptyPlanForm());
     setPlanSubmitError("");
     setPlanModalOpen(true);
-  };
-
-  const openPlanEditor = (planId: string) => {
-    const plan = plans.find((item) => item.id === planId);
-    if (!plan) return;
-    setPlanEditingId(plan.id);
-    setPlanForm({
-      planDate: plan.planDate,
-      customerId: plan.customerId,
-      systemId: plan.systemId,
-      workTypeId: plan.workTypeId,
-      workDescription: plan.workDescription,
-      plannedHours: String(plan.plannedHours),
-      isProject: plan.isProject,
-    });
-    setPlanSubmitError("");
-    setPlanModalOpen(true);
-  };
-
-  const prefillReportFromPlan = (plan: WorkPlan) => {
-    setReportEditingId(null);
-    setReportForm({
-      reportDate: today,
-      customerId: plan.customerId,
-      systemId: plan.systemId,
-      workTypeId: plan.workTypeId,
-      workDescription: plan.workDescription,
-      plannedHours: String(plan.plannedHours ?? 0),
-      workTime: "0",
-      isProject: plan.isProject,
-      isComplete: true,
-    });
-    setReportSubmitError("");
-    setReportModalOpen(true);
   };
 
   const requestPublish = async () => {
@@ -549,7 +724,7 @@ export default function DailyEntryPage() {
     }
   };
 
-  if (reportsLoading || plansLoading || workDaysLoading) {
+  if (reportsLoading || todayPlansLoading || plansLoading || workDaysLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
@@ -577,10 +752,10 @@ export default function DailyEntryPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-          <Badge variant="outline">作業実績 {reports.length} 件</Badge>
-          <Badge variant="outline">作業予定 {plans.length} 件</Badge>
-          <Badge variant="outline">合計 {formatWorkHours(totalWorkHours)}h</Badge>
-          <Badge variant="outline">作業日 {currentWorkDay ? "登録済み" : "未登録"}</Badge>
+          <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50">作業実績 {reports.length} 件</Badge>
+          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">作業予定 {plans.length} 件</Badge>
+          <Badge className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50">合計 {formatWorkHours(totalWorkHours)}h</Badge>
+          <Badge className="border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-50">作業日 {currentWorkDay ? "登録済み" : "未登録"}</Badge>
         </div>
       </div>
 
@@ -591,53 +766,125 @@ export default function DailyEntryPage() {
               <CardTitle>作業実績一覧</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
-                <Button size="sm" onClick={openNewReportModal}>
+                <Button size="sm" onClick={openNewReportModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
                   <Plus className="mr-2 h-4 w-4" />実績追加
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            {reports.length === 0 ? (
-              <p className="text-sm text-muted-foreground">まだ作業実績がありません。</p>
+            {reportTableRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">作業実績と本日予定データがありません。</p>
             ) : (
               <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>種別</TableHead>
                     <TableHead>報告日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
                     <TableHead>区分</TableHead>
+                    <TableHead>作業内容</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead className="text-right">実績時間</TableHead>
+                    <TableHead className="text-center">案件</TableHead>
                     <TableHead className="text-center">完了</TableHead>
-                    <TableHead>作業内容</TableHead>
-                    <TableHead className="w-32">操作</TableHead>
+                    <TableHead className="w-[260px]">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="whitespace-nowrap">{report.reportDate}</TableCell>
-                      <TableCell className="whitespace-nowrap">{report.customerName}</TableCell>
-                      <TableCell className="whitespace-nowrap">{report.systemName}</TableCell>
-                      <TableCell className="whitespace-nowrap">{report.workTypeName}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{formatWorkHours(report.plannedHours)}h</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{formatWorkHours(report.workHours)}h</TableCell>
-                      <TableCell className="text-center">{report.isComplete ? "○" : "―"}</TableCell>
-                      <TableCell className="max-w-[16rem] truncate" title={report.workDescription}>{report.workDescription}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" onClick={() => openReportEditor(report.id)}>
-                            <Pencil className="mr-2 h-4 w-4" />編集
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setReportDeleteTargetId(report.id)} disabled={deleteReportMutation.isPending}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {reportTableRows.map((row) => {
+                    const isEditing = inlineEdit?.rowKey === row.rowKey;
+                    const activeCustomerId = isEditing ? inlineEdit.customerId : row.customerId;
+                    const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
+
+                    return (
+                      <TableRow key={row.rowKey}>
+                        <TableCell className="whitespace-nowrap">{row.source === "report" ? "実績" : "本日予定"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Input type="date" value={inlineEdit.reportDate} onChange={(e) => setInlineEdit({ ...inlineEdit, reportDate: e.target.value })} className="min-w-[130px]" />
+                        ) : row.reportDate}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlineEdit.customerId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, customerId: value, systemId: "" })}>
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="顧客" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((customer) => (
+                                <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : row.customerName}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, systemId: value })} disabled={!inlineEdit.customerId}>
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="システム" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {systemOptions.map((system) => (
+                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : row.systemName}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
+                            <SelectTrigger className="min-w-[130px]">
+                              <SelectValue placeholder="区分" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {workTypes.map((workType) => (
+                                <SelectItem key={workType.id} value={workType.id}>{workType.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : row.workTypeName}</TableCell>
+                        <TableCell className="max-w-[20rem]">{isEditing ? (
+                          <Input value={inlineEdit.workDescription} onChange={(e) => setInlineEdit({ ...inlineEdit, workDescription: e.target.value })} />
+                        ) : (
+                          <div className="truncate" title={row.workDescription}>{row.workDescription}</div>
+                        )}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{isEditing ? (
+                          <Input type="number" min="0" step="0.25" value={inlineEdit.plannedHours} onChange={(e) => setInlineEdit({ ...inlineEdit, plannedHours: e.target.value })} className="w-[90px] ml-auto" />
+                        ) : `${formatWorkHours(row.plannedHours)}h`}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{isEditing ? (
+                          <Input type="number" min="0" step="0.25" value={inlineEdit.workTime} onChange={(e) => setInlineEdit({ ...inlineEdit, workTime: e.target.value })} className="w-[90px] ml-auto" />
+                        ) : `${formatWorkHours(row.workHours)}h`}</TableCell>
+                        <TableCell className="text-center">{isEditing ? (
+                          <div className="flex justify-center">
+                            <Checkbox checked={inlineEdit.isProject} onCheckedChange={(checked) => setInlineEdit({ ...inlineEdit, isProject: checked === true })} />
+                          </div>
+                        ) : row.isProject ? "○" : "―"}</TableCell>
+                        <TableCell className="text-center">{isEditing ? (
+                          <div className="flex justify-center">
+                            <Checkbox checked={inlineEdit.isComplete} onCheckedChange={(checked) => setInlineEdit({ ...inlineEdit, isComplete: checked === true })} />
+                          </div>
+                        ) : row.isComplete ? "○" : "―"}</TableCell>
+                        <TableCell className="w-[260px]">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            {isEditing ? (
+                              <>
+                                <Button size="sm" onClick={() => void saveInlineEdit()} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">{row.source === "report" ? "保存" : "登録"}</Button>
+                                <Button size="sm" variant="outline" onClick={cancelInlineEdit} className="shrink-0">キャンセル</Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button size="sm" onClick={() => beginInlineEdit(row)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
+                                  <Pencil className="mr-1 h-4 w-4" />編集
+                                </Button>
+                                {row.source === "report" && (
+                                  <Button size="sm" variant="destructive" onClick={() => setReportDeleteTargetId(row.sourceId)} disabled={deleteReportMutation.isPending} className="shrink-0">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -650,7 +897,7 @@ export default function DailyEntryPage() {
               <CardTitle>明日以降の予定一覧</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">次回: {nextPlanDate ?? "-"}</div>
-                <Button size="sm" variant="outline" onClick={openNewPlanModal}>
+                <Button size="sm" onClick={openNewPlanModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
                   <Plus className="mr-2 h-4 w-4" />予定追加
                 </Button>
               </div>
@@ -670,34 +917,91 @@ export default function DailyEntryPage() {
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead>案件</TableHead>
                     <TableHead>作業内容</TableHead>
-                    <TableHead className="w-40">操作</TableHead>
+                    <TableHead className="w-[220px]">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plans.map((plan) => (
-                    <TableRow key={plan.id}>
-                      <TableCell className="whitespace-nowrap">{plan.planDate}</TableCell>
-                      <TableCell className="whitespace-nowrap">{plan.customerName}</TableCell>
-                      <TableCell className="whitespace-nowrap">{plan.systemName}</TableCell>
-                      <TableCell className="whitespace-nowrap">{plan.workTypeName || "―"}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{plan.plannedHours > 0 ? `${formatWorkHours(plan.plannedHours)}h` : "―"}</TableCell>
-                      <TableCell className="text-center">{plan.isProject ? "○" : "―"}</TableCell>
-                      <TableCell className="max-w-[16rem] truncate" title={plan.workDescription}>{plan.workDescription}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" onClick={() => openPlanEditor(plan.id)}>
-                            <Pencil className="mr-2 h-4 w-4" />編集
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => prefillReportFromPlan(plan)}>
-                            <CalendarPlus className="mr-2 h-4 w-4" />実績へ
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setPlanDeleteTargetId(plan.id)} disabled={deletePlanMutation.isPending}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {plans.map((plan) => {
+                    const isEditing = inlinePlanEdit?.planId === plan.id;
+                    const activeCustomerId = isEditing ? inlinePlanEdit.customerId : plan.customerId;
+                    const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
+
+                    return (
+                      <TableRow key={plan.id}>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Input type="date" value={inlinePlanEdit.planDate} onChange={(e) => setInlinePlanEdit({ ...inlinePlanEdit, planDate: e.target.value })} className="min-w-[130px]" />
+                        ) : plan.planDate}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlinePlanEdit.customerId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, customerId: value, systemId: "" })}>
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="顧客" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((customer) => (
+                                <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : plan.customerName}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlinePlanEdit.systemId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, systemId: value })} disabled={!inlinePlanEdit.customerId}>
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="システム" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {systemOptions.map((system) => (
+                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : plan.systemName}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select value={inlinePlanEdit.workTypeId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, workTypeId: value })}>
+                            <SelectTrigger className="min-w-[130px]">
+                              <SelectValue placeholder="区分" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {workTypes.map((workType) => (
+                                <SelectItem key={workType.id} value={workType.id}>{workType.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : plan.workTypeName || "―"}</TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{isEditing ? (
+                          <Input type="number" min="0" step="0.25" value={inlinePlanEdit.plannedHours} onChange={(e) => setInlinePlanEdit({ ...inlinePlanEdit, plannedHours: e.target.value })} className="w-[90px] ml-auto" />
+                        ) : plan.plannedHours > 0 ? `${formatWorkHours(plan.plannedHours)}h` : "―"}</TableCell>
+                        <TableCell className="text-center">{isEditing ? (
+                          <div className="flex justify-center">
+                            <Checkbox checked={inlinePlanEdit.isProject} onCheckedChange={(checked) => setInlinePlanEdit({ ...inlinePlanEdit, isProject: checked === true })} />
+                          </div>
+                        ) : plan.isProject ? "○" : "―"}</TableCell>
+                        <TableCell className="max-w-[16rem]">{isEditing ? (
+                          <Input value={inlinePlanEdit.workDescription} onChange={(e) => setInlinePlanEdit({ ...inlinePlanEdit, workDescription: e.target.value })} />
+                        ) : (
+                          <div className="truncate" title={plan.workDescription}>{plan.workDescription}</div>
+                        )}</TableCell>
+                        <TableCell className="w-[220px]">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            {isEditing ? (
+                              <>
+                                <Button size="sm" onClick={() => void saveInlinePlanEdit()} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">保存</Button>
+                                <Button size="sm" variant="outline" onClick={cancelInlinePlanEdit} className="shrink-0">キャンセル</Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button size="sm" onClick={() => beginInlinePlanEdit(plan)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
+                                  <Pencil className="mr-1 h-4 w-4" />編集
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => setPlanDeleteTargetId(plan.id)} disabled={deletePlanMutation.isPending} className="shrink-0">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -732,10 +1036,6 @@ export default function DailyEntryPage() {
               <div>
                 <p className="text-muted-foreground">本日のひとこと</p>
                 <p className="font-medium whitespace-pre-wrap">{currentWorkDay.todayNote || "-"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">登録者名</p>
-                <p className="font-medium">{currentWorkDay.userName || "-"}</p>
               </div>
             </div>
           ) : (
@@ -938,7 +1238,7 @@ export default function DailyEntryPage() {
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>作業日</Label>
+              <Label>今日の実績</Label>
               <Input type="date" value={workDayForm.workDate} readOnly />
             </div>
             <div className="space-y-1.5">
