@@ -225,21 +225,32 @@ export default function DailyEntryPage() {
   const [inlinePlanEdit, setInlinePlanEdit] = useState<InlinePlanEditState | null>(null);
 
   const currentUserName = currentUser.name.trim();
+  const currentUserEmail = currentUser.email.trim();
+  const currentUserKeys = useMemo(() => {
+    const keys = [currentUserName, currentUserEmail]
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    return new Set(keys);
+  }, [currentUserName, currentUserEmail]);
+  const isCurrentUserRecord = (userName: string) => {
+    const normalized = userName.trim().toLowerCase();
+    return !!normalized && currentUserKeys.has(normalized);
+  };
   const reports = useMemo(
-    () => reportItems.filter((report) => report.userName.trim() === currentUserName),
-    [reportItems, currentUserName],
+    () => reportItems.filter((report) => isCurrentUserRecord(report.userName)),
+    [reportItems, currentUserKeys],
   );
   const plans = useMemo(
-    () => planItems.filter((plan) => plan.userName.trim() === currentUserName),
-    [planItems, currentUserName],
+    () => planItems.filter((plan) => isCurrentUserRecord(plan.userName)),
+    [planItems, currentUserKeys],
   );
   const todayPlans = useMemo(
-    () => todayPlanItems.filter((plan) => plan.userName.trim() === currentUserName),
-    [todayPlanItems, currentUserName],
+    () => todayPlanItems.filter((plan) => isCurrentUserRecord(plan.userName)),
+    [todayPlanItems, currentUserKeys],
   );
   const currentWorkDay = useMemo(
-    () => workDayItems.find((item) => item.workDate === today && item.userName.trim() === currentUserName) ?? null,
-    [workDayItems, currentUserName],
+    () => workDayItems.find((item) => item.workDate === today && isCurrentUserRecord(item.userName)) ?? null,
+    [workDayItems, currentUserKeys],
   );
 
   useEffect(() => {
@@ -617,7 +628,7 @@ export default function DailyEntryPage() {
       WorkEndTime: workDayForm.workEndTime,
       BreakHours: breakHours,
       TodayNote: workDayForm.todayNote,
-      ReporterName: currentUser.name,
+      ReporterName: currentUserName,
     };
 
     try {
