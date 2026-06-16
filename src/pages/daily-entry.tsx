@@ -555,7 +555,7 @@ export default function DailyEntryPage() {
       return;
     }
 
-    const plannedHours = Number(reportForm.plannedHours);
+    const plannedHours = 0;
     const workHours = Number(reportForm.workTime);
     if (Number.isNaN(plannedHours) || plannedHours < 0) {
       setReportSubmitError("予定時間は 0 以上で入力してください。");
@@ -1098,14 +1098,10 @@ export default function DailyEntryPage() {
         isSaving={addReportMutation.isPending || updateReportMutation.isPending}
       >
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-1">
             <div className="space-y-1.5">
               <Label>報告日</Label>
               <Input type="date" value={reportForm.reportDate} onChange={(e) => setReportForm({ ...reportForm, reportDate: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>予定時間 (h)</Label>
-              <Input type="number" value={reportForm.plannedHours} readOnly />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -1194,14 +1190,10 @@ export default function DailyEntryPage() {
         isSaving={addPlanMutation.isPending || updatePlanMutation.isPending}
       >
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-1">
             <div className="space-y-1.5">
               <Label>予定日</Label>
               <Input type="date" value={planForm.planDate} onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>予定作業時間 (h)</Label>
-              <Input type="number" min="0" step="0.25" value={planForm.plannedHours} onChange={(e) => setPlanForm({ ...planForm, plannedHours: e.target.value })} />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -1247,11 +1239,15 @@ export default function DailyEntryPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>案件</Label>
-              <div className="flex h-10 items-center gap-2">
-                <Checkbox checked={planForm.isProject} onCheckedChange={(checked) => setPlanForm({ ...planForm, isProject: checked === true })} />
-                <span className="text-sm">案件</span>
-              </div>
+              <Label>予定作業時間 (h)</Label>
+              <Input type="number" min="0" step="0.25" value={planForm.plannedHours} onChange={(e) => setPlanForm({ ...planForm, plannedHours: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>案件</Label>
+            <div className="flex h-10 items-center gap-2">
+              <Checkbox checked={planForm.isProject} onCheckedChange={(checked) => setPlanForm({ ...planForm, isProject: checked === true })} />
+              <span className="text-sm">案件</span>
             </div>
           </div>
           <div className="space-y-1.5">
