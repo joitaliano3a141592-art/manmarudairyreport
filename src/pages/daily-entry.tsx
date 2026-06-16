@@ -238,12 +238,13 @@ export default function DailyEntryPage() {
     [todayPlanItems, currentUserName],
   );
   const currentWorkDay = useMemo(
-    () => workDayItems.find((item) => item.workDate === today) ?? null,
-    [workDayItems],
+    () => workDayItems.find((item) => item.workDate === today && item.userName.trim() === currentUserName) ?? null,
+    [workDayItems, currentUserName],
   );
 
   useEffect(() => {
     if (!currentWorkDay) {
+      setWorkDayId(null);
       return;
     }
 
@@ -742,7 +743,6 @@ export default function DailyEntryPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">日次入力</h1>
-            <p className="text-muted-foreground">今日の作業実績、次回予定、作業日をまとめて管理します。</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button size="lg" onClick={requestPublish} disabled={publishing}>
@@ -1234,7 +1234,7 @@ export default function DailyEntryPage() {
           if (!open) closeWorkDayModal();
         }}
         title={workDayId ? "本日の業務を編集" : "本日の業務を登録"}
-        description="開始時刻、終了時刻、休憩時間、本日のひとことを保存します。"
+        description=""
         onCancel={closeWorkDayModal}
         onSave={() => {
           void saveWorkDay();
