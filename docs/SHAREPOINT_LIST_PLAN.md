@@ -9,6 +9,7 @@
 - 作業種別マスタ
 - 作業報告
 - 作業予定
+- 作業日
 
 ## 2. 列定義
 
@@ -36,9 +37,12 @@
 - System（Lookup -> システムマスタ.Title）: システム
 - WorkType（Lookup -> 作業種別マスタ.Title）: 作業種別
 - WorkDescription（複数行テキスト）: 作業内容
+- PlannedHours（数値）: 予定時間
 - WorkHours（数値）: 作業時間
+- ReporterName（単一行テキスト）: 報告者名
 - Reporter（ユーザー）: 報告者
 - IsProject（はい/いいえ）: 案件
+- IsComplete（はい/いいえ）: 完了
 
 ### 作業予定
 
@@ -50,8 +54,18 @@
 - WorkDescription（複数行テキスト）: 作業内容
 - PlannedHours（数値）: 作業予定時間
 - IsProject（はい/いいえ）: 案件
+- AssigneeName（単一行テキスト）: 担当者名
 - Assignee（ユーザー）: 担当者
 - Status（Choice）: 未着手 / 進行中 / 完了
+
+### 作業日
+
+- Title（既定）: 件名
+- WorkDate（日付）: 作業日
+- WorkStartTime（単一行テキスト）: 開始時刻
+- WorkEndTime（単一行テキスト）: 終了時刻
+- BreakHours（数値）: 休憩時間
+- TodayNote（複数行テキスト）: 本日のひとこと
 
 ## 3. 自動化スクリプト
 
@@ -84,6 +98,7 @@ Install-Module PnP.PowerShell -Scope CurrentUser
    - システムマスタ画面 -> システムマスタリスト
    - 日報入力/一覧 -> 作業報告リスト
    - 作業予定入力/一覧 -> 作業予定リスト
+   - 作業日 -> 作業日リスト
 
 ## 5. 次の実装タスク（このリポジトリ側）
 

@@ -10,6 +10,7 @@ export const SP_LISTS = {
   workTypes: "6ef3dd68-9c04-41fa-a16d-998d86d25355",
   reports: "b289a27a-a815-472f-8a12-9297589a5096",
   plans: "662c83d4-b2c1-44e1-ac79-b2d9dd8f92c9",
+  workDays: import.meta.env.VITE_SP_LIST_WORKDAYS ?? "bd70092f-0fe5-42f9-9731-ac200dfaa693",
 } as const;
 
 export const TEAMS_CONFIG = {

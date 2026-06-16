@@ -323,6 +323,7 @@ def main():
     worktype_list_id = ensure_list(site_id, "作業種別マスタ", existing_lists)
     report_list_id = ensure_list(site_id, "作業報告", existing_lists)
     plan_list_id = ensure_list(site_id, "作業予定", existing_lists)
+    workday_list_id = ensure_list(site_id, "作業日", existing_lists)
 
     # 4. 列作成
     print("\n[STEP 3] 列作成")
@@ -347,9 +348,11 @@ def main():
     ensure_lookup_column(site_id, report_list_id, "System", "システム", system_list_id, rpt_cols, required=True)
     ensure_lookup_column(site_id, report_list_id, "WorkType", "作業種別", worktype_list_id, rpt_cols, required=True)
     ensure_text_column(site_id, report_list_id, "WorkDescription", "作業内容", rpt_cols, required=True, multi_line=True)
+    ensure_number_column(site_id, report_list_id, "PlannedHours", "予定時間", rpt_cols, required=False)
     ensure_number_column(site_id, report_list_id, "WorkHours", "作業時間", rpt_cols, required=True)
     ensure_text_column(site_id, report_list_id, "ReporterName", "報告者名", rpt_cols)
     ensure_person_column(site_id, report_list_id, "Reporter", "報告者", rpt_cols)
+    ensure_boolean_column(site_id, report_list_id, "IsComplete", "完了", rpt_cols, default_value=True)
 
     # 作業予定
     plan_cols = get_columns(site_id, plan_list_id)
@@ -364,19 +367,28 @@ def main():
     ensure_person_column(site_id, plan_list_id, "Assignee", "担当者", plan_cols)
     ensure_choice_column(site_id, plan_list_id, "Status", "状態", ["未着手", "進行中", "完了"], plan_cols, required=True)
 
+    # 作業日
+    workday_cols = get_columns(site_id, workday_list_id)
+    ensure_datetime_column(site_id, workday_list_id, "WorkDate", "作業日", workday_cols, required=True)
+    ensure_text_column(site_id, workday_list_id, "WorkStartTime", "開始時刻", workday_cols)
+    ensure_text_column(site_id, workday_list_id, "WorkEndTime", "終了時刻", workday_cols)
+    ensure_number_column(site_id, workday_list_id, "BreakHours", "休憩時間", workday_cols, required=False)
+    ensure_text_column(site_id, workday_list_id, "TodayNote", "本日のひとこと", workday_cols, multi_line=True)
+    ensure_text_column(site_id, workday_list_id, "ReporterName", "登録者名", workday_cols)
+
     print("\n[OK] リストと列の作成が完了しました。")
 
     # 5. テストデータ
     if args.seed_demo_data:
         print("\n[STEP 4] テストデータ投入")
-        seed_demo_data(site_id, customer_list_id, system_list_id, worktype_list_id, report_list_id, plan_list_id)
+        seed_demo_data(site_id, customer_list_id, system_list_id, worktype_list_id, report_list_id, plan_list_id, workday_list_id)
 
     print("\n" + "=" * 50)
     print("セットアップ完了!")
     print("=" * 50)
 
 
-def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, worktype_list_id: str, report_list_id: str, plan_list_id: str):
+def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, worktype_list_id: str, report_list_id: str, plan_list_id: str, workday_list_id: str):
     from datetime import date, timedelta
     today = date.today().isoformat()
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
@@ -429,7 +441,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "SystemLookupId": system_map.get("システムA"),
             "WorkTypeLookupId": worktype_map.get("機能開発"),
             "WorkDescription": "画面設計と実装（ダッシュボード機能）",
+            "PlannedHours": 4.0,
             "WorkHours": 4.5,
+            "IsComplete": True,
         })
         add_item(site_id, report_list_id, {
             "Title": "日報-テスト",
@@ -439,7 +453,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "SystemLookupId": system_map.get("システムC"),
             "WorkTypeLookupId": worktype_map.get("テスト"),
             "WorkDescription": "結合テスト実施とバグ修正",
+            "PlannedHours": 3.0,
             "WorkHours": 3.0,
+            "IsComplete": True,
         })
         add_item(site_id, report_list_id, {
             "Title": "日報-定例会議",
@@ -449,7 +465,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "SystemLookupId": system_map.get("システムD"),
             "WorkTypeLookupId": worktype_map.get("定例会議"),
             "WorkDescription": "週次定例ミーティング",
+            "PlannedHours": 1.0,
             "WorkHours": 1.0,
+            "IsComplete": True,
         })
     else:
         print("  [SKIP] Already has data")
@@ -464,6 +482,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "CustomerLookupId": customer_map.get("ABC 株式会社"),
             "SystemLookupId": system_map.get("システムA"),
             "WorkDescription": "定例ミーティング資料の整理と共有",
+            "PlannedHours": 1.0,
+            "IsProject": True,
+            "AssigneeName": "サンプル担当者",
             "Status": "完了",
         })
         add_item(site_id, plan_list_id, {
@@ -472,6 +493,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "CustomerLookupId": customer_map.get("XYZ 工業"),
             "SystemLookupId": system_map.get("システムC"),
             "WorkDescription": "環境構築の確認と初期テスト",
+            "PlannedHours": 2.5,
+            "IsProject": True,
+            "AssigneeName": "サンプル担当者",
             "Status": "進行中",
         })
         add_item(site_id, plan_list_id, {
@@ -480,6 +504,9 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "CustomerLookupId": customer_map.get("テックス合同会社"),
             "SystemLookupId": system_map.get("システムD"),
             "WorkDescription": "要件確認と調整",
+            "PlannedHours": 1.5,
+            "IsProject": True,
+            "AssigneeName": "サンプル担当者",
             "Status": "未着手",
         })
         add_item(site_id, plan_list_id, {
@@ -488,7 +515,26 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "CustomerLookupId": customer_map.get("ABC 株式会社"),
             "SystemLookupId": system_map.get("システムB"),
             "WorkDescription": "障害対応の予備調査",
+            "PlannedHours": 2.0,
+            "IsProject": True,
+            "AssigneeName": "サンプル担当者",
             "Status": "未着手",
+        })
+    else:
+        print("  [SKIP] Already has data")
+
+    # 作業日
+    print("\n  [作業日]")
+    existing = get_items(site_id, workday_list_id)
+    if not existing:
+        add_item(site_id, workday_list_id, {
+            "Title": "作業日-今日",
+            "WorkDate": today,
+            "WorkStartTime": "09:00",
+            "WorkEndTime": "18:00",
+            "BreakHours": 1.0,
+            "TodayNote": "本日の作業メモ",
+            "ReporterName": "サンプル登録者",
         })
     else:
         print("  [SKIP] Already has data")

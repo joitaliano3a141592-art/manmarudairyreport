@@ -92,6 +92,7 @@ SharePoint サイト: manmarusystem テナント内の Teams チャネル専用�
 | 作業種別マスタ | `VITE_SP_LIST_WORKTYPES` |
 | 作業報告 | `VITE_SP_LIST_REPORTS` |
 | 作業予定 | `VITE_SP_LIST_PLANS` |
+| 作業日 | `VITE_SP_LIST_WORKDAYS` |
 
 ---
 
@@ -122,6 +123,7 @@ VITE_SP_LIST_SYSTEMS=<システムマスタ リスト ID>
 VITE_SP_LIST_WORKTYPES=<作業種別マスタ リスト ID>
 VITE_SP_LIST_REPORTS=<作業報告 リスト ID>
 VITE_SP_LIST_PLANS=<作業予定 リスト ID>
+VITE_SP_LIST_WORKDAYS=<作業日 リスト ID>
 VITE_TEAMS_TEAM_ID=<Teams グループ ID>
 VITE_TEAMS_CHANNEL_ID=<Teams チャネル ID>
 `
@@ -158,6 +160,7 @@ SharePoint 関連は共有フォルダリンクではなく、対象サイトの
 | VITE_SP_LIST_WORKTYPES | 作業種別マスタ リスト ID |
 | VITE_SP_LIST_REPORTS | 作業報告 リスト ID |
 | VITE_SP_LIST_PLANS | 作業予定 リスト ID |
+| VITE_SP_LIST_WORKDAYS | 作業日 リスト ID |
 | VITE_TEAMS_TEAM_ID | Teams グループ ID |
 | VITE_TEAMS_CHANNEL_ID | Teams チャネル ID |
 | VITE_APP_BASE_PATH | /manmarudairyreport/ |
@@ -170,6 +173,7 @@ SharePoint の参照先を変えるときに更新する Secret:
 4. VITE_SP_LIST_WORKTYPES
 5. VITE_SP_LIST_REPORTS
 6. VITE_SP_LIST_PLANS
+7. VITE_SP_LIST_WORKDAYS
 
 ### 社内サーバー配信
 

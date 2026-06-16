@@ -113,6 +113,7 @@ $systems = Ensure-List -Title "システムマスタ"
 $workTypes = Ensure-List -Title "作業種別マスタ"
 $workReports = Ensure-List -Title "作業報告"
 $workPlans = Ensure-List -Title "作業予定"
+$workDays = Ensure-List -Title "作業日"
 
 Write-Host "[STEP] Ensure columns: 顧客マスタ"
 # Title = 会社名
@@ -131,16 +132,32 @@ Ensure-LookupField -ListTitle "作業報告" -InternalName "Customer" -DisplayNa
 Ensure-LookupField -ListTitle "作業報告" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes -Required $true
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
+Ensure-Field -ListTitle "作業報告" -InternalName "PlannedHours" -DisplayName "予定時間" -Type "Number"
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkHours" -DisplayName "作業時間" -Type "Number" -Required $true
+Ensure-Field -ListTitle "作業報告" -InternalName "ReporterName" -DisplayName "報告者名" -Type "Text"
 Ensure-Field -ListTitle "作業報告" -InternalName "Reporter" -DisplayName "報告者" -Type "User"
+Ensure-Field -ListTitle "作業報告" -InternalName "IsProject" -DisplayName "案件" -Type "Boolean"
+Ensure-Field -ListTitle "作業報告" -InternalName "IsComplete" -DisplayName "完了" -Type "Boolean"
 
 Write-Host "[STEP] Ensure columns: 作業予定"
 Ensure-Field -ListTitle "作業予定" -InternalName "PlanDate" -DisplayName "予定日" -Type "DateTime" -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
+Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes
 Ensure-Field -ListTitle "作業予定" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
+Ensure-Field -ListTitle "作業予定" -InternalName "PlannedHours" -DisplayName "作業予定時間" -Type "Number"
+Ensure-Field -ListTitle "作業予定" -InternalName "IsProject" -DisplayName "案件" -Type "Boolean"
+Ensure-Field -ListTitle "作業予定" -InternalName "AssigneeName" -DisplayName "担当者名" -Type "Text"
 Ensure-Field -ListTitle "作業予定" -InternalName "Assignee" -DisplayName "担当者" -Type "User"
 Ensure-ChoiceField -ListTitle "作業予定" -InternalName "Status" -DisplayName "状態" -Choices @("未着手", "進行中", "完了") -Required $true
+
+Write-Host "[STEP] Ensure columns: 作業日"
+Ensure-Field -ListTitle "作業日" -InternalName "WorkDate" -DisplayName "作業日" -Type "DateTime" -Required $true
+Ensure-Field -ListTitle "作業日" -InternalName "WorkStartTime" -DisplayName "開始時刻" -Type "Text"
+Ensure-Field -ListTitle "作業日" -InternalName "WorkEndTime" -DisplayName "終了時刻" -Type "Text"
+Ensure-Field -ListTitle "作業日" -InternalName "BreakHours" -DisplayName "休憩時間" -Type "Number"
+Ensure-Field -ListTitle "作業日" -InternalName "TodayNote" -DisplayName "本日のひとこと" -Type "Note"
+Ensure-Field -ListTitle "作業日" -InternalName "ReporterName" -DisplayName "登録者名" -Type "Text"
 
 if ($SeedDemoData) {
   Write-Host "[STEP] Seed demo data"
@@ -179,6 +196,9 @@ if ($SeedDemoData) {
       Customer = $customerMap["テックス合同会社"]
       System = $systemMap["システムD"]
       WorkDescription = "要件確認と調整"
+      PlannedHours = 1.5
+      IsProject = $true
+      AssigneeName = "サンプル担当者"
       Status = "未着手"
     } | Out-Null
 
@@ -188,6 +208,9 @@ if ($SeedDemoData) {
       Customer = $customerMap["ABC 株式会社"]
       System = $systemMap["システムB"]
       WorkDescription = "障害対応の予備調査"
+      PlannedHours = 2.0
+      IsProject = $true
+      AssigneeName = "サンプル担当者"
       Status = "進行中"
     } | Out-Null
 
@@ -197,6 +220,9 @@ if ($SeedDemoData) {
       Customer = $customerMap["ABC 株式会社"]
       System = $systemMap["システムA"]
       WorkDescription = "定例ミーティング資料の整理と共有"
+      PlannedHours = 1.0
+      IsProject = $true
+      AssigneeName = "サンプル担当者"
       Status = "完了"
     } | Out-Null
   }
@@ -210,7 +236,11 @@ if ($SeedDemoData) {
       System = $systemMap["システムA"]
       WorkType = $workTypeMap["機能開発"]
       WorkDescription = "機能開発（続き）"
+      PlannedHours = 4.0
       WorkHours = 4.5
+      ReporterName = "サンプル報告者"
+      IsProject = $true
+      IsComplete = $true
     } | Out-Null
 
     Add-PnPListItem -List "作業報告" -Values @{
@@ -221,7 +251,23 @@ if ($SeedDemoData) {
       System = $systemMap["システムC"]
       WorkType = $workTypeMap["テスト"]
       WorkDescription = "テスト実施"
+      PlannedHours = 3.0
       WorkHours = 3.0
+      ReporterName = "サンプル報告者"
+      IsProject = $true
+      IsComplete = $true
+    } | Out-Null
+  }
+
+  if ((Get-PnPListItem -List "作業日" -PageSize 1).Count -eq 0) {
+    Add-PnPListItem -List "作業日" -Values @{
+      Title = "作業日-今日"
+      WorkDate = $today
+      WorkStartTime = "09:00"
+      WorkEndTime = "18:00"
+      BreakHours = 1
+      TodayNote = "本日の作業メモ"
+      ReporterName = "サンプル登録者"
     } | Out-Null
   }
 }

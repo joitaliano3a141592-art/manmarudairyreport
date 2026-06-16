@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import {
   MsalProvider as MsalReactProvider,
   useMsal,
@@ -64,45 +65,6 @@ async function notifyTeamsAuthFailure(error: unknown): Promise<void> {
   } catch {
     window.close();
   }
-}
-
-async function ensureActiveAccount(scopes: string[]): Promise<void> {
-  if (msalInstance.getActiveAccount()) return;
-
-  const existing = msalInstance.getAllAccounts();
-  if (existing.length > 0) {
-    msalInstance.setActiveAccount(existing[0]);
-    return;
-  }
-
-  if (isInIframe) {
-    try {
-      await microsoftTeams.app.initialize();
-      const ctx = await microsoftTeams.app.getContext();
-      if (ctx?.app?.host) {
-        const baseUrl = window.location.origin + import.meta.env.BASE_URL;
-        clearTeamsSessionReady();
-        markTeamsAuthPending();
-        await microsoftTeams.authentication.authenticate({
-          url: `${baseUrl}teams-auth-start`,
-          width: 600,
-          height: 535,
-        });
-        clearTeamsAuthPending();
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) {
-          msalInstance.setActiveAccount(accounts[0]);
-          return;
-        }
-      }
-    } catch {
-      clearTeamsAuthPending();
-      // Fall through to popup login below.
-    }
-  }
-
-  const res = await msalInstance.loginPopup({ scopes });
-  msalInstance.setActiveAccount(res.account);
 }
 
 async function acquireTokenInternal(scopes: string[]): Promise<string> {
@@ -312,6 +274,11 @@ function AutoLogin({ children }: { children: ReactNode }) {
         <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
           <p className="text-sm font-medium text-foreground">認証エラー</p>
           <p className="mt-2 text-sm text-muted-foreground">{authError}</p>
+          <div className="mt-4 flex justify-center">
+            <Button type="button" onClick={() => window.location.reload()}>
+              再読み込み
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -405,6 +372,11 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
         <div className="max-w-md rounded-lg border border-border bg-background p-6 text-center shadow-sm">
           <p className="text-sm font-medium text-foreground">認証エラー</p>
           <p className="mt-2 text-sm text-muted-foreground">{initError}</p>
+          <div className="mt-4 flex justify-center">
+            <Button type="button" onClick={() => window.location.reload()}>
+              再読み込み
+            </Button>
+          </div>
         </div>
       </div>
     );

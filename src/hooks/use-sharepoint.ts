@@ -41,7 +41,7 @@ function toJstIsoAtStartOfNextDay(localDate: string): string {
   return `${nextYear}-${nextMonth}-${nextDate}T00:00:00+09:00`;
 }
 
-function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate" | "RegistrationDate", startDate?: string, endDate?: string): string {
+function buildDateRangeQuery(fieldName: "ReportDate" | "PlanDate" | "RegistrationDate" | "WorkDate", startDate?: string, endDate?: string): string {
   const params = new URLSearchParams();
   const filters: string[] = [];
 
@@ -110,11 +110,13 @@ import type {
   SPWorkTypeFields,
   SPReportFields,
   SPPlanFields,
+  SPWorkDayFields,
   Customer,
   System,
   WorkType,
   WorkReport,
   WorkPlan,
+  WorkDay,
 } from "@/types/sharepoint";
 
 // ==================== 顧客マスタ ====================
@@ -223,6 +225,10 @@ function resolveReportFilterDate(
   return toLocalDateStr(item.fields.ReportDate);
 }
 
+function resolveWorkDayFilterDate(item: { fields: SPWorkDayFields; createdDateTime?: string }): string {
+  return toLocalDateStr(item.fields.WorkDate) || toLocalDateStr(item.createdDateTime);
+}
+
 export function useReportsByDateField(
   dateField: "ReportDate" | "RegistrationDate",
   startDate?: string,
@@ -261,6 +267,7 @@ export function useReportsByDateField(
           title: f.Title,
           reportDate: toLocalDateStr(f.ReportDate),
           registrationDate: toLocalDateStr(f.RegistrationDate) || toLocalDateStr(item.createdDateTime),
+          plannedHours: f.PlannedHours ?? 0,
           customerId: custId,
           customerName: maps.customerMap.get(custId) ?? "",
           systemId: sysId,
@@ -271,6 +278,7 @@ export function useReportsByDateField(
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
           isProject: f.IsProject !== false,
+          isComplete: f.IsComplete !== false,
         };
       }).sort((left, right) => {
         const dateCompare = left.reportDate.localeCompare(right.reportDate);
@@ -329,6 +337,88 @@ export function useDeleteReport() {
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(`作業実績の削除に失敗しました。\n${message}`);
+    },
+  });
+}
+
+// ==================== 作業日 ====================
+
+export function useWorkDays(startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ["sp", "workDays", startDate, endDate],
+    queryFn: async () => {
+      if (!SP_LISTS.workDays) {
+        return [] as Array<{ id: string; fields: SPWorkDayFields; createdDateTime?: string; createdByName?: string }>;
+      }
+      const query = buildDateRangeQuery("WorkDate", startDate, endDate);
+      try {
+        return await fetchListItems<SPWorkDayFields>(SP_LISTS.workDays, query);
+      } catch (error) {
+        if (!isNonIndexedQueryError(error)) {
+          throw error;
+        }
+        console.warn("[useWorkDays] Non-indexed query fallback: fetch all then filter client-side", error);
+        return fetchListItems<SPWorkDayFields>(SP_LISTS.workDays);
+      }
+    },
+    select: (items): WorkDay[] => {
+      const filtered = startDate && endDate
+        ? items.filter((item) => {
+            const d = resolveWorkDayFilterDate(item);
+            return d >= startDate && d <= endDate;
+          })
+        : items;
+      return filtered.map((item) => {
+        const f = item.fields;
+        return {
+          id: item.id,
+          title: f.Title,
+          workDate: toLocalDateStr(f.WorkDate) || toLocalDateStr(item.createdDateTime),
+          workStartTime: f.WorkStartTime ?? "",
+          workEndTime: f.WorkEndTime ?? "",
+          breakHours: f.BreakHours ?? 0,
+          todayNote: f.TodayNote ?? "",
+          userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
+        };
+      }).sort((left, right) => right.workDate.localeCompare(left.workDate) || Number(right.id) - Number(left.id));
+    },
+  });
+}
+
+export function useAddWorkDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (fields: Record<string, unknown>) => {
+      if (!SP_LISTS.workDays) {
+        throw new Error("作業日リストが未設定です。");
+      }
+      return createListItem(SP_LISTS.workDays, fields);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sp", "workDays"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`作業日の登録に失敗しました。\n${message}`);
+    },
+  });
+}
+
+export function useUpdateWorkDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, fields }: { itemId: string; fields: Record<string, unknown> }) => {
+      if (!SP_LISTS.workDays) {
+        throw new Error("作業日リストが未設定です。");
+      }
+      return updateListItem(SP_LISTS.workDays, itemId, fields);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sp", "workDays"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`作業日の更新に失敗しました。\n${message}`);
     },
   });
 }

@@ -52,6 +52,11 @@ function getGraphToken(): string {
   }
 }
 
+function clearCachedToken(): void {
+  cachedToken = null;
+  tokenExpiresAt = 0;
+}
+
 export function graphProxy(): Plugin {
   return {
     name: "graph-proxy",
@@ -88,11 +93,25 @@ export function graphProxy(): Plugin {
           }
 
           try {
-            const resp = await fetch(targetUrl, {
+            let resp = await fetch(targetUrl, {
               method: req.method || "GET",
               headers,
               body: body && body.length > 0 ? body : undefined,
             });
+
+            // 開発中の期限切れトークンは 1 回だけ再取得して再試行する。
+            if (resp.status === 401) {
+              clearCachedToken();
+              const retryToken = getGraphToken();
+              resp = await fetch(targetUrl, {
+                method: req.method || "GET",
+                headers: {
+                  ...headers,
+                  Authorization: `Bearer ${retryToken}`,
+                },
+                body: body && body.length > 0 ? body : undefined,
+              });
+            }
 
             // Forward status and CORS-safe headers
             const respHeaders: Record<string, string> = {

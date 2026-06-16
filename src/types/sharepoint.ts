@@ -26,6 +26,7 @@ export type SPReportFields = {
   Title: string;
   ReportDate?: string;
   RegistrationDate?: string;
+  PlannedHours?: number;
   CustomerLookupId?: number;
   SystemLookupId?: number;
   WorkTypeLookupId?: number;
@@ -34,6 +35,7 @@ export type SPReportFields = {
   ReporterLookupId?: number;
   ReporterName?: string;
   IsProject?: boolean;
+  IsComplete?: boolean;
 };
 
 export type SPPlanFields = {
@@ -47,6 +49,16 @@ export type SPPlanFields = {
   IsProject?: boolean;
   AssigneeLookupId?: number;
   AssigneeName?: string;
+};
+
+export type SPWorkDayFields = {
+  Title: string;
+  WorkDate?: string;
+  WorkStartTime?: string;
+  WorkEndTime?: string;
+  BreakHours?: number;
+  TodayNote?: string;
+  ReporterName?: string;
 };
 
 // ---------- App-level types (resolved) ----------
@@ -78,6 +90,7 @@ export type WorkReport = {
   title: string;
   reportDate: string;
   registrationDate: string;
+  plannedHours: number;
   customerId: string;
   customerName: string;
   systemId: string;
@@ -88,6 +101,7 @@ export type WorkReport = {
   workHours: number;
   userName: string;
   isProject: boolean;
+  isComplete: boolean;
 };
 
 export type WorkPlan = {
@@ -103,5 +117,16 @@ export type WorkPlan = {
   workDescription: string;
   plannedHours: number;
   isProject: boolean;
+  userName: string;
+};
+
+export type WorkDay = {
+  id: string;
+  title: string;
+  workDate: string;
+  workStartTime: string;
+  workEndTime: string;
+  breakHours: number;
+  todayNote: string;
   userName: string;
 };

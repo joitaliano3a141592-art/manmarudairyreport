@@ -36,6 +36,7 @@ jobs:
           VITE_SP_LIST_WORKTYPES: ${{ secrets.VITE_SP_LIST_WORKTYPES }}
           VITE_SP_LIST_REPORTS: ${{ secrets.VITE_SP_LIST_REPORTS }}
           VITE_SP_LIST_PLANS: ${{ secrets.VITE_SP_LIST_PLANS }}
+          VITE_SP_LIST_WORKDAYS: ${{ secrets.VITE_SP_LIST_WORKDAYS }}
           VITE_APP_BASE_PATH: ${{ secrets.VITE_APP_BASE_PATH }}
       - name: Configure custom domain (optional)
         env:

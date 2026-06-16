@@ -2,7 +2,7 @@
 既存 SharePoint サイトの日報リストを Teams チームサイトへ移行するスクリプト。
 
 機能:
-- 5リスト（顧客マスタ / システムマスタ / 作業種別マスタ / 作業報告 / 作業予定）をコピー
+- 6リスト（顧客マスタ / システムマスタ / 作業種別マスタ / 作業報告 / 作業予定 / 作業日）をコピー
 - Lookup を Title ベースで再マッピング
 - 必要に応じて .env.production.local の参照先 VITE_SP_* を更新
 
@@ -36,6 +36,7 @@ from dotenv import load_dotenv
 from setup_sharepoint_lists import (
     ensure_choice_column,
     ensure_datetime_column,
+    ensure_boolean_column,
     ensure_lookup_column,
     ensure_number_column,
     ensure_person_column,
@@ -56,7 +57,7 @@ GRAPH_SCOPES = (
 GRAPH_CLIENT_ID = "14d82eec-204b-4c2f-b7e8-296a70dab67e"
 AUTH_RECORD_PATH = PROJECT_ROOT / ".graph_auth_record.json"
 
-LIST_NAMES = ["顧客マスタ", "システムマスタ", "作業種別マスタ", "作業報告", "作業予定"]
+LIST_NAMES = ["顧客マスタ", "システムマスタ", "作業種別マスタ", "作業報告", "作業予定", "作業日"]
 
 ALLOWED_FIELDS_BY_LIST = {
     "顧客マスタ": {"Title"},
@@ -65,21 +66,37 @@ ALLOWED_FIELDS_BY_LIST = {
     "作業報告": {
         "Title",
         "ReportDate",
+        "RegistrationDate",
         "CustomerLookupId",
         "SystemLookupId",
         "WorkTypeLookupId",
         "WorkDescription",
+        "PlannedHours",
         "WorkHours",
         "ReporterName",
+        "IsProject",
+        "IsComplete",
     },
     "作業予定": {
         "Title",
         "PlanDate",
         "CustomerLookupId",
         "SystemLookupId",
+        "WorkTypeLookupId",
         "WorkDescription",
+        "PlannedHours",
+        "IsProject",
         "Status",
         "AssigneeName",
+    },
+    "作業日": {
+        "Title",
+        "WorkDate",
+        "WorkStartTime",
+        "WorkEndTime",
+        "BreakHours",
+        "TodayNote",
+        "ReporterName",
     },
 }
 
@@ -230,8 +247,9 @@ def ensure_target_schema(target_site_id: str, target_lists: dict[str, str], exec
         print("[DRY-RUN] target schema sync")
         print("  - システムマスタ: Customer, Description")
         print("  - 作業種別マスタ: Category")
-        print("  - 作業報告: ReportDate, Customer, System, WorkType, WorkDescription, WorkHours, Reporter")
-        print("  - 作業予定: PlanDate, Customer, System, WorkDescription, Assignee, Status")
+        print("  - 作業報告: ReportDate, RegistrationDate, Customer, System, WorkType, WorkDescription, PlannedHours, WorkHours, Reporter, ReporterName, IsProject, IsComplete")
+        print("  - 作業予定: PlanDate, Customer, System, WorkType, WorkDescription, PlannedHours, IsProject, AssigneeName, Assignee, Status")
+        print("  - 作業日: WorkDate, WorkStartTime, WorkEndTime, BreakHours, TodayNote, ReporterName")
         return
 
     customer_list_id = target_lists["顧客マスタ"]
@@ -249,22 +267,38 @@ def ensure_target_schema(target_site_id: str, target_lists: dict[str, str], exec
 
     rpt_cols = get_columns(target_site_id, report_list_id)
     ensure_datetime_column(target_site_id, report_list_id, "ReportDate", "作業日", rpt_cols, required=True)
+    ensure_datetime_column(target_site_id, report_list_id, "RegistrationDate", "登録日", rpt_cols, required=False)
     ensure_lookup_column(target_site_id, report_list_id, "Customer", "顧客", customer_list_id, rpt_cols, required=True)
     ensure_lookup_column(target_site_id, report_list_id, "System", "システム", system_list_id, rpt_cols, required=True)
     ensure_lookup_column(target_site_id, report_list_id, "WorkType", "作業種別", worktype_list_id, rpt_cols, required=True)
     ensure_text_column(target_site_id, report_list_id, "WorkDescription", "作業内容", rpt_cols, required=True, multi_line=True)
+    ensure_number_column(target_site_id, report_list_id, "PlannedHours", "予定時間", rpt_cols, required=False)
     ensure_number_column(target_site_id, report_list_id, "WorkHours", "作業時間", rpt_cols, required=True)
     ensure_text_column(target_site_id, report_list_id, "ReporterName", "報告者名", rpt_cols)
     ensure_person_column(target_site_id, report_list_id, "Reporter", "報告者", rpt_cols)
+    ensure_boolean_column(target_site_id, report_list_id, "IsProject", "案件", rpt_cols, default_value=True)
+    ensure_boolean_column(target_site_id, report_list_id, "IsComplete", "完了", rpt_cols, default_value=True)
 
     plan_cols = get_columns(target_site_id, plan_list_id)
     ensure_datetime_column(target_site_id, plan_list_id, "PlanDate", "予定日", plan_cols, required=True)
     ensure_lookup_column(target_site_id, plan_list_id, "Customer", "顧客", customer_list_id, plan_cols, required=True)
     ensure_lookup_column(target_site_id, plan_list_id, "System", "システム", system_list_id, plan_cols, required=True)
+    ensure_lookup_column(target_site_id, plan_list_id, "WorkType", "作業種別", worktype_list_id, plan_cols, required=False)
     ensure_text_column(target_site_id, plan_list_id, "WorkDescription", "作業内容", plan_cols, required=True, multi_line=True)
+    ensure_number_column(target_site_id, plan_list_id, "PlannedHours", "作業予定時間", plan_cols, required=False)
+    ensure_boolean_column(target_site_id, plan_list_id, "IsProject", "案件", plan_cols, default_value=True)
     ensure_text_column(target_site_id, plan_list_id, "AssigneeName", "担当者名", plan_cols)
     ensure_person_column(target_site_id, plan_list_id, "Assignee", "担当者", plan_cols)
     ensure_choice_column(target_site_id, plan_list_id, "Status", "状態", ["未着手", "進行中", "完了"], plan_cols, required=True)
+
+    workday_list_id = target_lists["作業日"]
+    workday_cols = get_columns(target_site_id, workday_list_id)
+    ensure_datetime_column(target_site_id, workday_list_id, "WorkDate", "作業日", workday_cols, required=True)
+    ensure_text_column(target_site_id, workday_list_id, "WorkStartTime", "開始時刻", workday_cols)
+    ensure_text_column(target_site_id, workday_list_id, "WorkEndTime", "終了時刻", workday_cols)
+    ensure_number_column(target_site_id, workday_list_id, "BreakHours", "休憩時間", workday_cols, required=False)
+    ensure_text_column(target_site_id, workday_list_id, "TodayNote", "本日のひとこと", workday_cols, multi_line=True)
+    ensure_text_column(target_site_id, workday_list_id, "ReporterName", "登録者名", workday_cols)
 
 
 def get_all_items(site_id: str, list_id: str) -> list[dict[str, Any]]:
