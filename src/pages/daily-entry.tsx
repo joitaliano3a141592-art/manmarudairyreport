@@ -50,7 +50,6 @@ const tomorrow = (() => {
   date.setDate(date.getDate() + 1);
   return toLocalDate(date);
 })();
-
 type TeamsPublishTarget = {
   teamId: string;
   channelId: string;
@@ -159,8 +158,8 @@ function emptyPlanForm(): PlanFormState {
 function emptyWorkDayForm(): WorkDayFormState {
   return {
     workDate: today,
-    workStartTime: "",
-    workEndTime: "",
+    workStartTime: "08:45",
+    workEndTime: "17:15",
     breakHours: "1",
     todayNote: "",
   };
@@ -752,10 +751,10 @@ export default function DailyEntryPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-          <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50">作業実績 {reports.length} 件</Badge>
-          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">作業予定 {plans.length} 件</Badge>
-          <Badge className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50">合計 {formatWorkHours(totalWorkHours)}h</Badge>
-          <Badge className="border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-50">作業日 {currentWorkDay ? "登録済み" : "未登録"}</Badge>
+          <Badge className="border-sky-300 bg-sky-200 text-black font-bold hover:bg-sky-200">作業実績 {reports.length} 件</Badge>
+          <Badge className="border-emerald-300 bg-emerald-200 text-black font-bold hover:bg-emerald-200">作業予定 {plans.length} 件</Badge>
+          <Badge className="border-amber-300 bg-amber-200 text-black font-bold hover:bg-amber-200">合計 {formatWorkHours(totalWorkHours)}h</Badge>
+          <Badge className="border-violet-300 bg-violet-200 text-black font-bold hover:bg-violet-200">本日 {currentWorkDay ? "登録済み" : "未登録"}</Badge>
         </div>
       </div>
 
@@ -800,7 +799,15 @@ export default function DailyEntryPage() {
 
                     return (
                       <TableRow key={row.rowKey}>
-                        <TableCell className="whitespace-nowrap">{row.source === "report" ? "実績" : "本日予定"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <span
+                            className={row.source === "report"
+                              ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-black"
+                              : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-black"}
+                          >
+                             {row.source === "report" ? "実績" : "予定"}
+                          </span>
+                        </TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Input type="date" value={inlineEdit.reportDate} onChange={(e) => setInlineEdit({ ...inlineEdit, reportDate: e.target.value })} className="min-w-[130px]" />
                         ) : row.reportDate}</TableCell>
@@ -1012,7 +1019,7 @@ export default function DailyEntryPage() {
       <Card className="mt-6">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>作業日</CardTitle>
+            <CardTitle>本日の業務</CardTitle>
             <Button variant="outline" onClick={() => setWorkDayModalOpen(true)}>
               <Pencil className="mr-2 h-4 w-4" /> {currentWorkDay ? "編集" : "登録"}
             </Button>
@@ -1226,7 +1233,7 @@ export default function DailyEntryPage() {
         onOpenChange={(open) => {
           if (!open) closeWorkDayModal();
         }}
-        title={workDayId ? "作業日を編集" : "作業日を登録"}
+        title={workDayId ? "本日の業務を編集" : "本日の業務を登録"}
         description="開始時刻、終了時刻、休憩時間、本日のひとことを保存します。"
         onCancel={closeWorkDayModal}
         onSave={() => {

@@ -8,6 +8,7 @@ import { Menu } from "lucide-react"
 import { useCurrentUser, clearCurrentUserNameOverride, setCurrentUserNameOverride } from "@/hooks/use-current-user"
 import { useReports } from "@/hooks/use-sharepoint"
 import { toast } from "sonner"
+import appPackage from "../../package.json"
 
 type LayoutProps = { showHeader?: boolean }
 
@@ -64,6 +65,7 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
   const { data: allReports = [] } = useReports();
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
   const userPickerRef = useRef<HTMLDivElement | null>(null)
+  const appVersion = appPackage.version
 
   const reportUserNames = useMemo(() => {
     return Array.from(new Set(allReports.map((report) => report.userName.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ja"))
@@ -105,15 +107,15 @@ function LayoutContent({ showHeader = true }: LayoutProps) {
                 </h1>
                 <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
                   <span>Daily Work Report</span>
-                  <span className="rounded border border-border px-1.5 py-0.5 text-[10px] leading-none">
-                    1.0.1
-                  </span>
                 </p>
               </div>
             </div>
 
             {/* 右側: テーマ切替とユーザー */}
             <div className="flex items-center gap-3">
+              <span className="rounded border border-border bg-muted px-2 py-1 text-[11px] font-medium leading-none text-muted-foreground">
+                Ver {appVersion}
+              </span>
               <ModeToggle />
               <div className="relative" ref={userPickerRef}>
                 <button
