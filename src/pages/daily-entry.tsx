@@ -715,8 +715,13 @@ export default function DailyEntryPage() {
         const [, month, day] = date.split("-");
         return `${Number(month)}/${Number(day)}`;
       };
-      const buildCustomerLines = (items: Array<{ customerName: string; workDescription: string }>) => {
-        return items.map((item) => `<p>【${escapeHtml(item.customerName.trim() || "未設定")}】：${escapeHtml(normalizeInlineText(item.workDescription) || "（内容なし）")}</p>`).join("");
+      const buildWorkSummary = (workTypeName: string, workDescription: string) => {
+        const normalizedWorkTypeName = normalizeInlineText(workTypeName);
+        const normalizedWorkDescription = normalizeInlineText(workDescription);
+        return [normalizedWorkTypeName, normalizedWorkDescription].filter(Boolean).join(" ");
+      };
+      const buildCustomerLines = (items: Array<{ customerName: string; workTypeName: string; workDescription: string }>) => {
+        return items.map((item) => `<p>【${escapeHtml(item.customerName.trim() || "未設定")}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription))}</p>`).join("");
       };
       const reportSections = publishReportGroups.map(([reportDate, groupedReports]) => `
     <p>■ ${formatMonthDay(reportDate)}</p>
