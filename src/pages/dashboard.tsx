@@ -265,6 +265,12 @@ export default function DashboardPage() {
     return Array.from(users);
   }, [systemStackData]);
 
+  const systemTopBottomLists = useMemo(() => {
+    const top = systemStackData.slice(0, 5);
+    const worst = [...systemStackData].sort((a, b) => a.total - b.total).slice(0, 5);
+    return { top, worst };
+  }, [systemStackData]);
+
   const systemChartLayout = useMemo(() => {
     const width = 760;
     const height = 260;
@@ -712,6 +718,30 @@ export default function DashboardPage() {
                       {user}
                     </span>
                   ))}
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Top 5</div>
+                    <div className="space-y-1.5">
+                      {systemTopBottomLists.top.map((item) => (
+                        <div key={`top-${item.system}`} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 flex-1 truncate">{item.system}</span>
+                          <span className="shrink-0 font-medium">{formatWorkHours(item.total)}h</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Worst 5</div>
+                    <div className="space-y-1.5">
+                      {systemTopBottomLists.worst.map((item) => (
+                        <div key={`worst-${item.system}`} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 flex-1 truncate">{item.system}</span>
+                          <span className="shrink-0 font-medium">{formatWorkHours(item.total)}h</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
