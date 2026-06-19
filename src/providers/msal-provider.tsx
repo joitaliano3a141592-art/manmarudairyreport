@@ -169,6 +169,12 @@ function AutoLogin({ children }: { children: ReactNode }) {
     }
 
     if (inProgress === "none" && !isAuthenticated) {
+      const accounts = instance.getAllAccounts();
+      if (accounts.length > 0) {
+        instance.setActiveAccount(accounts[0]);
+        return;
+      }
+
       setGraphReady(false);
       setAuthError(null);
       if (isInIframe) {
@@ -176,9 +182,26 @@ function AutoLogin({ children }: { children: ReactNode }) {
         microsoftTeams.app
           .initialize()
           .then(() => microsoftTeams.app.getContext())
-          .then((ctx) => {
+          .then(async (ctx) => {
             if (ctx?.app?.host) {
-              // Teams タブ内 → Teams 管理ポップアップ経由で認証
+              // Teams タブ内 → まずはサイレント認証を試行
+              const loginHint = ctx.user?.userPrincipalName || ctx.user?.loginHint;
+              if (loginHint) {
+                try {
+                  const silentRes = await instance.ssoSilent({
+                    scopes: graphScopes,
+                    loginHint: loginHint,
+                  });
+                  if (silentRes.account) {
+                    instance.setActiveAccount(silentRes.account);
+                    return;
+                  }
+                } catch (err) {
+                  console.log("SSO Silent failed, falling back to popup:", err);
+                }
+              }
+
+              // サイレント認証が失敗した場合は Teams 管理ポップアップ経由で認証
               const baseUrl =
                 window.location.origin + import.meta.env.BASE_URL;
               clearTeamsSessionReady();

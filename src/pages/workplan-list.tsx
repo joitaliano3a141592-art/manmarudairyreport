@@ -58,8 +58,8 @@ export default function WorkPlanListPage() {
   };
 
   const handleSave = (plan: WorkPlan) => {
-    if (!editDescription.trim() || !editPlanDate) {
-      toast.warning("予定日と作業内容を入力してください。");
+    if (!editPlanDate) {
+      toast.warning("予定日を入力してください。");
       return;
     }
 

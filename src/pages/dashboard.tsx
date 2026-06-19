@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
-import { Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, ChevronDown, ChevronUp, Medal } from "lucide-react";
 import { useReports } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
 import { formatWorkHours } from "@/lib/utils";
@@ -723,12 +723,22 @@ export default function DashboardPage() {
                   <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Top 5</div>
                     <div className="space-y-1.5">
-                      {systemTopBottomLists.top.map((item) => (
-                        <div key={`top-${item.system}`} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="min-w-0 flex-1 truncate">{item.system}</span>
-                          <span className="shrink-0 font-medium">{formatWorkHours(item.total)}h</span>
-                        </div>
-                      ))}
+                      {systemTopBottomLists.top.map((item, index) => {
+                        const bgColors = ["bg-yellow-100/60", "bg-slate-200/60", "bg-orange-200/60", "bg-emerald-100/60", "bg-sky-100/60"];
+                        const medalColors = ["text-yellow-500", "text-slate-400", "text-orange-500"];
+                        return (
+                          <div
+                            key={`top-${item.system}`}
+                            className={`flex items-center justify-between gap-3 text-sm p-1.5 rounded ${bgColors[index] || ""}`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {index < 3 && <Medal className={`shrink-0 w-4 h-4 ${medalColors[index]}`} />}
+                              <span className="truncate">{item.system}</span>
+                            </div>
+                            <span className="shrink-0 font-medium">{formatWorkHours(item.total)}h</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">

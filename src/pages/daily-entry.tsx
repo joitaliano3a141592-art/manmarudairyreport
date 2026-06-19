@@ -409,7 +409,7 @@ export default function DailyEntryPage() {
 
   const saveInlineEdit = async () => {
     if (!inlineEdit) return;
-    if (!inlineEdit.customerId || !inlineEdit.systemId || !inlineEdit.workTypeId || !inlineEdit.workDescription.trim()) {
+    if (!inlineEdit.customerId || !inlineEdit.systemId || !inlineEdit.workTypeId) {
       toast.error("必須項目を入力してください。", { duration: 2200 });
       return;
     }
@@ -485,7 +485,7 @@ export default function DailyEntryPage() {
 
   const saveInlinePlanEdit = async () => {
     if (!inlinePlanEdit) return;
-    if (!inlinePlanEdit.customerId || !inlinePlanEdit.systemId || !inlinePlanEdit.workTypeId || !inlinePlanEdit.workDescription.trim()) {
+    if (!inlinePlanEdit.customerId || !inlinePlanEdit.systemId || !inlinePlanEdit.workTypeId) {
       toast.error("必須項目を入力してください。", { duration: 2200 });
       return;
     }

@@ -27,7 +27,7 @@ export default function WorkPlanInputPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.customerId || !formData.systemId || !formData.workDescription.trim()) {
+    if (!formData.customerId || !formData.systemId) {
       setSubmitError("必須項目を入力してください。");
       return;
     }
