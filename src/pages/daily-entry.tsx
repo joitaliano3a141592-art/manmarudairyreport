@@ -1067,7 +1067,7 @@ export default function DailyEntryPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-1.5">
-            <p className="text-muted-foreground">本日のひとこと</p>
+            <p className="text-muted-foreground"></p>
             <Textarea value={workDayForm.todayNote} onChange={(e) => setWorkDayForm({ ...workDayForm, todayNote: e.target.value })} rows={4} />
             {workDaySubmitError && <p className="text-sm text-destructive">登録できませんでした: {workDaySubmitError}</p>}
           </div>
