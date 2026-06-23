@@ -655,7 +655,7 @@ export default function DailyEntryPage() {
       } else {
         await addWorkDayMutation.mutateAsync(fields);
       }
-      toast.success("作業日を保存しました。", { duration: 2200 });
+      toast.success("本日のひとことを登録しました", { duration: 2200 });
       closeWorkDayModal();
     } catch (error) {
       setWorkDaySubmitError(error instanceof Error ? error.message : String(error));
@@ -1054,34 +1054,23 @@ export default function DailyEntryPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle>本日のひとこと</CardTitle>
-            <Button variant="outline" onClick={() => setWorkDayModalOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" /> {currentWorkDay ? "編集" : "登録"}
+            <Button
+              variant="outline"
+              onClick={() => {
+                void saveWorkDay();
+              }}
+              disabled={addWorkDayMutation.isPending || updateWorkDayMutation.isPending}
+            >
+              <Pencil className="mr-2 h-4 w-4" /> 登録
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {currentWorkDay ? (
-            <div className="grid gap-4 md:grid-cols-2 text-sm">
-              <div>
-                <p className="text-muted-foreground">開始時刻</p>
-                <p className="font-medium">{currentWorkDay.workStartTime || "-"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">終了時刻</p>
-                <p className="font-medium">{currentWorkDay.workEndTime || "-"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">休憩時間</p>
-                <p className="font-medium">{currentWorkDay.breakHours}h</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">本日のひとこと</p>
-                <p className="font-medium whitespace-pre-wrap">{currentWorkDay.todayNote || "-"}</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">まだ作業日が登録されていません。</p>
-          )}
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground">本日のひとこと</p>
+            <Textarea value={workDayForm.todayNote} onChange={(e) => setWorkDayForm({ ...workDayForm, todayNote: e.target.value })} rows={4} />
+            {workDaySubmitError && <p className="text-sm text-destructive">登録できませんでした: {workDaySubmitError}</p>}
+          </div>
         </CardContent>
       </Card>
 
