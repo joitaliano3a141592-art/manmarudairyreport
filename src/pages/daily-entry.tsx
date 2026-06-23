@@ -821,7 +821,7 @@ export default function DailyEntryPage() {
               <p className="text-sm text-muted-foreground">作業実績と本日予定データがありません。</p>
             ) : (
               <Table className="min-w-full">
-                <TableHeader>
+                <TableHeader className="bg-sky-200">
                   <TableRow>
                     <TableHead>種別</TableHead>
                     <TableHead>報告日</TableHead>
@@ -962,7 +962,7 @@ export default function DailyEntryPage() {
               <p className="text-sm text-muted-foreground">今後の作業予定がありません。</p>
             ) : (
               <Table className="min-w-full">
-                <TableHeader>
+                <TableHeader className="bg-sky-200">
                   <TableRow>
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
