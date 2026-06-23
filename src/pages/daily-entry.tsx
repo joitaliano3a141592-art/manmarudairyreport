@@ -796,7 +796,7 @@ export default function DailyEntryPage() {
         <Card className="min-w-0">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>作業実績一覧</CardTitle>
+              <CardTitle>本日の実績一覧</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
                 <Button size="sm" onClick={openNewReportModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
@@ -935,7 +935,7 @@ export default function DailyEntryPage() {
         <Card className="min-w-0">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>明日以降の予定一覧</CardTitle>
+              <CardTitle>次回の予定一覧</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">次回: {nextPlanDate ?? "-"}</div>
                 <Button size="sm" onClick={openNewPlanModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
@@ -1053,7 +1053,7 @@ export default function DailyEntryPage() {
       <Card className="mt-6">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>本日の業務</CardTitle>
+            <CardTitle>本日のひとこと</CardTitle>
             <Button variant="outline" onClick={() => setWorkDayModalOpen(true)}>
               <Pencil className="mr-2 h-4 w-4" /> {currentWorkDay ? "編集" : "登録"}
             </Button>
