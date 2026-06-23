@@ -89,6 +89,7 @@ type ReportTableRow = {
   rowKey: string;
   source: "report" | "today-plan";
   sourceId: string;
+  displayType: "予定" | "予定外";
   reportDate: string;
   customerId: string;
   customerName: string;
@@ -303,6 +304,15 @@ export default function DailyEntryPage() {
       rowKey: `report-${report.id}`,
       source: "report",
       sourceId: report.id,
+      displayType: convertedPlanKeys.has([
+        report.reportDate,
+        report.customerId,
+        report.systemId,
+        report.workTypeId,
+      ].join("|"))
+        && report.plannedHours > 0
+        ? "予定"
+        : "予定外",
       reportDate: report.reportDate,
       customerId: report.customerId,
       customerName: report.customerName,
@@ -320,6 +330,7 @@ export default function DailyEntryPage() {
       rowKey: `today-plan-${plan.id}`,
       source: "today-plan",
       sourceId: plan.id,
+      displayType: "予定",
       reportDate: plan.planDate,
       customerId: plan.customerId,
       customerName: plan.customerName,
@@ -796,7 +807,7 @@ export default function DailyEntryPage() {
         <Card className="min-w-0">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>本日の実績一覧</CardTitle>
+              <CardTitle>本日の実績</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">合計: {formatWorkHours(totalWorkHours)}h</div>
                 <Button size="sm" onClick={openNewReportModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
@@ -836,10 +847,12 @@ export default function DailyEntryPage() {
                         <TableCell className="whitespace-nowrap">
                           <span
                             className={row.source === "report"
-                              ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-black"
-                              : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-black"}
+                              ? row.displayType === "予定"
+                                ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-black"
+                                : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-black"
+                              : "inline-flex items-center rounded-full border border-sky-200 px-3 py-1 text-xs font-bold text-black"}
                           >
-                             {row.source === "report" ? "実績" : "予定"}
+                             {row.displayType}
                           </span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
@@ -935,7 +948,7 @@ export default function DailyEntryPage() {
         <Card className="min-w-0">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>次回の予定一覧</CardTitle>
+              <CardTitle>次回の予定</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">次回: {nextPlanDate ?? "-"}</div>
                 <Button size="sm" onClick={openNewPlanModal} className="bg-emerald-600 text-white hover:bg-emerald-700">
