@@ -695,7 +695,7 @@ export default function DailyEntryPage() {
   };
 
   const openEditReportModal = (row: ReportTableRow) => {
-    setReportEditingId(row.sourceId);
+    setReportEditingId(row.source === "report" ? row.sourceId : null);
     setReportForm({
       reportDate: row.reportDate,
       customerId: row.customerId,
