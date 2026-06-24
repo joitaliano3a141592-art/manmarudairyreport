@@ -282,21 +282,25 @@ export default function DailyEntryPage() {
 
   const filteredReportSystems = systems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId);
   const filteredPlanSystems = systems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId);
-  const reportCustomerSystemIds = useMemo(
-    () => new Set(filteredReportSystems.map((system) => system.id)),
-    [filteredReportSystems],
-  );
-  const planCustomerSystemIds = useMemo(
-    () => new Set(filteredPlanSystems.map((system) => system.id)),
-    [filteredPlanSystems],
-  );
   const filteredReportWorkNumbers = useMemo(
-    () => workNumbers.filter((workNumber) => reportCustomerSystemIds.has(workNumber.systemId)),
-    [reportCustomerSystemIds, workNumbers],
+    () => {
+      if (!reportForm.customerId) {
+        return [];
+      }
+      const customerSystemIds = new Set(systems.filter((system) => system.customerId === reportForm.customerId).map((system) => system.id));
+      return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+    },
+    [reportForm.customerId, systems, workNumbers],
   );
   const filteredPlanWorkNumbers = useMemo(
-    () => workNumbers.filter((workNumber) => planCustomerSystemIds.has(workNumber.systemId)),
-    [planCustomerSystemIds, workNumbers],
+    () => {
+      if (!planForm.customerId) {
+        return [];
+      }
+      const customerSystemIds = new Set(systems.filter((system) => system.customerId === planForm.customerId).map((system) => system.id));
+      return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+    },
+    [planForm.customerId, systems, workNumbers],
   );
   const totalWorkHours = useMemo(() => reports.reduce((sum, report) => sum + report.workHours, 0), [reports]);
   const nextPlanDate = useMemo(
@@ -707,7 +711,7 @@ export default function DailyEntryPage() {
       reportDate: row.reportDate,
       customerId: row.customerId,
       systemId: row.systemId,
-      workNumberId: filteredReportWorkNumbers.find((workNumber) => workNumber.name === row.workNumberName)?.id ?? "",
+      workNumberId: workNumbers.find((workNumber) => workNumber.name === row.workNumberName)?.id ?? "",
       workTypeId: row.workTypeId,
       workDescription: row.workDescription,
       plannedHours: String(row.plannedHours ?? 0),
@@ -732,7 +736,7 @@ export default function DailyEntryPage() {
       planDate: plan.planDate,
       customerId: plan.customerId,
       systemId: plan.systemId,
-      workNumberId: filteredPlanWorkNumbers.find((workNumber) => workNumber.name === plan.workNumberName)?.id ?? "",
+      workNumberId: workNumbers.find((workNumber) => workNumber.name === plan.workNumberName)?.id ?? "",
       workTypeId: plan.workTypeId,
       workDescription: plan.workDescription,
       plannedHours: String(plan.plannedHours ?? 0),
