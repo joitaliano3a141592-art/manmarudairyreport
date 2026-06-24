@@ -100,6 +100,7 @@ type ReportTableRow = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberId: string;
   workNumberName: string;
   plannedHours: number;
   workHours: number;
@@ -307,21 +308,24 @@ export default function DailyEntryPage() {
     [nextPlanDate, plans],
   );
   const reportTableRows = useMemo<ReportTableRow[]>(() => {
+    const buildKey = (parts: Array<string | null | undefined>) => parts.map((part) => (part == null ? "__missing__" : part)).join("|");
     const convertedPlanKeys = new Set(
-      reports.map((report) => [
+      reports.map((report) => buildKey([
         report.reportDate,
         report.customerId,
         report.systemId,
         report.workTypeId,
-      ].join("|")),
+        report.workNumberId,
+      ])),
     );
     const visibleTodayPlans = todayPlans.filter((plan) => {
-      const key = [
+      const key = buildKey([
         plan.planDate,
         plan.customerId,
         plan.systemId,
         plan.workTypeId,
-      ].join("|");
+        plan.workNumberId,
+      ]);
       return !convertedPlanKeys.has(key);
     });
 
@@ -329,12 +333,13 @@ export default function DailyEntryPage() {
       rowKey: `report-${report.id}`,
       source: "report",
       sourceId: report.id,
-      displayType: convertedPlanKeys.has([
+      displayType: convertedPlanKeys.has(buildKey([
         report.reportDate,
         report.customerId,
         report.systemId,
         report.workTypeId,
-      ].join("|"))
+        report.workNumberId,
+      ]))
         && report.plannedHours > 0
         ? "予定"
         : "予定外",
@@ -345,6 +350,7 @@ export default function DailyEntryPage() {
       systemName: report.systemName,
       workTypeId: report.workTypeId,
       workTypeName: report.workTypeName,
+      workNumberId: report.workNumberId,
       workNumberName: report.workNumberName,
       plannedHours: report.plannedHours,
       workHours: report.workHours,
@@ -364,6 +370,7 @@ export default function DailyEntryPage() {
       systemName: plan.systemName,
       workTypeId: plan.workTypeId,
       workTypeName: plan.workTypeName,
+      workNumberId: plan.workNumberId,
       workNumberName: plan.workNumberName,
       plannedHours: plan.plannedHours,
       workHours: 0,

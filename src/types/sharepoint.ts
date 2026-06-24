@@ -111,6 +111,7 @@ export type WorkReport = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberId: string;
   workNumberName: string;
   workDescription: string;
   workHours: number;
@@ -129,6 +130,7 @@ export type WorkPlan = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberId: string;
   workNumberName: string;
   workDescription: string;
   plannedHours: number;
