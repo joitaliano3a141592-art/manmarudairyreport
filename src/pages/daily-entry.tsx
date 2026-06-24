@@ -569,7 +569,7 @@ export default function DailyEntryPage() {
       return;
     }
 
-    const plannedHours = 0;
+    const plannedHours = Number(reportForm.plannedHours);
     const workHours = Number(reportForm.workTime);
     if (Number.isNaN(plannedHours) || plannedHours < 0) {
       setReportSubmitError("予定時間は 0 以上で入力してください。");
@@ -897,9 +897,9 @@ export default function DailyEntryPage() {
                           <span
                             className={row.source === "report"
                               ? row.displayType === "予定"
-                                ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-black"
-                                : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-black"
-                              : "inline-flex items-center rounded-full border border-sky-200 px-3 py-1 text-xs font-bold text-black"}
+                               ? "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-sky-900 dark:bg-sky-950 dark:text-slate-100"
+                               : "inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-amber-900 dark:bg-amber-950 dark:text-slate-100"
+                              : "inline-flex items-center rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-bold text-slate-900 dark:border-sky-900 dark:bg-sky-950 dark:text-slate-100"}
                           >
                              {row.displayType}
                           </span>
