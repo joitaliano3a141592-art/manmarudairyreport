@@ -868,8 +868,8 @@ export default function DailyEntryPage() {
             {reportTableRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">作業実績と本日予定データがありません。</p>
             ) : (
-              <Table className="min-w-full">
-                <TableHeader className="bg-sky-200">
+              <Table className="min-w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+              <TableHeader className="bg-slate-200 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>種別</TableHead>
                     <TableHead>報告日</TableHead>
@@ -1011,8 +1011,8 @@ export default function DailyEntryPage() {
             {plans.length === 0 ? (
               <p className="text-sm text-muted-foreground">今後の作業予定がありません。</p>
             ) : (
-              <Table className="min-w-full">
-                <TableHeader className="bg-sky-200">
+              <Table className="min-w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+              <TableHeader className="bg-slate-200 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
