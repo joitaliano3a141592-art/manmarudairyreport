@@ -35,6 +35,7 @@ export type SPReportFields = {
   CustomerLookupId?: number;
   SystemLookupId?: number;
   WorkTypeLookupId?: number;
+  WorkNumberLookupId?: number;
   WorkDescription?: string;
   WorkHours?: number;
   ReporterLookupId?: number;
@@ -49,6 +50,7 @@ export type SPPlanFields = {
   CustomerLookupId?: number;
   SystemLookupId?: number;
   WorkTypeLookupId?: number;
+  WorkNumberLookupId?: number;
   WorkDescription?: string;
   PlannedHours?: number;
   IsProject?: boolean;
@@ -109,6 +111,7 @@ export type WorkReport = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberName: string;
   workDescription: string;
   workHours: number;
   userName: string;
@@ -126,6 +129,7 @@ export type WorkPlan = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberName: string;
   workDescription: string;
   plannedHours: number;
   isProject: boolean;

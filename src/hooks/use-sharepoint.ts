@@ -266,6 +266,7 @@ export function useReportsByDateField(
   endDate?: string,
 ) {
   const maps = useLookupMaps();
+  const { data: workNumbers } = useWorkNumbers();
 
   return useQuery({
     queryKey: ["sp", "reports", dateField, startDate, endDate],
@@ -293,6 +294,7 @@ export function useReportsByDateField(
         const custId = String(f.CustomerLookupId ?? "");
         const sysId = String(f.SystemLookupId ?? "");
         const wtId = String(f.WorkTypeLookupId ?? "");
+        const wnId = String(f.WorkNumberLookupId ?? "");
         return {
           id: item.id,
           title: f.Title,
@@ -305,6 +307,7 @@ export function useReportsByDateField(
           systemName: maps.systemMap.get(sysId) ?? "",
           workTypeId: wtId,
           workTypeName: maps.workTypeMap.get(wtId) ?? "",
+          workNumberName: workNumbers?.find((item) => item.id === wnId)?.name ?? "",
           workDescription: f.WorkDescription ?? "",
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
@@ -499,6 +502,7 @@ export function useUpdateWorkNumber() {
 
 export function usePlans(startDate?: string, endDate?: string) {
   const maps = useLookupMaps();
+  const { data: workNumbers } = useWorkNumbers();
 
   return useQuery({
     queryKey: ["sp", "plans", startDate, endDate],
@@ -530,6 +534,7 @@ export function usePlans(startDate?: string, endDate?: string) {
         const custId = String(f.CustomerLookupId ?? "");
         const sysId = String(f.SystemLookupId ?? "");
         const workTypeId = String(f.WorkTypeLookupId ?? "");
+        const wnId = String(f.WorkNumberLookupId ?? "");
         return {
           id: item.id,
           title: f.Title,
@@ -540,6 +545,7 @@ export function usePlans(startDate?: string, endDate?: string) {
           systemName: maps.systemMap.get(sysId) ?? "",
           workTypeId: workTypeId,
           workTypeName: maps.workTypeMap.get(workTypeId) ?? "",
+          workNumberName: workNumbers?.find((item) => item.id === wnId)?.name ?? "",
           workDescription: f.WorkDescription ?? "",
           plannedHours: f.PlannedHours ?? 0,
           isProject: f.IsProject ?? true,

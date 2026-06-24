@@ -16,6 +16,7 @@ import { Pencil, Plus, Send, Trash2 } from "lucide-react";
 import {
   useCustomers,
   useSystems,
+  useWorkNumbers,
   useWorkTypes,
   useReportsByDateField,
   useAddReport,
@@ -59,6 +60,7 @@ type ReportFormState = {
   reportDate: string;
   customerId: string;
   systemId: string;
+  workNumberId: string;
   workTypeId: string;
   workDescription: string;
   plannedHours: string;
@@ -71,6 +73,7 @@ type PlanFormState = {
   planDate: string;
   customerId: string;
   systemId: string;
+  workNumberId: string;
   workTypeId: string;
   workDescription: string;
   plannedHours: string;
@@ -97,6 +100,7 @@ type ReportTableRow = {
   systemName: string;
   workTypeId: string;
   workTypeName: string;
+  workNumberName: string;
   plannedHours: number;
   workHours: number;
   isComplete: boolean;
@@ -111,6 +115,7 @@ type InlineEditState = {
   reportDate: string;
   customerId: string;
   systemId: string;
+  workNumberId: string;
   workTypeId: string;
   plannedHours: string;
   workTime: string;
@@ -124,6 +129,7 @@ type InlinePlanEditState = {
   planDate: string;
   customerId: string;
   systemId: string;
+  workNumberId: string;
   workTypeId: string;
   plannedHours: string;
   isProject: boolean;
@@ -135,6 +141,7 @@ function emptyReportForm(): ReportFormState {
     reportDate: today,
     customerId: "",
     systemId: "",
+    workNumberId: "",
     workTypeId: "",
     workDescription: "",
     plannedHours: "0",
@@ -149,6 +156,7 @@ function emptyPlanForm(): PlanFormState {
     planDate: tomorrow,
     customerId: "",
     systemId: "",
+    workNumberId: "",
     workTypeId: "",
     workDescription: "",
     plannedHours: "0",
@@ -189,6 +197,7 @@ async function resolveTeamsPublishTarget(): Promise<TeamsPublishTarget> {
 export default function DailyEntryPage() {
   const { data: customers = [], isError: custError, error: customersError } = useCustomers();
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
+  const { data: workNumbers = [] } = useWorkNumbers();
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reportItems = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReportsByDateField("RegistrationDate", today, today);
   const { data: todayPlanItems = [], isLoading: todayPlansLoading, isError: todayPlansErrorState, error: todayPlansError } = usePlans(today, today);
@@ -272,6 +281,22 @@ export default function DailyEntryPage() {
 
   const filteredReportSystems = systems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId);
   const filteredPlanSystems = systems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId);
+  const reportCustomerSystemIds = useMemo(
+    () => new Set(filteredReportSystems.map((system) => system.id)),
+    [filteredReportSystems],
+  );
+  const planCustomerSystemIds = useMemo(
+    () => new Set(filteredPlanSystems.map((system) => system.id)),
+    [filteredPlanSystems],
+  );
+  const filteredReportWorkNumbers = useMemo(
+    () => workNumbers.filter((workNumber) => reportCustomerSystemIds.has(workNumber.systemId)),
+    [reportCustomerSystemIds, workNumbers],
+  );
+  const filteredPlanWorkNumbers = useMemo(
+    () => workNumbers.filter((workNumber) => planCustomerSystemIds.has(workNumber.systemId)),
+    [planCustomerSystemIds, workNumbers],
+  );
   const totalWorkHours = useMemo(() => reports.reduce((sum, report) => sum + report.workHours, 0), [reports]);
   const nextPlanDate = useMemo(
     () => plans.reduce<string | null>((nearest, plan) => (!nearest || plan.planDate < nearest ? plan.planDate : nearest), null),
@@ -320,6 +345,7 @@ export default function DailyEntryPage() {
       systemName: report.systemName,
       workTypeId: report.workTypeId,
       workTypeName: report.workTypeName,
+      workNumberName: report.workNumberName,
       plannedHours: report.plannedHours,
       workHours: report.workHours,
       isComplete: report.isComplete,
@@ -338,6 +364,7 @@ export default function DailyEntryPage() {
       systemName: plan.systemName,
       workTypeId: plan.workTypeId,
       workTypeName: plan.workTypeName,
+      workNumberName: plan.workNumberName,
       plannedHours: plan.plannedHours,
       workHours: 0,
       isComplete: false,
@@ -416,6 +443,9 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === inlineEdit.customerId);
+    const workNumber = filteredReportWorkNumbers.find((item) => item.id === inlineEdit.workNumberId);
+    const systemLookupId = inlineEdit.systemId ? Number(inlineEdit.systemId) : null;
+    const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
 
     try {
       if (inlineEdit.source === "report") {
@@ -427,8 +457,9 @@ export default function DailyEntryPage() {
             RegistrationDate: `${today}T00:00:00+09:00`,
             PlannedHours: plannedHours,
             CustomerLookupId: Number(inlineEdit.customerId),
-            SystemLookupId: Number(inlineEdit.systemId),
+            SystemLookupId: systemLookupId,
             WorkTypeLookupId: Number(inlineEdit.workTypeId),
+            WorkNumberLookupId: workNumberLookupId,
             WorkDescription: inlineEdit.workDescription,
             WorkHours: workHours,
             ReporterName: currentUser.name,
@@ -444,8 +475,9 @@ export default function DailyEntryPage() {
           RegistrationDate: `${today}T00:00:00+09:00`,
           PlannedHours: plannedHours,
           CustomerLookupId: Number(inlineEdit.customerId),
-          SystemLookupId: Number(inlineEdit.systemId),
+          SystemLookupId: systemLookupId,
           WorkTypeLookupId: Number(inlineEdit.workTypeId),
+          WorkNumberLookupId: workNumberLookupId,
           WorkDescription: inlineEdit.workDescription,
           WorkHours: workHours,
           ReporterName: currentUser.name,
@@ -478,6 +510,9 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === inlinePlanEdit.customerId);
+    const workNumber = filteredPlanWorkNumbers.find((item) => item.id === inlinePlanEdit.workNumberId);
+    const systemLookupId = inlinePlanEdit.systemId ? Number(inlinePlanEdit.systemId) : null;
+    const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
 
     try {
       await updatePlanMutation.mutateAsync({
@@ -486,8 +521,9 @@ export default function DailyEntryPage() {
           Title: `予定-${customer?.name ?? ""}`,
           PlanDate: `${inlinePlanEdit.planDate}T00:00:00+09:00`,
           CustomerLookupId: Number(inlinePlanEdit.customerId),
-          SystemLookupId: Number(inlinePlanEdit.systemId),
+          SystemLookupId: systemLookupId,
           WorkTypeLookupId: Number(inlinePlanEdit.workTypeId),
+          WorkNumberLookupId: workNumberLookupId,
           WorkDescription: inlinePlanEdit.workDescription,
           PlannedHours: plannedHours,
           IsProject: inlinePlanEdit.isProject,
@@ -528,7 +564,7 @@ export default function DailyEntryPage() {
   };
 
   const saveReport = async () => {
-    if (!reportForm.customerId || !reportForm.systemId || !reportForm.workTypeId) {
+    if (!reportForm.customerId || !reportForm.workTypeId) {
       setReportSubmitError("必須項目を入力してください。");
       return;
     }
@@ -545,18 +581,22 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === reportForm.customerId);
+    const workNumber = filteredReportWorkNumbers.find((item) => item.id === reportForm.workNumberId) ?? null;
+    const systemLookupId = reportForm.systemId ? Number(reportForm.systemId) : null;
+    const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
     const fields = {
       Title: `日報-${customer?.name ?? ""}`,
       ReportDate: `${reportForm.reportDate}T00:00:00+09:00`,
       RegistrationDate: `${today}T00:00:00+09:00`,
       PlannedHours: plannedHours,
       CustomerLookupId: Number(reportForm.customerId),
-      SystemLookupId: Number(reportForm.systemId),
+      SystemLookupId: systemLookupId,
       WorkTypeLookupId: Number(reportForm.workTypeId),
+      WorkNumberLookupId: workNumberLookupId,
       WorkDescription: reportForm.workDescription,
       WorkHours: workHours,
       ReporterName: currentUser.name,
-      IsProject: reportForm.isProject,
+      IsProject: !!workNumber,
       IsComplete: reportForm.isComplete,
     };
 
@@ -575,7 +615,7 @@ export default function DailyEntryPage() {
   };
 
   const savePlan = async () => {
-    if (!planForm.customerId || !planForm.systemId || !planForm.workTypeId) {
+    if (!planForm.customerId || !planForm.workTypeId) {
       setPlanSubmitError("必須項目を入力してください。");
       return;
     }
@@ -587,15 +627,19 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === planForm.customerId);
+    const workNumber = filteredPlanWorkNumbers.find((item) => item.id === planForm.workNumberId) ?? null;
+    const systemLookupId = planForm.systemId ? Number(planForm.systemId) : null;
+    const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
     const fields = {
       Title: `予定-${customer?.name ?? ""}`,
       PlanDate: `${planForm.planDate}T00:00:00+09:00`,
       CustomerLookupId: Number(planForm.customerId),
-      SystemLookupId: Number(planForm.systemId),
+      SystemLookupId: systemLookupId,
       WorkTypeLookupId: Number(planForm.workTypeId),
+      WorkNumberLookupId: workNumberLookupId,
       WorkDescription: planForm.workDescription,
       PlannedHours: plannedHours,
-      IsProject: planForm.isProject,
+      IsProject: !!workNumber,
       AssigneeName: currentUser.name,
     };
 
@@ -656,6 +700,7 @@ export default function DailyEntryPage() {
       reportDate: row.reportDate,
       customerId: row.customerId,
       systemId: row.systemId,
+      workNumberId: filteredReportWorkNumbers.find((workNumber) => workNumber.name === row.workNumberName)?.id ?? "",
       workTypeId: row.workTypeId,
       workDescription: row.workDescription,
       plannedHours: String(row.plannedHours ?? 0),
@@ -680,6 +725,7 @@ export default function DailyEntryPage() {
       planDate: plan.planDate,
       customerId: plan.customerId,
       systemId: plan.systemId,
+      workNumberId: filteredPlanWorkNumbers.find((workNumber) => workNumber.name === plan.workNumberName)?.id ?? "",
       workTypeId: plan.workTypeId,
       workDescription: plan.workDescription,
       plannedHours: String(plan.plannedHours ?? 0),
@@ -829,6 +875,7 @@ export default function DailyEntryPage() {
                     <TableHead>報告日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
+                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead>作業内容</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
@@ -883,7 +930,8 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : row.systemName}</TableCell>
+                        ) : row.systemName || "―"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{row.workNumberName || "―"}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
@@ -969,6 +1017,7 @@ export default function DailyEntryPage() {
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
+                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead>案件</TableHead>
@@ -1010,7 +1059,8 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : plan.systemName}</TableCell>
+                        ) : plan.systemName || "―"}</TableCell>
+                        <TableCell className="whitespace-nowrap">{plan.workNumberName || "―"}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlinePlanEdit.workTypeId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
@@ -1110,10 +1160,10 @@ export default function DailyEntryPage() {
               <Input type="date" value={reportForm.reportDate} onChange={(e) => setReportForm({ ...reportForm, reportDate: e.target.value })} />
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-1">
             <div className="space-y-1.5">
               <Label>顧客</Label>
-              <Select value={reportForm.customerId} onValueChange={(value) => setReportForm({ ...reportForm, customerId: value, systemId: "" })}>
+              <Select value={reportForm.customerId} onValueChange={(value) => setReportForm({ ...reportForm, customerId: value, systemId: "", workNumberId: "" })}>
                 <SelectTrigger>
                   <SelectValue placeholder="顧客を選択" />
                 </SelectTrigger>
@@ -1124,15 +1174,51 @@ export default function DailyEntryPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>システム</Label>
-              <Select value={reportForm.systemId} onValueChange={(value) => setReportForm({ ...reportForm, systemId: value })} disabled={!reportForm.customerId}>
+              <Select value={reportForm.systemId} onValueChange={(value) => setReportForm((prev) => ({
+                ...prev,
+                systemId: value,
+                workNumberId: "",
+                isProject: false,
+              }))} disabled={!reportForm.customerId}>
                 <SelectTrigger>
                   <SelectValue placeholder="システムを選択" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredReportSystems.map((system) => (
                     <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>工番</Label>
+              <Select value={reportForm.workNumberId} onValueChange={(value) => {
+                const selected = filteredReportWorkNumbers.find((item) => item.id === value);
+                setReportForm((prev) => ({
+                  ...prev,
+                  workNumberId: value,
+                  systemId: "",
+                  isProject: true,
+                }));
+                if (selected) {
+                  setReportForm((prev) => ({
+                    ...prev,
+                    workNumberId: value,
+                    systemId: "",
+                    isProject: true,
+                  }));
+                }
+              }} disabled={!reportForm.customerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="工番を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredReportWorkNumbers.map((workNumber) => (
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1158,13 +1244,6 @@ export default function DailyEntryPage() {
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>案件</Label>
-              <div className="flex h-10 items-center gap-2">
-                <Checkbox checked={reportForm.isProject} onCheckedChange={(checked) => setReportForm({ ...reportForm, isProject: checked === true })} />
-                <span className="text-sm">案件</span>
-              </div>
-            </div>
             <div className="space-y-1.5">
               <Label>完了</Label>
               <div className="flex h-10 items-center gap-2">
@@ -1202,10 +1281,10 @@ export default function DailyEntryPage() {
               <Input type="date" value={planForm.planDate} onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })} />
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-1">
             <div className="space-y-1.5">
               <Label>顧客</Label>
-              <Select value={planForm.customerId} onValueChange={(value) => setPlanForm({ ...planForm, customerId: value, systemId: "" })}>
+              <Select value={planForm.customerId} onValueChange={(value) => setPlanForm({ ...planForm, customerId: value, systemId: "", workNumberId: "" })}>
                 <SelectTrigger>
                   <SelectValue placeholder="顧客を選択" />
                 </SelectTrigger>
@@ -1216,15 +1295,40 @@ export default function DailyEntryPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>システム</Label>
-              <Select value={planForm.systemId} onValueChange={(value) => setPlanForm({ ...planForm, systemId: value })} disabled={!planForm.customerId}>
+              <Select value={planForm.systemId} onValueChange={(value) => setPlanForm((prev) => ({
+                ...prev,
+                systemId: value,
+                workNumberId: "",
+                isProject: false,
+              }))} disabled={!planForm.customerId}>
                 <SelectTrigger>
                   <SelectValue placeholder="システムを選択" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredPlanSystems.map((system) => (
                     <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>工番</Label>
+              <Select value={planForm.workNumberId} onValueChange={(value) => setPlanForm((prev) => ({
+                ...prev,
+                workNumberId: value,
+                systemId: "",
+                isProject: true,
+              }))} disabled={!planForm.customerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="工番を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredPlanWorkNumbers.map((workNumber) => (
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1247,13 +1351,6 @@ export default function DailyEntryPage() {
             <div className="space-y-1.5">
               <Label>予定作業時間 (h)</Label>
               <Input type="number" min="0" step="0.25" value={planForm.plannedHours} onChange={(e) => setPlanForm({ ...planForm, plannedHours: e.target.value })} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>案件</Label>
-            <div className="flex h-10 items-center gap-2">
-              <Checkbox checked={planForm.isProject} onCheckedChange={(checked) => setPlanForm({ ...planForm, isProject: checked === true })} />
-              <span className="text-sm">案件</span>
             </div>
           </div>
           <div className="space-y-1.5">
