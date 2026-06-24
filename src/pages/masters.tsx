@@ -11,13 +11,14 @@ import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import {
   useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer,
-  useSystems, useAddSystem, useUpdateSystem, useDeleteSystem,
+  useSystems, useWorkNumbers, useAddSystem, useUpdateSystem, useDeleteSystem, useAddWorkNumber, useUpdateWorkNumber,
   useWorkTypes, useAddWorkType, useUpdateWorkType, useDeleteWorkType,
 } from "@/hooks/use-sharepoint";
 
 export default function MastersPage() {
   const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers();
   const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems();
+  const { data: workNumbers = [], isLoading: wnLoading, isError: wnError, error: workNumbersError } = useWorkNumbers();
   const { data: workTypes = [], isLoading: wtLoading, isError: wtError, error: workTypesError } = useWorkTypes();
 
   const addCustomer = useAddCustomer();
@@ -26,6 +27,8 @@ export default function MastersPage() {
   const addSystem = useAddSystem();
   const updateSystem = useUpdateSystem();
   const deleteSystemMut = useDeleteSystem();
+  const addWorkNumber = useAddWorkNumber();
+  const updateWorkNumber = useUpdateWorkNumber();
   const addWorkType = useAddWorkType();
   const updateWorkType = useUpdateWorkType();
   const deleteWorkTypeMut = useDeleteWorkType();
@@ -36,6 +39,7 @@ export default function MastersPage() {
 
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [editingSystem, setEditingSystem] = useState<any>(null);
+  const [editingWorkNumber, setEditingWorkNumber] = useState<any>(null);
   const [editingWorkType, setEditingWorkType] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<null | { type: "customer" | "system" | "workType"; id: string; label: string }>(null);
   const actionLoadingMessage = addCustomer.isPending
@@ -50,10 +54,14 @@ export default function MastersPage() {
             ? "システムを更新しています..."
             : deleteSystemMut.isPending
               ? "システムを削除しています..."
-              : addWorkType.isPending
-                ? "作業区分を登録しています..."
-                : updateWorkType.isPending
-                  ? "作業区分を更新しています..."
+              : addWorkNumber.isPending
+                ? "工番を登録しています..."
+                : updateWorkNumber.isPending
+                  ? "工番を更新しています..."
+                  : addWorkType.isPending
+                  ? "作業区分を登録しています..."
+                  : updateWorkType.isPending
+                    ? "作業区分を更新しています..."
                   : deleteWorkTypeMut.isPending
                     ? "作業区分を削除しています..."
                     : "処理中...";
@@ -63,6 +71,8 @@ export default function MastersPage() {
     || addSystem.isPending
     || updateSystem.isPending
     || deleteSystemMut.isPending
+    || addWorkNumber.isPending
+    || updateWorkNumber.isPending
     || addWorkType.isPending
     || updateWorkType.isPending
     || deleteWorkTypeMut.isPending;
@@ -81,17 +91,35 @@ export default function MastersPage() {
     setDeleteTarget({ type: "customer", id, label: "この顧客を削除しますか？" });
   };
 
-  const handleSaveSystem = (data: { name: string; customerId: string; description: string; sortOrder: number }) => {
+  const handleSaveSystem = async (data: { name: string; customerId: string; description: string; sortOrder: number; workNumberName: string }) => {
     if (editingSystem) {
       updateSystem.mutate({
         itemId: editingSystem.id,
         fields: { Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder },
       });
+      if (editingWorkNumber) {
+        updateWorkNumber.mutate({
+          itemId: editingWorkNumber.id,
+          fields: { Title: data.workNumberName, SystemLookupId: Number(editingSystem.id) },
+        });
+      } else if (data.workNumberName) {
+        addWorkNumber.mutate({ Title: data.workNumberName, SystemLookupId: Number(editingSystem.id) });
+      }
     } else {
-      addSystem.mutate({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder });
+      const result = await addSystem.mutateAsync({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder });
+      const systemId = Number(result.id);
+      if (editingWorkNumber) {
+        updateWorkNumber.mutate({
+          itemId: editingWorkNumber.id,
+          fields: { Title: data.workNumberName, SystemLookupId: systemId },
+        });
+      } else if (data.workNumberName) {
+        addWorkNumber.mutate({ Title: data.workNumberName, SystemLookupId: systemId });
+      }
     }
     setSystemDialog(false);
     setEditingSystem(null);
+    setEditingWorkNumber(null);
   };
 
   const handleDeleteSystem = (id: string) => {
@@ -123,7 +151,7 @@ export default function MastersPage() {
     setDeleteTarget(null);
   };
 
-  if (custLoading || sysLoading || wtLoading) {
+  if (custLoading || sysLoading || wnLoading || wtLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
@@ -134,11 +162,11 @@ export default function MastersPage() {
     );
   }
 
-  if (custError || sysError || wtError) {
+  if (custError || sysError || wtError || wnError) {
     return (
       <DataErrorState
         title="マスタデータを取得できませんでした"
-        error={customersError ?? systemsError ?? workTypesError}
+        error={customersError ?? systemsError ?? workTypesError ?? workNumbersError}
       />
     );
   }
@@ -231,7 +259,9 @@ export default function MastersPage() {
                       <DialogTitle>{editingSystem ? "システム編集" : "システム追加"}</DialogTitle>
                     </DialogHeader>
                     <SystemForm
+                      key={`${editingSystem?.id ?? "new"}-${editingWorkNumber?.id ?? "new"}`}
                       system={editingSystem}
+                      workNumber={editingWorkNumber}
                       customers={customers}
                       onSave={handleSaveSystem}
                       onCancel={() => setSystemDialog(false)}
@@ -247,34 +277,39 @@ export default function MastersPage() {
                     <TableHead className="w-16">表示順</TableHead>
                     <TableHead>システム名</TableHead>
                     <TableHead>所有顧客</TableHead>
+                    <TableHead>工番名</TableHead>
                     <TableHead>説明</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {systems.map((system) => (
-                    <TableRow key={system.id}>
-                      <TableCell className="text-center">{system.sortOrder}</TableCell>
-                      <TableCell>{system.name}</TableCell>
-                      <TableCell>{system.customerName}</TableCell>
-                      <TableCell>{system.description}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setSystemDialog(true); }}>編集</Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={deleteSystemMut.isPending}
-                            onClick={() => handleDeleteSystem(system.id)}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              handleDeleteSystem(system.id);
-                            }}
-                          >削除</Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {systems.map((system) => {
+                    const workNumber = workNumbers.find((item) => item.systemId === system.id);
+                    return (
+                      <TableRow key={system.id}>
+                        <TableCell className="text-center">{system.sortOrder}</TableCell>
+                        <TableCell>{system.name}</TableCell>
+                        <TableCell>{system.customerName}</TableCell>
+                        <TableCell>{workNumber?.name ?? ""}</TableCell>
+                        <TableCell>{system.description}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setEditingWorkNumber(workNumber ?? null); setSystemDialog(true); }}>編集</Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteSystemMut.isPending}
+                              onClick={() => handleDeleteSystem(system.id)}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                handleDeleteSystem(system.id);
+                              }}
+                            >削除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -380,18 +415,23 @@ function CustomerForm({ customer, onSave, onCancel }: any) {
   );
 }
 
-function SystemForm({ system, customers, onSave, onCancel }: any) {
+function SystemForm({ system, workNumber, customers, onSave, onCancel }: any) {
   const [formData, setFormData] = useState({
     name: system?.name || "",
     customerId: system?.customerId || "",
     description: system?.description || "",
     sortOrder: system?.sortOrder ?? 10,
+    workNumberName: workNumber?.name || "",
   });
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
       <div>
         <Label htmlFor="sysName">システム名</Label>
         <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="workNumberName">工番名</Label>
+        <Input id="workNumberName" value={formData.workNumberName} onChange={(e) => setFormData({ ...formData, workNumberName: e.target.value })} />
       </div>
       <div>
         <Label htmlFor="custId">所有顧客</Label>

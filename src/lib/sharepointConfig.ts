@@ -9,6 +9,7 @@ const workDaysListIdFromEnv = (import.meta.env.VITE_SP_LIST_WORKDAYS ?? "").trim
 export const SP_LISTS = {
   customers: "81a8d0e3-4a8a-4545-86da-a83f83fa119f",
   systems: "a92d8237-ef04-4afc-b39a-b7bea69b0412",
+  workNumbers: (import.meta.env.VITE_SP_LIST_WORKNUMBERS ?? "").trim(),
   workTypes: "6ef3dd68-9c04-41fa-a16d-998d86d25355",
   reports: "b289a27a-a815-472f-8a12-9297589a5096",
   plans: "662c83d4-b2c1-44e1-ac79-b2d9dd8f92c9",

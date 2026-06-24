@@ -16,6 +16,11 @@ export type SPSystemFields = {
   SortOrder?: number;
 };
 
+export type SPWorkNumberFields = {
+  Title: string;
+  _x30b7__x30b9__x30c6__x30e0_ID?: number;
+};
+
 export type SPWorkTypeFields = {
   Title: string;
   Category?: string;
@@ -75,6 +80,13 @@ export type System = {
   customerId: string;
   customerName: string;
   description: string;
+  sortOrder: number;
+};
+
+export type WorkNumber = {
+  id: string;
+  name: string;
+  systemId: string;
   sortOrder: number;
 };
 

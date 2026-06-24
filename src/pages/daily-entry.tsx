@@ -397,23 +397,6 @@ export default function DailyEntryPage() {
     || deleteReportMutation.isPending
     || deletePlanMutation.isPending;
 
-  const beginInlineEdit = (row: ReportTableRow) => {
-    setInlineEdit({
-      rowKey: row.rowKey,
-      source: row.source,
-      sourceId: row.sourceId,
-      reportDate: row.reportDate || today,
-      customerId: row.customerId,
-      systemId: row.systemId,
-      workTypeId: row.workTypeId,
-      plannedHours: String(row.plannedHours ?? 0),
-      workTime: String(row.workHours ?? 0),
-      isComplete: row.isComplete,
-      isProject: row.isProject,
-      workDescription: row.workDescription,
-    });
-  };
-
   const cancelInlineEdit = () => {
     setInlineEdit(null);
   };
@@ -475,19 +458,6 @@ export default function DailyEntryPage() {
     } catch (error) {
       toast.error(`保存に失敗しました。${error instanceof Error ? error.message : String(error)}`, { duration: 2500 });
     }
-  };
-
-  const beginInlinePlanEdit = (plan: WorkPlan) => {
-    setInlinePlanEdit({
-      planId: plan.id,
-      planDate: plan.planDate,
-      customerId: plan.customerId,
-      systemId: plan.systemId,
-      workTypeId: plan.workTypeId,
-      plannedHours: String(plan.plannedHours ?? 0),
-      isProject: plan.isProject,
-      workDescription: plan.workDescription,
-    });
   };
 
   const cancelInlinePlanEdit = () => {
@@ -680,9 +650,41 @@ export default function DailyEntryPage() {
     setReportModalOpen(true);
   };
 
+  const openEditReportModal = (row: ReportTableRow) => {
+    setReportEditingId(row.sourceId);
+    setReportForm({
+      reportDate: row.reportDate,
+      customerId: row.customerId,
+      systemId: row.systemId,
+      workTypeId: row.workTypeId,
+      workDescription: row.workDescription,
+      plannedHours: String(row.plannedHours ?? 0),
+      workTime: String(row.workHours ?? 0),
+      isProject: row.isProject,
+      isComplete: row.isComplete,
+    });
+    setReportSubmitError("");
+    setReportModalOpen(true);
+  };
+
   const openNewPlanModal = () => {
     setPlanEditingId(null);
     setPlanForm(emptyPlanForm());
+    setPlanSubmitError("");
+    setPlanModalOpen(true);
+  };
+
+  const openEditPlanModal = (plan: WorkPlan) => {
+    setPlanEditingId(plan.id);
+    setPlanForm({
+      planDate: plan.planDate,
+      customerId: plan.customerId,
+      systemId: plan.systemId,
+      workTypeId: plan.workTypeId,
+      workDescription: plan.workDescription,
+      plannedHours: String(plan.plannedHours ?? 0),
+      isProject: plan.isProject,
+    });
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
@@ -924,7 +926,7 @@ export default function DailyEntryPage() {
                               </>
                             ) : (
                               <>
-                                <Button size="sm" onClick={() => beginInlineEdit(row)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
+                                <Button size="sm" onClick={() => openEditReportModal(row)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
                                   <Pencil className="mr-1 h-4 w-4" />編集
                                 </Button>
                                 {row.source === "report" && (
@@ -1043,7 +1045,7 @@ export default function DailyEntryPage() {
                               </>
                             ) : (
                               <>
-                                <Button size="sm" onClick={() => beginInlinePlanEdit(plan)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
+                                <Button size="sm" onClick={() => openEditPlanModal(plan)} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
                                   <Pencil className="mr-1 h-4 w-4" />編集
                                 </Button>
                                 <Button size="sm" variant="destructive" onClick={() => setPlanDeleteTargetId(plan.id)} disabled={deletePlanMutation.isPending} className="shrink-0">

@@ -107,12 +107,14 @@ import { toast } from "sonner";
 import type {
   SPCustomerFields,
   SPSystemFields,
+  SPWorkNumberFields,
   SPWorkTypeFields,
   SPReportFields,
   SPPlanFields,
   SPWorkDayFields,
   Customer,
   System,
+  WorkNumber,
   WorkType,
   WorkReport,
   WorkPlan,
@@ -164,6 +166,35 @@ export function useSystems(): UseQueryResult<System[]> {
         .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
     enabled: !!customers,
+  });
+}
+
+// ==================== 工番マスタ ====================
+
+export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
+  const { data: systems } = useSystems();
+
+  return useQuery({
+    queryKey: ["sp", "workNumbers"],
+    queryFn: async () => {
+      if (!SP_LISTS.workNumbers) return [];
+      return fetchListItems<SPWorkNumberFields>(SP_LISTS.workNumbers);
+    },
+    select: (items) => {
+      const systemMap = new Map((systems ?? []).map((s) => [Number(s.id), s]));
+      return items
+        .map((item) => {
+        const systemId = String(item.fields._x30b7__x30b9__x30c6__x30e0_ID ?? "");
+          return {
+            id: item.id,
+            name: item.fields.Title,
+            systemId,
+            sortOrder: systemMap.get(Number(systemId))?.sortOrder ?? 10,
+          };
+        })
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
+    },
+    enabled: !!systems,
   });
 }
 
@@ -411,6 +442,7 @@ export function useUpdateWorkDay() {
       if (!SP_LISTS.workDays) {
         throw new Error("作業日リストが未設定です。");
       }
+
       return updateListItem(SP_LISTS.workDays, itemId, fields);
     },
     onSuccess: () => {
@@ -419,6 +451,46 @@ export function useUpdateWorkDay() {
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(`作業日の更新に失敗しました。\n${message}`);
+    },
+  });
+}
+
+// ==================== 工番マスタ CRUD ====================
+
+export function useAddWorkNumber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (fields: { Title: string; SystemLookupId: number }) => {
+      if (!SP_LISTS.workNumbers) {
+        throw new Error("工番マスタリストが未設定です。");
+      }
+      return createListItem(SP_LISTS.workNumbers, { Title: fields.Title, _x30b7__x30b9__x30c6__x30e0_ID: fields.SystemLookupId });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sp", "workNumbers"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`工番マスタの登録に失敗しました。\n${message}`);
+    },
+  });
+}
+
+export function useUpdateWorkNumber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, fields }: { itemId: string; fields: { Title: string; SystemLookupId: number } }) => {
+      if (!SP_LISTS.workNumbers) {
+        throw new Error("工番マスタリストが未設定です。");
+      }
+      return updateListItem(SP_LISTS.workNumbers, itemId, { Title: fields.Title, _x30b7__x30b9__x30c6__x30e0_ID: fields.SystemLookupId });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sp", "workNumbers"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`工番マスタの更新に失敗しました。\n${message}`);
     },
   });
 }

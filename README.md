@@ -89,6 +89,7 @@ SharePoint サイト: manmarusystem テナント内の Teams チャネル専用�
 |--------|-------------|
 | 顧客マスタ | `VITE_SP_LIST_CUSTOMERS` |
 | システムマスタ | `VITE_SP_LIST_SYSTEMS` |
+| 工番マスタ | `VITE_SP_LIST_WORKNUMBERS` |
 | 作業種別マスタ | `VITE_SP_LIST_WORKTYPES` |
 | 作業報告 | `VITE_SP_LIST_REPORTS` |
 | 作業予定 | `VITE_SP_LIST_PLANS` |
@@ -120,6 +121,7 @@ VITE_MSAL_CLIENT_ID=<Azure AD クライアント ID>
 VITE_SP_SITE_ID=<SharePoint サイト ID>
 VITE_SP_LIST_CUSTOMERS=<顧客マスタ リスト ID>
 VITE_SP_LIST_SYSTEMS=<システムマスタ リスト ID>
+VITE_SP_LIST_WORKNUMBERS=<工番マスタ リスト ID>
 VITE_SP_LIST_WORKTYPES=<作業種別マスタ リスト ID>
 VITE_SP_LIST_REPORTS=<作業報告 リスト ID>
 VITE_SP_LIST_PLANS=<作業予定 リスト ID>
@@ -157,6 +159,7 @@ SharePoint 関連は共有フォルダリンクではなく、対象サイトの
 | VITE_SP_SITE_ID | SharePoint サイト ID |
 | VITE_SP_LIST_CUSTOMERS | 顧客マスタ リスト ID |
 | VITE_SP_LIST_SYSTEMS | システムマスタ リスト ID |
+| VITE_SP_LIST_WORKNUMBERS | 工番マスタ リスト ID |
 | VITE_SP_LIST_WORKTYPES | 作業種別マスタ リスト ID |
 | VITE_SP_LIST_REPORTS | 作業報告 リスト ID |
 | VITE_SP_LIST_PLANS | 作業予定 リスト ID |
@@ -170,10 +173,11 @@ SharePoint の参照先を変えるときに更新する Secret:
 1. VITE_SP_SITE_ID
 2. VITE_SP_LIST_CUSTOMERS
 3. VITE_SP_LIST_SYSTEMS
-4. VITE_SP_LIST_WORKTYPES
-5. VITE_SP_LIST_REPORTS
-6. VITE_SP_LIST_PLANS
-7. VITE_SP_LIST_WORKDAYS
+4. VITE_SP_LIST_WORKNUMBERS
+5. VITE_SP_LIST_WORKTYPES
+6. VITE_SP_LIST_REPORTS
+7. VITE_SP_LIST_PLANS
+8. VITE_SP_LIST_WORKDAYS
 
 ### 社内サーバー配信
 
