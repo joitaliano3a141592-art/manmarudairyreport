@@ -11,7 +11,7 @@ import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import {
   useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer,
-  useSystems, useWorkNumbers, useAddSystem, useUpdateSystem, useDeleteSystem, useAddWorkNumber, useUpdateWorkNumber,
+  useSystems, useWorkNumbers, useAddSystem, useUpdateSystem, useDeleteSystem, useAddWorkNumber, useUpdateWorkNumber, useDeleteWorkNumber,
   useWorkTypes, useAddWorkType, useUpdateWorkType, useDeleteWorkType,
 } from "@/hooks/use-sharepoint";
 
@@ -29,6 +29,7 @@ export default function MastersPage() {
   const deleteSystemMut = useDeleteSystem();
   const addWorkNumber = useAddWorkNumber();
   const updateWorkNumber = useUpdateWorkNumber();
+  const deleteWorkNumber = useDeleteWorkNumber();
   const addWorkType = useAddWorkType();
   const updateWorkType = useUpdateWorkType();
   const deleteWorkTypeMut = useDeleteWorkType();
@@ -97,24 +98,30 @@ export default function MastersPage() {
         itemId: editingSystem.id,
         fields: { Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder },
       });
-      if (editingWorkNumber) {
+      const workNumberName = data.workNumberName.trim();
+      if (editingWorkNumber && !workNumberName) {
+        deleteWorkNumber.mutate(editingWorkNumber.id);
+      } else if (editingWorkNumber) {
         updateWorkNumber.mutate({
           itemId: editingWorkNumber.id,
-          fields: { Title: data.workNumberName, SystemLookupId: Number(editingSystem.id) },
+          fields: { Title: workNumberName, SystemLookupId: Number(editingSystem.id) },
         });
-      } else if (data.workNumberName) {
-        addWorkNumber.mutate({ Title: data.workNumberName, SystemLookupId: Number(editingSystem.id) });
+      } else if (workNumberName) {
+        addWorkNumber.mutate({ Title: workNumberName, SystemLookupId: Number(editingSystem.id) });
       }
     } else {
       const result = await addSystem.mutateAsync({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder });
       const systemId = Number(result.id);
-      if (editingWorkNumber) {
+      const workNumberName = data.workNumberName.trim();
+      if (editingWorkNumber && !workNumberName) {
+        deleteWorkNumber.mutate(editingWorkNumber.id);
+      } else if (editingWorkNumber) {
         updateWorkNumber.mutate({
           itemId: editingWorkNumber.id,
-          fields: { Title: data.workNumberName, SystemLookupId: systemId },
+          fields: { Title: workNumberName, SystemLookupId: systemId },
         });
-      } else if (data.workNumberName) {
-        addWorkNumber.mutate({ Title: data.workNumberName, SystemLookupId: systemId });
+      } else if (workNumberName) {
+        addWorkNumber.mutate({ Title: workNumberName, SystemLookupId: systemId });
       }
     }
     setSystemDialog(false);

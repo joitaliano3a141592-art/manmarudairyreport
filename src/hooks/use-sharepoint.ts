@@ -498,6 +498,25 @@ export function useUpdateWorkNumber() {
   });
 }
 
+export function useDeleteWorkNumber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      if (!SP_LISTS.workNumbers) {
+        throw new Error("工番マスタリストが未設定です。");
+      }
+      return deleteListItem(SP_LISTS.workNumbers, itemId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sp", "workNumbers"] });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`工番マスタの削除に失敗しました。\n${message}`);
+    },
+  });
+}
+
 // ==================== 作業予定 ====================
 
 export function usePlans(startDate?: string, endDate?: string) {
