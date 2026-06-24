@@ -194,7 +194,6 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
         })
         .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
-    enabled: !!systems,
   });
 }
 
