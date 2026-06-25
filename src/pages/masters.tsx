@@ -304,38 +304,40 @@ export default function MastersPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">表示順</TableHead>
-                    <TableHead>顧客名</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="text-center">{customer.sortOrder}</TableCell>
-                      <TableCell>{customer.name}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingCustomer(customer); setCustomerDialog(true); }}>編集</Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={deleteCustomerMut.isPending}
-                            onClick={() => handleDeleteCustomer(customer.id)}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              handleDeleteCustomer(customer.id);
-                            }}
-                          >削除</Button>
-                        </div>
-                      </TableCell>
+              <div className="max-h-[28rem] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">表示順</TableHead>
+                      <TableHead>顧客名</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {customers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell className="text-center">{customer.sortOrder}</TableCell>
+                        <TableCell>{customer.name}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => { setEditingCustomer(customer); setCustomerDialog(true); }}>編集</Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteCustomerMut.isPending}
+                              onClick={() => handleDeleteCustomer(customer.id)}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                handleDeleteCustomer(customer.id);
+                              }}
+                            >削除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -375,7 +377,8 @@ export default function MastersPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="max-h-[28rem] overflow-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-16">表示順</TableHead>
@@ -437,7 +440,8 @@ export default function MastersPage() {
                     );
                   })}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -465,40 +469,42 @@ export default function MastersPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">表示順</TableHead>
-                    <TableHead>区分名</TableHead>
-                    <TableHead>カテゴリ</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workTypes.map((workType) => (
-                    <TableRow key={workType.id}>
-                      <TableCell className="text-center">{workType.sortOrder}</TableCell>
-                      <TableCell>{workType.name}</TableCell>
-                      <TableCell>{workType.category}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingWorkType(workType); setWorkTypeDialog(true); }}>編集</Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={deleteWorkTypeMut.isPending}
-                            onClick={() => handleDeleteWorkType(workType.id)}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              handleDeleteWorkType(workType.id);
-                            }}
-                          >削除</Button>
-                        </div>
-                      </TableCell>
+              <div className="max-h-[28rem] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">表示順</TableHead>
+                      <TableHead>区分名</TableHead>
+                      <TableHead>カテゴリ</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {workTypes.map((workType) => (
+                      <TableRow key={workType.id}>
+                        <TableCell className="text-center">{workType.sortOrder}</TableCell>
+                        <TableCell>{workType.name}</TableCell>
+                        <TableCell>{workType.category}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => { setEditingWorkType(workType); setWorkTypeDialog(true); }}>編集</Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteWorkTypeMut.isPending}
+                              onClick={() => handleDeleteWorkType(workType.id)}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                handleDeleteWorkType(workType.id);
+                              }}
+                            >削除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

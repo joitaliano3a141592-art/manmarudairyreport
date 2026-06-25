@@ -795,36 +795,38 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>報告日</TableHead>
-                <TableHead>ユーザー</TableHead>
-                <TableHead>顧客</TableHead>
-                <TableHead>システム</TableHead>
-                <TableHead>作業内容</TableHead>
-                <TableHead>区分</TableHead>
-                <TableHead>時間</TableHead>
-                <TableHead>案件</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredReports.map((report: WorkReport) => (
-                <TableRow key={report.id}>
-                  <TableCell>{report.reportDate}</TableCell>
-                  <TableCell>{report.userName}</TableCell>
-                  <TableCell>{report.customerName}</TableCell>
-                  <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={report.workDescription}>
-                    {report.workDescription}
-                  </TableCell>
-                  <TableCell>{report.workTypeName}</TableCell>
-                  <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
-                  <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
+          <div className="max-h-[28rem] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>報告日</TableHead>
+                  <TableHead>ユーザー</TableHead>
+                  <TableHead>顧客</TableHead>
+                  <TableHead>システム</TableHead>
+                  <TableHead>作業内容</TableHead>
+                  <TableHead>区分</TableHead>
+                  <TableHead>時間</TableHead>
+                  <TableHead>案件</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredReports.map((report: WorkReport) => (
+                  <TableRow key={report.id}>
+                    <TableCell>{report.reportDate}</TableCell>
+                    <TableCell>{report.userName}</TableCell>
+                    <TableCell>{report.customerName}</TableCell>
+                    <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={report.workDescription}>
+                      {report.workDescription}
+                    </TableCell>
+                    <TableCell>{report.workTypeName}</TableCell>
+                    <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
+                    <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

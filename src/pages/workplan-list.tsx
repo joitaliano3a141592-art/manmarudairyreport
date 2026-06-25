@@ -288,47 +288,49 @@ export default function WorkPlanListPage() {
           {filteredPlans.length === 0 ? (
             <p className="text-sm text-muted-foreground">指定期間にログインユーザーの作業予定はありません。</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>予定日</TableHead>
-                  <TableHead>顧客</TableHead>
-                  <TableHead>システム</TableHead>
-                  <TableHead>作業内容</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPlans.map((plan) => (
-                  <TableRow key={plan.id}>
-                    <TableCell>{plan.planDate}</TableCell>
-                    <TableCell>{plan.customerName}</TableCell>
-                    <TableCell>{resolveSystemDisplayName(plan)}</TableCell>
-                    <TableCell className="max-w-xs truncate" title={plan.workDescription}>
-                      {plan.workDescription}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditPlanModal(plan)}>編集</Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => handleDeleteTap(plan.id)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            handleDeleteTap(plan.id);
-                          }}
-                        >
-                          削除
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="max-h-[28rem] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>予定日</TableHead>
+                    <TableHead>顧客</TableHead>
+                    <TableHead>システム</TableHead>
+                    <TableHead>作業内容</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredPlans.map((plan) => (
+                    <TableRow key={plan.id}>
+                      <TableCell>{plan.planDate}</TableCell>
+                      <TableCell>{plan.customerName}</TableCell>
+                      <TableCell>{resolveSystemDisplayName(plan)}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={plan.workDescription}>
+                        {plan.workDescription}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditPlanModal(plan)}>編集</Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => handleDeleteTap(plan.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleDeleteTap(plan.id);
+                            }}
+                          >
+                            削除
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

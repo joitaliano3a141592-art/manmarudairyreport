@@ -301,52 +301,54 @@ export default function WorkReportListPage() {
           {filteredReports.length === 0 ? (
             <p className="text-sm text-muted-foreground">指定期間にログインユーザーの作業実績はありません。</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>報告日</TableHead>
-                  <TableHead>顧客</TableHead>
-                  <TableHead>システム</TableHead>
-                  <TableHead>作業内容</TableHead>
-                  <TableHead>区分</TableHead>
-                  <TableHead>時間</TableHead>
-                  <TableHead>案件</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>{report.reportDate}</TableCell>
-                    <TableCell>{report.customerName}</TableCell>
-                    <TableCell>{resolveSystemDisplayName(report)}</TableCell>
-                    <TableCell className="max-w-xs truncate" title={report.workDescription}>
-                      {report.workDescription}
-                    </TableCell>
-                    <TableCell>{report.workTypeName || "―"}</TableCell>
-                    <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
-                    <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditReportModal(report)}>編集</Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => handleDeleteTap(report.id)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            handleDeleteTap(report.id);
-                          }}
-                        >
-                          削除
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="max-h-[28rem] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>報告日</TableHead>
+                    <TableHead>顧客</TableHead>
+                    <TableHead>システム</TableHead>
+                    <TableHead>作業内容</TableHead>
+                    <TableHead>区分</TableHead>
+                    <TableHead>時間</TableHead>
+                    <TableHead>案件</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredReports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>{report.reportDate}</TableCell>
+                      <TableCell>{report.customerName}</TableCell>
+                      <TableCell>{resolveSystemDisplayName(report)}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={report.workDescription}>
+                        {report.workDescription}
+                      </TableCell>
+                      <TableCell>{report.workTypeName || "―"}</TableCell>
+                      <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
+                      <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditReportModal(report)}>編集</Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => handleDeleteTap(report.id)}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              handleDeleteTap(report.id);
+                            }}
+                          >
+                            削除
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
