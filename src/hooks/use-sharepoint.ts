@@ -155,11 +155,16 @@ export function useCustomers(): UseQueryResult<Customer[]> {
 
 // ==================== システムマスタ ====================
 
-export function useSystems(): UseQueryResult<System[]> {
+type UseSystemsOptions = {
+  includeDisabled?: boolean;
+};
+
+export function useSystems(options: UseSystemsOptions = {}): UseQueryResult<System[]> {
   const { data: customers } = useCustomers();
+  const includeDisabled = options.includeDisabled ?? true;
 
   return useQuery({
-    queryKey: ["sp", "systems"],
+    queryKey: ["sp", "systems", includeDisabled],
     queryFn: async () => {
       const items = await fetchListItems<SPSystemFields>(SP_LISTS.systems);
       return items;
@@ -176,7 +181,9 @@ export function useSystems(): UseQueryResult<System[]> {
           customerName: custMap.get(String(item.fields.CustomerLookupId ?? "")) ?? "",
           description: item.fields.Description ?? "",
           sortOrder: item.fields.SortOrder ?? 10,
+          isDisabled: item.fields.IsDisabled === true,
         }))
+        .filter((system) => includeDisabled || !system.isDisabled)
         .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
     },
     enabled: !!customers,
@@ -186,7 +193,7 @@ export function useSystems(): UseQueryResult<System[]> {
 // ==================== 工番マスタ ====================
 
 export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
-  const { data: systems } = useSystems();
+  const { data: systems } = useSystems({ includeDisabled: true });
 
   return useQuery({
     queryKey: ["sp", "workNumbers"],
@@ -251,7 +258,7 @@ type LookupMaps = {
 
 export function useLookupMaps(): LookupMaps {
   const { data: customers } = useCustomers();
-  const { data: systems } = useSystems();
+  const { data: systems } = useSystems({ includeDisabled: true });
   const { data: workTypes } = useWorkTypes();
 
   return useMemo(
@@ -726,6 +733,7 @@ export function useAddSystem() {
       CustomerLookupId: number;
       Description?: string;
       SortOrder?: number;
+      IsDisabled?: boolean;
     }) => {
       return createListItem(SP_LISTS.systems, fields);
     },

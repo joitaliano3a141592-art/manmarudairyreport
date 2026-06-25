@@ -121,10 +121,14 @@ export default function WorkReportListPage() {
     () => reports.filter((report) => report.userName === currentUser.name),
     [currentUser.name, reports],
   );
+  const activeSystems = useMemo(
+    () => systems.filter((system) => !system.isDisabled),
+    [systems],
+  );
 
   const filteredSystems = useMemo(
-    () => systems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId),
-    [reportForm.customerId, systems],
+    () => activeSystems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId),
+    [activeSystems, reportForm.customerId],
   );
 
   const filteredWorkNumbers = useMemo(() => {
@@ -133,13 +137,13 @@ export default function WorkReportListPage() {
     }
 
     const customerSystemIds = new Set(
-      systems
+      activeSystems
         .filter((system) => system.customerId === reportForm.customerId)
         .map((system) => system.id),
     );
 
     return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
-  }, [reportForm.customerId, systems, workNumbers]);
+  }, [activeSystems, reportForm.customerId, workNumbers]);
 
   const workNumberNameMap = useMemo(
     () => new Map(

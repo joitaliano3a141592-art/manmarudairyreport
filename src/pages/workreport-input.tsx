@@ -66,7 +66,7 @@ export default function WorkReportInputPage() {
   };
 
   const filteredSystems = systems.filter(
-    (system) => !formData.customerId || system.customerId === formData.customerId
+    (system) => !system.isDisabled && (!formData.customerId || system.customerId === formData.customerId)
   );
 
   if (custError || sysError || wtError) {

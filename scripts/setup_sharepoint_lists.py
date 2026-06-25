@@ -366,6 +366,7 @@ def main():
     sys_cols = get_columns(site_id, system_list_id)
     ensure_lookup_column(site_id, system_list_id, "Customer", "顧客", customer_list_id, sys_cols, required=True)
     ensure_text_column(site_id, system_list_id, "Description", "説明", sys_cols, multi_line=True)
+    ensure_boolean_column(site_id, system_list_id, "IsDisabled", "無効", sys_cols, default_value=False)
 
     # 工番マスタ
     worknumber_cols = get_columns(site_id, worknumber_list_id)

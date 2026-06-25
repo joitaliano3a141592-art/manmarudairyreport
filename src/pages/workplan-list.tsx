@@ -118,10 +118,14 @@ export default function WorkPlanListPage() {
     () => plans.filter((plan) => plan.userName === currentUser.name),
     [currentUser.name, plans],
   );
+  const activeSystems = useMemo(
+    () => systems.filter((system) => !system.isDisabled),
+    [systems],
+  );
 
   const filteredSystems = useMemo(
-    () => systems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId),
-    [planForm.customerId, systems],
+    () => activeSystems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId),
+    [activeSystems, planForm.customerId],
   );
 
   const filteredWorkNumbers = useMemo(() => {
@@ -130,13 +134,13 @@ export default function WorkPlanListPage() {
     }
 
     const customerSystemIds = new Set(
-      systems
+      activeSystems
         .filter((system) => system.customerId === planForm.customerId)
         .map((system) => system.id),
     );
 
     return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
-  }, [planForm.customerId, systems, workNumbers]);
+  }, [activeSystems, planForm.customerId, workNumbers]);
 
   const workNumberNameMap = useMemo(
     () => new Map(

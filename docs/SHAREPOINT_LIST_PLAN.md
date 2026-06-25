@@ -23,6 +23,7 @@
 - Title（既定）: システム名
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - Description（複数行テキスト）: 説明
+- IsDisabled（はい/いいえ）: 無効
 
 ### 工番マスタ
 

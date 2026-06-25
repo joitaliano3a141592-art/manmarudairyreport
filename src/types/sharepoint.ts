@@ -14,6 +14,7 @@ export type SPSystemFields = {
   CustomerLookupId?: number;
   Description?: string;
   SortOrder?: number;
+  IsDisabled?: boolean;
 };
 
 export type SPWorkNumberFields = {
@@ -84,6 +85,7 @@ export type System = {
   customerName: string;
   description: string;
   sortOrder: number;
+  isDisabled: boolean;
 };
 
 export type WorkNumber = {

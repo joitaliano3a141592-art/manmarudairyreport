@@ -160,6 +160,7 @@ Write-Host "[STEP] Ensure columns: 顧客マスタ"
 Write-Host "[STEP] Ensure columns: システムマスタ"
 Ensure-LookupField -ListTitle "システムマスタ" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-Field -ListTitle "システムマスタ" -InternalName "Description" -DisplayName "説明" -Type "Note"
+Ensure-Field -ListTitle "システムマスタ" -InternalName "IsDisabled" -DisplayName "無効" -Type "Boolean"
 
 Write-Host "[STEP] Ensure columns: 工番マスタ"
 Remove-FieldIfExists -ListTitle "工番マスタ" -InternalName "WorkNumber"

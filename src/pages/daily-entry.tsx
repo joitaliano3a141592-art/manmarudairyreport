@@ -308,27 +308,28 @@ export default function DailyEntryPage() {
     setWorkDayId(currentWorkDay.id);
   }, [currentWorkDay]);
 
-  const filteredReportSystems = systems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId);
-  const filteredPlanSystems = systems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId);
+  const activeSystems = useMemo(() => systems.filter((system) => !system.isDisabled), [systems]);
+  const filteredReportSystems = activeSystems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId);
+  const filteredPlanSystems = activeSystems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId);
   const filteredReportWorkNumbers = useMemo(
     () => {
       if (!reportForm.customerId) {
         return [];
       }
-      const customerSystemIds = new Set(systems.filter((system) => system.customerId === reportForm.customerId).map((system) => system.id));
+      const customerSystemIds = new Set(activeSystems.filter((system) => system.customerId === reportForm.customerId).map((system) => system.id));
       return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
     },
-    [reportForm.customerId, systems, workNumbers],
+    [activeSystems, reportForm.customerId, workNumbers],
   );
   const filteredPlanWorkNumbers = useMemo(
     () => {
       if (!planForm.customerId) {
         return [];
       }
-      const customerSystemIds = new Set(systems.filter((system) => system.customerId === planForm.customerId).map((system) => system.id));
+      const customerSystemIds = new Set(activeSystems.filter((system) => system.customerId === planForm.customerId).map((system) => system.id));
       return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
     },
-    [planForm.customerId, systems, workNumbers],
+    [activeSystems, planForm.customerId, workNumbers],
   );
   const workNumberNameMap = useMemo(
     () => new Map(
@@ -947,7 +948,7 @@ export default function DailyEntryPage() {
                   {reportTableRows.map((row) => {
                     const isEditing = inlineEdit?.rowKey === row.rowKey;
                     const activeCustomerId = isEditing ? inlineEdit.customerId : row.customerId;
-                    const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
+                    const systemOptions = activeSystems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
 
                     return (
                       <TableRow
@@ -1095,7 +1096,7 @@ export default function DailyEntryPage() {
                   {plans.map((plan) => {
                     const isEditing = inlinePlanEdit?.planId === plan.id;
                     const activeCustomerId = isEditing ? inlinePlanEdit.customerId : plan.customerId;
-                    const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
+                    const systemOptions = activeSystems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
 
                     return (
                       <TableRow

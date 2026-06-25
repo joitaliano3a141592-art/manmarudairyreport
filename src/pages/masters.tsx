@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
 import {
@@ -26,6 +27,7 @@ type SystemFormData = {
   customerId: string;
   description: string;
   sortOrder: number;
+  isDisabled: boolean;
   workNumbers: Array<{
     id?: string;
     workNumber: string;
@@ -51,7 +53,7 @@ function isGraphItemNotFoundError(error: unknown): boolean {
 
 export default function MastersPage() {
   const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers();
-  const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems();
+  const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems({ includeDisabled: true });
   const { data: workNumbers = [], isLoading: wnLoading, isError: wnError, error: workNumbersError } = useWorkNumbers();
   const { data: workTypes = [], isLoading: wtLoading, isError: wtError, error: workTypesError } = useWorkTypes();
 
@@ -154,6 +156,7 @@ export default function MastersPage() {
       CustomerLookupId: Number(data.customerId),
       Description: data.description,
       SortOrder: data.sortOrder,
+      IsDisabled: data.isDisabled,
     };
 
     try {
@@ -403,6 +406,7 @@ export default function MastersPage() {
                     <TableHead>工番</TableHead>
                     <TableHead>工番名</TableHead>
                     <TableHead>説明</TableHead>
+                    <TableHead>無効</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -437,6 +441,7 @@ export default function MastersPage() {
                           </div>
                         </TableCell>
                         <TableCell>{system.description}</TableCell>
+                        <TableCell className="text-center">{system.isDisabled ? "○" : "―"}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => openEditSystemDialog(system, relatedWorkNumbers)}>編集</Button>
@@ -573,6 +578,7 @@ function SystemForm({
     customerId: system?.customerId || "",
     description: system?.description || "",
     sortOrder: system?.sortOrder ?? 10,
+    isDisabled: system?.isDisabled ?? false,
     workNumbers: workNumbers.map((workNumber) => ({
       id: workNumber.id,
       workNumber: workNumber.workNumber,
@@ -635,6 +641,13 @@ function SystemForm({
       <div>
         <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
         <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
+      </div>
+      <div>
+        <Label>無効</Label>
+        <div className="flex h-10 items-center gap-2">
+          <Checkbox checked={formData.isDisabled} onCheckedChange={(checked) => setFormData({ ...formData, isDisabled: checked === true })} />
+          <span className="text-sm">このシステムを通常画面で非表示にする</span>
+        </div>
       </div>
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
