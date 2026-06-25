@@ -14,6 +14,37 @@ import {
   useSystems, useWorkNumbers, useAddSystem, useUpdateSystem, useDeleteSystem, useAddWorkNumber, useUpdateWorkNumber, useDeleteWorkNumber,
   useWorkTypes, useAddWorkType, useUpdateWorkType, useDeleteWorkType,
 } from "@/hooks/use-sharepoint";
+import type { Customer, System, WorkNumber, WorkType } from "@/types/sharepoint";
+import { toast } from "sonner";
+
+type CustomerFormData = {
+  name: string;
+  sortOrder: number;
+};
+
+type SystemFormData = {
+  name: string;
+  customerId: string;
+  description: string;
+  sortOrder: number;
+  workNumber: string;
+};
+
+type WorkTypeFormData = {
+  name: string;
+  category: string;
+  sortOrder: number;
+};
+
+type DeleteTarget = {
+  type: "customer" | "system" | "workType";
+  id: string;
+  label: string;
+};
+
+function isGraphItemNotFoundError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("itemNotFound");
+}
 
 export default function MastersPage() {
   const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers();
@@ -38,11 +69,11 @@ export default function MastersPage() {
   const [systemDialog, setSystemDialog] = useState(false);
   const [workTypeDialog, setWorkTypeDialog] = useState(false);
 
-  const [editingCustomer, setEditingCustomer] = useState<any>(null);
-  const [editingSystem, setEditingSystem] = useState<any>(null);
-  const [editingWorkNumber, setEditingWorkNumber] = useState<any>(null);
-  const [editingWorkType, setEditingWorkType] = useState<any>(null);
-  const [deleteTarget, setDeleteTarget] = useState<null | { type: "customer" | "system" | "workType"; id: string; label: string }>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingSystem, setEditingSystem] = useState<System | null>(null);
+  const [editingWorkNumber, setEditingWorkNumber] = useState<WorkNumber | null>(null);
+  const [editingWorkType, setEditingWorkType] = useState<WorkType | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const actionLoadingMessage = addCustomer.isPending
     ? "顧客を登録しています..."
     : updateCustomer.isPending
@@ -59,11 +90,13 @@ export default function MastersPage() {
                 ? "工番を登録しています..."
                 : updateWorkNumber.isPending
                   ? "工番を更新しています..."
+                  : deleteWorkNumber.isPending
+                   ? "工番を削除しています..."
                   : addWorkType.isPending
-                  ? "作業区分を登録しています..."
-                  : updateWorkType.isPending
+                   ? "作業区分を登録しています..."
+                   : updateWorkType.isPending
                     ? "作業区分を更新しています..."
-                  : deleteWorkTypeMut.isPending
+                   : deleteWorkTypeMut.isPending
                     ? "作業区分を削除しています..."
                     : "処理中...";
   const actionLoadingOpen = addCustomer.isPending
@@ -74,11 +107,12 @@ export default function MastersPage() {
     || deleteSystemMut.isPending
     || addWorkNumber.isPending
     || updateWorkNumber.isPending
+    || deleteWorkNumber.isPending
     || addWorkType.isPending
     || updateWorkType.isPending
     || deleteWorkTypeMut.isPending;
 
-  const handleSaveCustomer = (data: { name: string; sortOrder: number }) => {
+  const handleSaveCustomer = (data: CustomerFormData) => {
     if (editingCustomer) {
       updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name, sortOrder: data.sortOrder });
     } else {
@@ -92,48 +126,85 @@ export default function MastersPage() {
     setDeleteTarget({ type: "customer", id, label: "この顧客を削除しますか？" });
   };
 
-  const handleSaveSystem = async (data: { name: string; customerId: string; description: string; sortOrder: number; workNumberName: string }) => {
-    if (editingSystem) {
-      updateSystem.mutate({
-        itemId: editingSystem.id,
-        fields: { Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder },
-      });
-      const workNumberName = data.workNumberName.trim();
-      if (editingWorkNumber && !workNumberName) {
-        deleteWorkNumber.mutate(editingWorkNumber.id);
-      } else if (editingWorkNumber) {
-        updateWorkNumber.mutate({
-          itemId: editingWorkNumber.id,
-          fields: { Title: workNumberName, SystemLookupId: Number(editingSystem.id) },
-        });
-      } else if (workNumberName) {
-        addWorkNumber.mutate({ Title: workNumberName, SystemLookupId: Number(editingSystem.id) });
-      }
-    } else {
-      const result = await addSystem.mutateAsync({ Title: data.name, CustomerLookupId: Number(data.customerId), Description: data.description, SortOrder: data.sortOrder });
-      const systemId = Number(result.id);
-      const workNumberName = data.workNumberName.trim();
-      if (editingWorkNumber && !workNumberName) {
-        deleteWorkNumber.mutate(editingWorkNumber.id);
-      } else if (editingWorkNumber) {
-        updateWorkNumber.mutate({
-          itemId: editingWorkNumber.id,
-          fields: { Title: workNumberName, SystemLookupId: systemId },
-        });
-      } else if (workNumberName) {
-        addWorkNumber.mutate({ Title: workNumberName, SystemLookupId: systemId });
-      }
-    }
+  const closeSystemDialog = () => {
     setSystemDialog(false);
     setEditingSystem(null);
     setEditingWorkNumber(null);
+  };
+
+  const handleSaveSystem = async (data: SystemFormData) => {
+    const workNumberText = data.workNumber.trim();
+    const parsedWorkNumber = workNumberText === "" ? null : Number(workNumberText);
+    if (
+      parsedWorkNumber != null
+      && (!Number.isInteger(parsedWorkNumber) || Number.isNaN(parsedWorkNumber) || parsedWorkNumber < 0)
+    ) {
+      toast.error("工番は 0 以上の整数で入力してください。");
+      return;
+    }
+
+    const systemFields = {
+      Title: data.name,
+      CustomerLookupId: Number(data.customerId),
+      Description: data.description,
+      SortOrder: data.sortOrder,
+    };
+
+    try {
+      const systemId = editingSystem
+        ? (
+            await updateSystem.mutateAsync({
+              itemId: editingSystem.id,
+              fields: systemFields,
+            }),
+            Number(editingSystem.id)
+          )
+        : Number((await addSystem.mutateAsync(systemFields)).id);
+
+      if (editingWorkNumber && parsedWorkNumber == null) {
+        try {
+          await deleteWorkNumber.mutateAsync(editingWorkNumber.id);
+        } catch (error) {
+          if (!isGraphItemNotFoundError(error)) {
+            throw error;
+          }
+        }
+      } else if (editingWorkNumber && parsedWorkNumber != null) {
+        try {
+          await updateWorkNumber.mutateAsync({
+            itemId: editingWorkNumber.id,
+            fields: {
+              workNumber: parsedWorkNumber,
+              systemId,
+            },
+          });
+        } catch (error) {
+          if (!isGraphItemNotFoundError(error)) {
+            throw error;
+          }
+          await addWorkNumber.mutateAsync({
+            workNumber: parsedWorkNumber,
+            systemId,
+          });
+        }
+      } else if (parsedWorkNumber != null) {
+        await addWorkNumber.mutateAsync({
+          workNumber: parsedWorkNumber,
+          systemId,
+        });
+      }
+
+      closeSystemDialog();
+    } catch {
+      // Individual mutations already show user-facing errors.
+    }
   };
 
   const handleDeleteSystem = (id: string) => {
     setDeleteTarget({ type: "system", id, label: "このシステムを削除しますか？" });
   };
 
-  const handleSaveWorkType = (data: { name: string; category: string; sortOrder: number }) => {
+  const handleSaveWorkType = (data: WorkTypeFormData) => {
     if (editingWorkType) {
       updateWorkType.mutate({
         itemId: editingWorkType.id,
@@ -257,9 +328,18 @@ export default function MastersPage() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>システムマスタ</CardTitle>
-                <Dialog open={systemDialog} onOpenChange={setSystemDialog}>
+                <Dialog
+                  open={systemDialog}
+                  onOpenChange={(open) => {
+                    setSystemDialog(open);
+                    if (!open) {
+                      setEditingSystem(null);
+                      setEditingWorkNumber(null);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
-                    <Button onClick={() => setEditingSystem(null)}>新規追加</Button>
+                    <Button onClick={() => { setEditingSystem(null); setEditingWorkNumber(null); }}>新規追加</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -271,7 +351,7 @@ export default function MastersPage() {
                       workNumber={editingWorkNumber}
                       customers={customers}
                       onSave={handleSaveSystem}
-                      onCancel={() => setSystemDialog(false)}
+                      onCancel={closeSystemDialog}
                     />
                   </DialogContent>
                 </Dialog>
@@ -284,7 +364,7 @@ export default function MastersPage() {
                     <TableHead className="w-16">表示順</TableHead>
                     <TableHead>システム名</TableHead>
                     <TableHead>所有顧客</TableHead>
-                    <TableHead>工番名</TableHead>
+                    <TableHead>工番</TableHead>
                     <TableHead>説明</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
@@ -297,7 +377,7 @@ export default function MastersPage() {
                         <TableCell className="text-center">{system.sortOrder}</TableCell>
                         <TableCell>{system.name}</TableCell>
                         <TableCell>{system.customerName}</TableCell>
-                        <TableCell>{workNumber?.name ?? ""}</TableCell>
+                        <TableCell>{workNumber?.workNumber ?? ""}</TableCell>
                         <TableCell>{system.description}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -401,7 +481,15 @@ export default function MastersPage() {
   );
 }
 
-function CustomerForm({ customer, onSave, onCancel }: any) {
+function CustomerForm({
+  customer,
+  onSave,
+  onCancel,
+}: {
+  customer: Customer | null;
+  onSave: (data: CustomerFormData) => void;
+  onCancel: () => void;
+}) {
   const [name, setName] = useState(customer?.name || "");
   const [sortOrder, setSortOrder] = useState<number>(customer?.sortOrder ?? 10);
   return (
@@ -422,13 +510,25 @@ function CustomerForm({ customer, onSave, onCancel }: any) {
   );
 }
 
-function SystemForm({ system, workNumber, customers, onSave, onCancel }: any) {
+function SystemForm({
+  system,
+  workNumber,
+  customers,
+  onSave,
+  onCancel,
+}: {
+  system: System | null;
+  workNumber: WorkNumber | null;
+  customers: Customer[];
+  onSave: (data: SystemFormData) => void;
+  onCancel: () => void;
+}) {
   const [formData, setFormData] = useState({
     name: system?.name || "",
     customerId: system?.customerId || "",
     description: system?.description || "",
     sortOrder: system?.sortOrder ?? 10,
-    workNumberName: workNumber?.name || "",
+    workNumber: workNumber?.workNumber?.toString() ?? "",
   });
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
@@ -437,14 +537,21 @@ function SystemForm({ system, workNumber, customers, onSave, onCancel }: any) {
         <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
       </div>
       <div>
-        <Label htmlFor="workNumberName">工番名</Label>
-        <Input id="workNumberName" value={formData.workNumberName} onChange={(e) => setFormData({ ...formData, workNumberName: e.target.value })} />
+        <Label htmlFor="workNumber">工番</Label>
+        <Input
+          id="workNumber"
+          type="number"
+          min={0}
+          step={1}
+          value={formData.workNumber}
+          onChange={(e) => setFormData({ ...formData, workNumber: e.target.value })}
+        />
       </div>
       <div>
         <Label htmlFor="custId">所有顧客</Label>
         <select id="custId" className="w-full p-2 border rounded" value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} required>
           <option value="">顧客を選択</option>
-          {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
         </select>
       </div>
       <div>
@@ -463,7 +570,15 @@ function SystemForm({ system, workNumber, customers, onSave, onCancel }: any) {
   );
 }
 
-function WorkTypeForm({ workType, onSave, onCancel }: any) {
+function WorkTypeForm({
+  workType,
+  onSave,
+  onCancel,
+}: {
+  workType: WorkType | null;
+  onSave: (data: WorkTypeFormData) => void;
+  onCancel: () => void;
+}) {
   const [formData, setFormData] = useState({
     name: workType?.name || "",
     category: workType?.category || "",

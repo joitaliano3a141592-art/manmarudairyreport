@@ -25,7 +25,8 @@ import requests
 from dotenv import load_dotenv
 from azure.identity import DeviceCodeCredential, AuthenticationRecord, TokenCachePersistenceOptions
 
-load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT / ".env.local")
+load_dotenv(_PROJECT_ROOT / ".env", override=False)
 
 # ---------- 設定 ----------
 
@@ -336,6 +337,11 @@ def main():
     sys_cols = get_columns(site_id, system_list_id)
     ensure_lookup_column(site_id, system_list_id, "Customer", "顧客", customer_list_id, sys_cols, required=True)
     ensure_text_column(site_id, system_list_id, "Description", "説明", sys_cols, multi_line=True)
+
+    # 工番マスタ
+    worknumber_cols = get_columns(site_id, worknumber_list_id)
+    ensure_number_column(site_id, worknumber_list_id, "WorkNumber", "工番", worknumber_cols, required=False)
+    ensure_number_column(site_id, worknumber_list_id, "_x30b7__x30b9__x30c6__x30e0_ID", "システムID", worknumber_cols, required=True)
 
     # 作業種別マスタ
     wt_cols = get_columns(site_id, worktype_list_id)

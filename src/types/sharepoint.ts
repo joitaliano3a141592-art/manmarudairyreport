@@ -18,7 +18,8 @@ export type SPSystemFields = {
 
 export type SPWorkNumberFields = {
   Title: string;
-  _x30b7__x30b9__x30c6__x30e0_ID?: number;
+  WorkNumber?: number | string | null;
+  _x30b7__x30b9__x30c6__x30e0_ID?: number | string | null;
 };
 
 export type SPWorkTypeFields = {
@@ -87,8 +88,9 @@ export type System = {
 
 export type WorkNumber = {
   id: string;
-  name: string;
+  workNumber: number | null;
   systemId: string;
+  systemName: string;
   sortOrder: number;
 };
 
@@ -112,7 +114,7 @@ export type WorkReport = {
   workTypeId: string;
   workTypeName: string;
   workNumberId: string;
-  workNumberName: string;
+  workNumber: string;
   workDescription: string;
   workHours: number;
   userName: string;
@@ -131,7 +133,7 @@ export type WorkPlan = {
   workTypeId: string;
   workTypeName: string;
   workNumberId: string;
-  workNumberName: string;
+  workNumber: string;
   workDescription: string;
   plannedHours: number;
   isProject: boolean;

@@ -121,6 +121,19 @@ import type {
   WorkDay,
 } from "@/types/sharepoint";
 
+const WORK_NUMBER_SYSTEM_ID_FIELD = "_x30b7__x30b9__x30c6__x30e0_ID";
+
+function toNullableInteger(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const numericValue = typeof value === "number" ? value : Number(String(value).trim());
+  if (!Number.isFinite(numericValue)) return null;
+  return Math.trunc(numericValue);
+}
+
+function formatWorkNumber(value: number | null | undefined): string {
+  return value == null ? "" : String(value);
+}
+
 // ==================== 顧客マスタ ====================
 
 export function useCustomers(): UseQueryResult<Customer[]> {
@@ -181,18 +194,25 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
       return fetchListItems<SPWorkNumberFields>(SP_LISTS.workNumbers);
     },
     select: (items) => {
-      const systemMap = new Map((systems ?? []).map((s) => [Number(s.id), s]));
+      const systemMap = new Map((systems ?? []).map((system) => [system.id, system]));
       return items
         .map((item) => {
-        const systemId = String(item.fields._x30b7__x30b9__x30c6__x30e0_ID ?? "");
+          const systemId = formatWorkNumber(toNullableInteger(item.fields[WORK_NUMBER_SYSTEM_ID_FIELD]));
+          const linkedSystem = systemMap.get(systemId);
           return {
             id: item.id,
-            name: item.fields.Title,
+            workNumber: toNullableInteger(item.fields.WorkNumber) ?? toNullableInteger(item.fields.Title),
             systemId,
-            sortOrder: systemMap.get(Number(systemId))?.sortOrder ?? 10,
+            systemName: linkedSystem?.name ?? item.fields.Title,
+            sortOrder: linkedSystem?.sortOrder ?? 10,
           };
         })
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
+        .sort(
+          (a, b) =>
+            a.sortOrder - b.sortOrder
+            || a.systemName.localeCompare(b.systemName, "ja")
+            || (a.workNumber ?? Number.MAX_SAFE_INTEGER) - (b.workNumber ?? Number.MAX_SAFE_INTEGER),
+        );
     },
   });
 }
@@ -282,6 +302,7 @@ export function useReportsByDateField(
       }
     },
     select: (items): WorkReport[] => {
+      const workNumberMap = new Map((workNumbers ?? []).map((workNumber) => [workNumber.id, workNumber]));
       const filtered = startDate && endDate
         ? items.filter((item) => {
             const d = resolveReportFilterDate(item, dateField);
@@ -291,9 +312,10 @@ export function useReportsByDateField(
       return filtered.map((item) => {
         const f = item.fields;
         const custId = String(f.CustomerLookupId ?? "");
-        const sysId = String(f.SystemLookupId ?? "");
+        const workNumberId = String(f.WorkNumberLookupId ?? "");
+        const linkedWorkNumber = workNumberMap.get(workNumberId);
+        const systemId = String(f.SystemLookupId ?? "");
         const wtId = String(f.WorkTypeLookupId ?? "");
-        const wnId = String(f.WorkNumberLookupId ?? "");
         return {
           id: item.id,
           title: f.Title,
@@ -302,12 +324,12 @@ export function useReportsByDateField(
           plannedHours: f.PlannedHours ?? 0,
           customerId: custId,
           customerName: maps.customerMap.get(custId) ?? "",
-          systemId: sysId,
-          systemName: maps.systemMap.get(sysId) ?? "",
+          systemId,
+          systemName: maps.systemMap.get(systemId) ?? "",
           workTypeId: wtId,
           workTypeName: maps.workTypeMap.get(wtId) ?? "",
-          workNumberId: wnId,
-          workNumberName: workNumbers?.find((item) => item.id === wnId)?.name ?? "",
+          workNumberId,
+          workNumber: formatWorkNumber(linkedWorkNumber?.workNumber),
           workDescription: f.WorkDescription ?? "",
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
@@ -463,11 +485,15 @@ export function useUpdateWorkDay() {
 export function useAddWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { Title: string; SystemLookupId: number }) => {
+    mutationFn: async (fields: { workNumber: number; systemId: number }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
-      return createListItem(SP_LISTS.workNumbers, { Title: fields.Title, _x30b7__x30b9__x30c6__x30e0_ID: fields.SystemLookupId });
+      return createListItem(SP_LISTS.workNumbers, {
+        Title: String(fields.workNumber),
+        WorkNumber: fields.workNumber,
+        [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "workNumbers"] });
@@ -482,11 +508,21 @@ export function useAddWorkNumber() {
 export function useUpdateWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ itemId, fields }: { itemId: string; fields: { Title: string; SystemLookupId: number } }) => {
+    mutationFn: async ({
+      itemId,
+      fields,
+    }: {
+      itemId: string;
+      fields: { workNumber: number; systemId: number };
+    }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
-      return updateListItem(SP_LISTS.workNumbers, itemId, { Title: fields.Title, _x30b7__x30b9__x30c6__x30e0_ID: fields.SystemLookupId });
+      return updateListItem(SP_LISTS.workNumbers, itemId, {
+        Title: String(fields.workNumber),
+        WorkNumber: fields.workNumber,
+        [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "workNumbers"] });
@@ -538,6 +574,7 @@ export function usePlans(startDate?: string, endDate?: string) {
       }
     },
     select: (items): WorkPlan[] => {
+      const workNumberMap = new Map((workNumbers ?? []).map((workNumber) => [workNumber.id, workNumber]));
       const filtered = items.filter((item) => {
         const d = toLocalDateStr(item.fields.PlanDate);
         if (startDate && d < startDate) {
@@ -551,21 +588,22 @@ export function usePlans(startDate?: string, endDate?: string) {
       return filtered.map((item) => {
         const f = item.fields;
         const custId = String(f.CustomerLookupId ?? "");
-        const sysId = String(f.SystemLookupId ?? "");
+        const workNumberId = String(f.WorkNumberLookupId ?? "");
+        const linkedWorkNumber = workNumberMap.get(workNumberId);
+        const systemId = String(f.SystemLookupId ?? "");
         const workTypeId = String(f.WorkTypeLookupId ?? "");
-        const wnId = String(f.WorkNumberLookupId ?? "");
         return {
           id: item.id,
           title: f.Title,
           planDate: toLocalDateStr(f.PlanDate),
           customerId: custId,
           customerName: maps.customerMap.get(custId) ?? "",
-          systemId: sysId,
-          systemName: maps.systemMap.get(sysId) ?? "",
+          systemId,
+          systemName: maps.systemMap.get(systemId) ?? "",
           workTypeId: workTypeId,
           workTypeName: maps.workTypeMap.get(workTypeId) ?? "",
-          workNumberId: wnId,
-          workNumberName: workNumbers?.find((item) => item.id === wnId)?.name ?? "",
+          workNumberId,
+          workNumber: formatWorkNumber(linkedWorkNumber?.workNumber),
           workDescription: f.WorkDescription ?? "",
           plannedHours: f.PlannedHours ?? 0,
           isProject: f.IsProject ?? true,

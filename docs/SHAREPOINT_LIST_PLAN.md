@@ -6,6 +6,7 @@
 
 - 顧客マスタ
 - システムマスタ
+- 工番マスタ
 - 作業種別マスタ
 - 作業報告
 - 作業予定
@@ -23,6 +24,12 @@
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - Description（複数行テキスト）: 説明
 
+### 工番マスタ
+
+- Title（既定）: 工番の文字列表現（SharePoint 既定列）
+- WorkNumber（数値）: 工番
+- システムID（数値）: システムマスタのアイテム ID
+
 ### 作業種別マスタ
 
 - Title（既定）: 作業種別名
@@ -36,6 +43,7 @@
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - System（Lookup -> システムマスタ.Title）: システム
 - WorkType（Lookup -> 作業種別マスタ.Title）: 作業種別
+- WorkNumber（Lookup -> 工番マスタ.Title）: 工番
 - WorkDescription（複数行テキスト）: 作業内容
 - PlannedHours（数値）: 予定時間
 - WorkHours（数値）: 作業時間
@@ -51,6 +59,7 @@
 - Customer（Lookup -> 顧客マスタ.Title）: 顧客
 - System（Lookup -> システムマスタ.Title）: システム
 - WorkType（Lookup -> 作業種別マスタ.Title）: 作業種別
+- WorkNumber（Lookup -> 工番マスタ.Title）: 工番
 - WorkDescription（複数行テキスト）: 作業内容
 - PlannedHours（数値）: 作業予定時間
 - IsProject（はい/いいえ）: 案件

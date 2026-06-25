@@ -110,6 +110,7 @@ Connect-PnPOnline -Url $SiteUrl -Interactive
 Write-Host "[STEP] Ensure lists"
 $customers = Ensure-List -Title "顧客マスタ"
 $systems = Ensure-List -Title "システムマスタ"
+$workNumbers = Ensure-List -Title "工番マスタ"
 $workTypes = Ensure-List -Title "作業種別マスタ"
 $workReports = Ensure-List -Title "作業報告"
 $workPlans = Ensure-List -Title "作業予定"
@@ -122,6 +123,10 @@ Write-Host "[STEP] Ensure columns: システムマスタ"
 Ensure-LookupField -ListTitle "システムマスタ" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-Field -ListTitle "システムマスタ" -InternalName "Description" -DisplayName "説明" -Type "Note"
 
+Write-Host "[STEP] Ensure columns: 工番マスタ"
+Ensure-Field -ListTitle "工番マスタ" -InternalName "WorkNumber" -DisplayName "工番" -Type "Number"
+Ensure-Field -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -DisplayName "システムID" -Type "Number" -Required $true
+
 Write-Host "[STEP] Ensure columns: 作業種別マスタ"
 Ensure-ChoiceField -ListTitle "作業種別マスタ" -InternalName "Category" -DisplayName "カテゴリ" -Choices @("開発", "保守", "運用", "会議", "その他")
 
@@ -131,6 +136,7 @@ Ensure-Field -ListTitle "作業報告" -InternalName "RegistrationDate" -Display
 Ensure-LookupField -ListTitle "作業報告" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes -Required $true
+Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkNumber" -DisplayName "工番" -LookupList $workNumbers
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
 Ensure-Field -ListTitle "作業報告" -InternalName "PlannedHours" -DisplayName "予定時間" -Type "Number"
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkHours" -DisplayName "作業時間" -Type "Number" -Required $true
@@ -144,6 +150,7 @@ Ensure-Field -ListTitle "作業予定" -InternalName "PlanDate" -DisplayName "�
 Ensure-LookupField -ListTitle "作業予定" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes
+Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkNumber" -DisplayName "工番" -LookupList $workNumbers
 Ensure-Field -ListTitle "作業予定" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
 Ensure-Field -ListTitle "作業予定" -InternalName "PlannedHours" -DisplayName "作業予定時間" -Type "Number"
 Ensure-Field -ListTitle "作業予定" -InternalName "IsProject" -DisplayName "案件" -Type "Boolean"
