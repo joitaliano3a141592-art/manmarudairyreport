@@ -3,16 +3,87 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
-import { useReports, useUpdateReport, useDeleteReport } from "@/hooks/use-sharepoint";
+import { FormModal } from "@/components/form-modal";
+import {
+  useCustomers,
+  useSystems,
+  useWorkNumbers,
+  useWorkTypes,
+  useReports,
+  useUpdateReport,
+  useDeleteReport,
+} from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import type { WorkReport } from "@/types/sharepoint";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 import { formatWorkHours } from "@/lib/utils";
 import { toast } from "sonner";
+
+const EMPTY_LOOKUP_SELECT_VALUE = "__empty_lookup__";
+
+type ReportFormState = {
+  reportDate: string;
+  customerId: string;
+  systemId: string;
+  workNumberId: string;
+  workTypeId: string;
+  workDescription: string;
+  workTime: string;
+  isProject: boolean;
+  isComplete: boolean;
+};
+
+function toLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function emptyReportForm(): ReportFormState {
+  return {
+    reportDate: toLocalDate(new Date()),
+    customerId: "",
+    systemId: "",
+    workNumberId: "",
+    workTypeId: "",
+    workDescription: "",
+    workTime: "0",
+    isProject: false,
+    isComplete: true,
+  };
+}
+
+function toLookupSelectValue(value: string): string {
+  return value || EMPTY_LOOKUP_SELECT_VALUE;
+}
+
+function applySystemSelection<T extends { systemId: string; workNumberId: string }>(prev: T, rawValue: string): T {
+  const systemId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
+  return {
+    ...prev,
+    systemId,
+    workNumberId: systemId ? "" : prev.workNumberId,
+  };
+}
+
+function applyWorkNumberSelection<T extends { systemId: string; workNumberId: string }>(prev: T, rawValue: string): T {
+  const workNumberId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
+  return {
+    ...prev,
+    systemId: workNumberId ? "" : prev.systemId,
+    workNumberId,
+  };
+}
 
 export default function WorkReportListPage() {
   const navigate = useNavigate();
@@ -25,14 +96,18 @@ export default function WorkReportListPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState("");
-  const [editWorkTime, setEditWorkTime] = useState("");
-  const [editIsProject, setEditIsProject] = useState(true);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [reportForm, setReportForm] = useState<ReportFormState>(emptyReportForm());
+  const [reportSubmitError, setReportSubmitError] = useState("");
 
-  const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
+  const { data: customers = [], isLoading: customersLoading, isError: customersErrorState, error: customersError } = useCustomers();
+  const { data: systems = [], isLoading: systemsLoading, isError: systemsErrorState, error: systemsError } = useSystems();
+  const { data: workNumbers = [], isLoading: workNumbersLoading, isError: workNumbersErrorState, error: workNumbersError } = useWorkNumbers();
+  const { data: workTypes = [], isLoading: workTypesLoading, isError: workTypesErrorState, error: workTypesError } = useWorkTypes();
+  const { data: reports = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReports(startDate, endDate);
   const updateMutation = useUpdateReport();
   const deleteMutation = useDeleteReport();
   const actionLoadingMessage = updateMutation.isPending
@@ -47,46 +122,114 @@ export default function WorkReportListPage() {
     [currentUser.name, reports],
   );
 
+  const filteredSystems = useMemo(
+    () => systems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId),
+    [reportForm.customerId, systems],
+  );
+
+  const filteredWorkNumbers = useMemo(() => {
+    if (!reportForm.customerId) {
+      return [];
+    }
+
+    const customerSystemIds = new Set(
+      systems
+        .filter((system) => system.customerId === reportForm.customerId)
+        .map((system) => system.id),
+    );
+
+    return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+  }, [reportForm.customerId, systems, workNumbers]);
+
+  const workNumberDisplayMap = useMemo(
+    () => new Map(
+      workNumbers.map((workNumber) => [
+        workNumber.id,
+        workNumber.systemName || workNumber.workNumber || "",
+      ]),
+    ),
+    [workNumbers],
+  );
+
   const totalWorkHours = useMemo(
-    () => filteredReports.reduce((sum, r) => sum + r.workHours, 0),
+    () => filteredReports.reduce((sum, report) => sum + report.workHours, 0),
     [filteredReports],
   );
 
-  const handleEdit = (report: typeof reports[0]) => {
-    setEditingId(report.id);
-    setEditDescription(report.workDescription);
-    setEditWorkTime(String(report.workHours));
-    setEditIsProject(report.isProject);
+  const resolveSystemDisplayName = (report: WorkReport) =>
+    report.systemName
+    || workNumberDisplayMap.get(report.workNumberId)
+    || report.workNumber
+    || "―";
+
+  const closeReportModal = () => {
+    setReportModalOpen(false);
+    setEditingReportId(null);
+    setReportForm(emptyReportForm());
+    setReportSubmitError("");
   };
 
-  const handleSave = (report: typeof reports[0]) => {
-    const workTime = parseFloat(editWorkTime);
-    if (Number.isNaN(workTime) || workTime <= 0) {
-      toast.error("正しい作業時間を入力してください。");
+  const openEditReportModal = (report: WorkReport) => {
+    setEditingReportId(report.id);
+    setReportForm({
+      reportDate: report.reportDate,
+      customerId: report.customerId,
+      systemId: report.workNumberId ? "" : report.systemId,
+      workNumberId: report.workNumberId,
+      workTypeId: report.workTypeId,
+      workDescription: report.workDescription,
+      workTime: String(report.workHours ?? 0),
+      isProject: report.isProject,
+      isComplete: report.isComplete,
+    });
+    setReportSubmitError("");
+    setReportModalOpen(true);
+  };
+
+  const saveReport = async () => {
+    if (!editingReportId) return;
+    if (!reportForm.customerId || !reportForm.workTypeId) {
+      setReportSubmitError("必須項目を入力してください。");
       return;
     }
-    updateMutation.mutate({
-      itemId: report.id,
-      fields: {
-        WorkDescription: editDescription,
-        WorkHours: workTime,
-        IsProject: editIsProject,
-        ReporterName: currentUser.name,
-      },
-    });
-    setEditingId(null);
-  };
 
-  const handleDelete = (id: string) => {
-    setDeleteTargetId(id);
+    const workHours = Number(reportForm.workTime);
+    if (Number.isNaN(workHours) || workHours < 0) {
+      setReportSubmitError("作業時間は 0 以上で入力してください。");
+      return;
+    }
+
+    const customer = customers.find((item) => item.id === reportForm.customerId);
+    const workNumber = filteredWorkNumbers.find((item) => item.id === reportForm.workNumberId) ?? null;
+    const fields = {
+      Title: `日報-${customer?.name ?? ""}`,
+      ReportDate: `${reportForm.reportDate}T00:00:00+09:00`,
+      CustomerLookupId: Number(reportForm.customerId),
+      SystemLookupId: reportForm.systemId ? Number(reportForm.systemId) : null,
+      WorkTypeLookupId: Number(reportForm.workTypeId),
+      WorkNumberLookupId: workNumber ? Number(workNumber.id) : null,
+      WorkDescription: reportForm.workDescription,
+      WorkHours: workHours,
+      ReporterName: currentUser.name,
+      IsProject: reportForm.isProject,
+      IsComplete: reportForm.isComplete,
+    };
+
+    try {
+      await updateMutation.mutateAsync({ itemId: editingReportId, fields });
+      toast.success("作業実績を更新しました。", { duration: 2200 });
+      closeReportModal();
+    } catch (error) {
+      setReportSubmitError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const handleDeleteTap = (id: string) => {
     if (deleteMutation.isPending) return;
-    handleDelete(id);
+    setDeleteTargetId(id);
   };
 
-  if (isLoading) {
+  if (reportsLoading || customersLoading || systemsLoading || workNumbersLoading || workTypesLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
@@ -97,8 +240,13 @@ export default function WorkReportListPage() {
     );
   }
 
-  if (isError) {
-    return <DataErrorState title="作業実績を取得できませんでした" error={error} />;
+  if (reportsErrorState || customersErrorState || systemsErrorState || workNumbersErrorState || workTypesErrorState) {
+    return (
+      <DataErrorState
+        title="作業実績を取得できませんでした"
+        error={reportsError ?? customersError ?? systemsError ?? workNumbersError ?? workTypesError}
+      />
+    );
   }
 
   return (
@@ -171,72 +319,28 @@ export default function WorkReportListPage() {
                   <TableRow key={report.id}>
                     <TableCell>{report.reportDate}</TableCell>
                     <TableCell>{report.customerName}</TableCell>
-                    <TableCell>{report.systemName}</TableCell>
+                    <TableCell>{resolveSystemDisplayName(report)}</TableCell>
                     <TableCell className="max-w-xs truncate" title={report.workDescription}>
-                      {editingId === report.id ? (
-                        <textarea
-                          className="w-full rounded-md border border-input p-2 text-sm"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                        />
-                      ) : (
-                        report.workDescription
-                      )}
+                      {report.workDescription}
                     </TableCell>
-                    <TableCell>{report.workTypeName}</TableCell>
-                    <TableCell>
-                      {editingId === report.id ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            step="0.25"
-                            min="0"
-                            className="w-16 rounded-md border border-input px-2 py-1 text-sm"
-                            value={editWorkTime}
-                            onChange={(e) => setEditWorkTime(e.target.value)}
-                          />
-                          <span>h</span>
-                        </div>
-                      ) : (
-                        `${formatWorkHours(report.workHours)}h`
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {editingId === report.id ? (
-                        <input
-                          type="checkbox"
-                          checked={editIsProject}
-                          onChange={(e) => setEditIsProject(e.target.checked)}
-                          className="h-4 w-4"
-                        />
-                      ) : (
-                        report.isProject ? "○" : "―"
-                      )}
-                    </TableCell>
+                    <TableCell>{report.workTypeName || "―"}</TableCell>
+                    <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
+                    <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
-                        {editingId === report.id ? (
-                          <>
-                            <Button size="sm" onClick={() => handleSave(report)}>保存</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>キャンセル</Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(report)}>編集</Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={deleteMutation.isPending}
-                              onClick={() => handleDeleteTap(report.id)}
-                              onTouchEnd={(e) => {
-                                e.preventDefault();
-                                handleDeleteTap(report.id);
-                              }}
-                            >
-                              削除
-                            </Button>
-                          </>
-                        )}
+                        <Button size="sm" variant="outline" onClick={() => openEditReportModal(report)}>編集</Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => handleDeleteTap(report.id)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleDeleteTap(report.id);
+                          }}
+                        >
+                          削除
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -246,6 +350,123 @@ export default function WorkReportListPage() {
           )}
         </CardContent>
       </Card>
+
+      <FormModal
+        open={reportModalOpen}
+        onOpenChange={(open) => {
+          if (!open) closeReportModal();
+        }}
+        title="作業実績を編集"
+        description=""
+        onCancel={closeReportModal}
+        onSave={() => {
+          void saveReport();
+        }}
+        saveLabel="更新"
+        isSaving={updateMutation.isPending}
+      >
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-1">
+            <div className="space-y-1.5">
+              <Label>報告日</Label>
+              <Input type="date" value={reportForm.reportDate} onChange={(e) => setReportForm({ ...reportForm, reportDate: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-1">
+            <div className="space-y-1.5">
+              <Label>顧客</Label>
+              <Select value={reportForm.customerId} onValueChange={(value) => setReportForm({ ...reportForm, customerId: value, systemId: "", workNumberId: "" })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="顧客を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>システム</Label>
+              <Select
+                value={toLookupSelectValue(reportForm.systemId)}
+                onValueChange={(value) => setReportForm((prev) => applySystemSelection(prev, value))}
+                disabled={!reportForm.customerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="システムを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  {filteredSystems.map((system) => (
+                    <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>工番</Label>
+              <Select
+                value={toLookupSelectValue(reportForm.workNumberId)}
+                onValueChange={(value) => setReportForm((prev) => applyWorkNumberSelection(prev, value))}
+                disabled={!reportForm.customerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="工番を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  {filteredWorkNumbers.map((workNumber) => (
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.systemName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>作業区分</Label>
+              <Select value={reportForm.workTypeId} onValueChange={(value) => setReportForm({ ...reportForm, workTypeId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="作業区分を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workTypes.map((workType) => (
+                    <SelectItem key={workType.id} value={workType.id}>{workType.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>作業時間</Label>
+              <Input type="number" min="0" step="0.25" value={reportForm.workTime} onChange={(e) => setReportForm({ ...reportForm, workTime: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>案件</Label>
+              <div className="flex h-10 items-center gap-2">
+                <Checkbox checked={reportForm.isProject} onCheckedChange={(checked) => setReportForm({ ...reportForm, isProject: checked === true })} />
+                <span className="text-sm">案件</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>完了</Label>
+              <div className="flex h-10 items-center gap-2">
+                <Checkbox checked={reportForm.isComplete} onCheckedChange={(checked) => setReportForm({ ...reportForm, isComplete: checked === true })} />
+                <span className="text-sm">完了</span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>作業内容</Label>
+            <Textarea value={reportForm.workDescription} onChange={(e) => setReportForm({ ...reportForm, workDescription: e.target.value })} rows={4} />
+          </div>
+          {reportSubmitError && <p className="text-sm text-destructive">登録できませんでした: {reportSubmitError}</p>}
+        </div>
+      </FormModal>
 
       <ConfirmDialog
         open={deleteTargetId !== null}

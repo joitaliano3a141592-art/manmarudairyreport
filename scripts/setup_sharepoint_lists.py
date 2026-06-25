@@ -119,6 +119,13 @@ def graph_patch(path: str, body: dict) -> dict:
     return {}
 
 
+def graph_delete(path: str) -> None:
+    resp = requests.delete(f"{GRAPH_BASE}{path}", headers=graph_headers())
+    if resp.status_code >= 400:
+        print(f"[ERROR] DELETE {path}: {resp.status_code} {resp.text[:500]}", file=sys.stderr)
+    resp.raise_for_status()
+
+
 # ---------- Site ID 解決 ----------
 
 def resolve_site_id(group_id: str) -> str:
@@ -161,6 +168,15 @@ def get_columns(site_id: str, list_id: str) -> dict[str, dict]:
     """既存列一覧を dict[name] -> column info で返す。"""
     resp = graph_get(f"/sites/{site_id}/lists/{list_id}/columns")
     return {col["name"]: col for col in resp.get("value", [])}
+
+
+def delete_column(site_id: str, list_id: str, name: str, cols: dict[str, dict]):
+    col = cols.get(name)
+    if not col:
+        print(f"[SKIP] Column not found: {name}")
+        return
+    graph_delete(f"/sites/{site_id}/lists/{list_id}/columns/{col['id']}")
+    print(f"[DELETE] Column: {name}")
 
 
 def ensure_text_column(site_id: str, list_id: str, name: str, display_name: str, cols: dict, *, required: bool = False, multi_line: bool = False):
@@ -340,7 +356,7 @@ def main():
 
     # 工番マスタ
     worknumber_cols = get_columns(site_id, worknumber_list_id)
-    ensure_number_column(site_id, worknumber_list_id, "WorkNumber", "工番", worknumber_cols, required=False)
+    delete_column(site_id, worknumber_list_id, "WorkNumber", worknumber_cols)
     ensure_number_column(site_id, worknumber_list_id, "_x30b7__x30b9__x30c6__x30e0_ID", "システムID", worknumber_cols, required=True)
 
     # 作業種別マスタ

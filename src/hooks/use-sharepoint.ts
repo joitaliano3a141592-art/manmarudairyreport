@@ -130,8 +130,8 @@ function toNullableInteger(value: unknown): number | null {
   return Math.trunc(numericValue);
 }
 
-function formatWorkNumber(value: number | null | undefined): string {
-  return value == null ? "" : String(value);
+function formatWorkNumber(value: string | null | undefined): string {
+  return value?.trim() ?? "";
 }
 
 // ==================== 顧客マスタ ====================
@@ -197,11 +197,11 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
       const systemMap = new Map((systems ?? []).map((system) => [system.id, system]));
       return items
         .map((item) => {
-          const systemId = formatWorkNumber(toNullableInteger(item.fields[WORK_NUMBER_SYSTEM_ID_FIELD]));
+          const systemId = String(toNullableInteger(item.fields[WORK_NUMBER_SYSTEM_ID_FIELD]) ?? "");
           const linkedSystem = systemMap.get(systemId);
           return {
             id: item.id,
-            workNumber: toNullableInteger(item.fields.WorkNumber) ?? toNullableInteger(item.fields.Title),
+            workNumber: formatWorkNumber(item.fields.Title),
             systemId,
             systemName: linkedSystem?.name ?? item.fields.Title,
             sortOrder: linkedSystem?.sortOrder ?? 10,
@@ -211,7 +211,7 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
           (a, b) =>
             a.sortOrder - b.sortOrder
             || a.systemName.localeCompare(b.systemName, "ja")
-            || (a.workNumber ?? Number.MAX_SAFE_INTEGER) - (b.workNumber ?? Number.MAX_SAFE_INTEGER),
+            || a.workNumber.localeCompare(b.workNumber, "ja", { numeric: true }),
         );
     },
   });
@@ -485,13 +485,12 @@ export function useUpdateWorkDay() {
 export function useAddWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { workNumber: number; systemId: number }) => {
+    mutationFn: async (fields: { workNumber: string; systemId: number }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
       return createListItem(SP_LISTS.workNumbers, {
-        Title: String(fields.workNumber),
-        WorkNumber: fields.workNumber,
+        Title: fields.workNumber,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
       });
     },
@@ -513,14 +512,13 @@ export function useUpdateWorkNumber() {
       fields,
     }: {
       itemId: string;
-      fields: { workNumber: number; systemId: number };
+      fields: { workNumber: string; systemId: number };
     }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
       return updateListItem(SP_LISTS.workNumbers, itemId, {
-        Title: String(fields.workNumber),
-        WorkNumber: fields.workNumber,
+        Title: fields.workNumber,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
       });
     },

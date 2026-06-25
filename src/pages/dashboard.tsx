@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
 import { Download, ChevronDown, ChevronUp, Medal } from "lucide-react";
-import { useReports } from "@/hooks/use-sharepoint";
+import { useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
 import { formatWorkHours } from "@/lib/utils";
 
@@ -81,6 +81,21 @@ export default function DashboardPage() {
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
 
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
+  const {
+    data: workNumbers = [],
+    isLoading: workNumbersLoading,
+    isError: workNumbersErrorState,
+    error: workNumbersError,
+  } = useWorkNumbers();
+
+  const workNumberSystemNameMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
+    [workNumbers],
+  );
+
+  const resolveSystemDisplayName = (report: WorkReport): string => {
+    return report.systemName || workNumberSystemNameMap.get(report.workNumberId) || report.workNumber || "(未設定)";
+  };
 
   const uniqueUsers = useMemo(
     () => Array.from(new Set(reports.map((report) => report.userName))),
@@ -236,7 +251,7 @@ export default function DashboardPage() {
   const systemStackData = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
     filteredReports.forEach((report: WorkReport) => {
-      const system = report.systemName || "(未設定)";
+      const system = resolveSystemDisplayName(report);
       if (!map.has(system)) {
         map.set(system, new Map());
       }
@@ -362,7 +377,7 @@ export default function DashboardPage() {
       report.reportDate,
       report.userName,
       report.customerName,
-      report.systemName,
+      resolveSystemDisplayName(report),
       report.workDescription,
       report.workTypeName,
       report.workHours,
@@ -382,7 +397,7 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) {
+  if (isLoading || workNumbersLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
@@ -393,8 +408,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (isError) {
-    return <DataErrorState title="ダッシュボードデータを取得できませんでした" error={error} />;
+  if (isError || workNumbersErrorState) {
+    return <DataErrorState title="ダッシュボードデータを取得できませんでした" error={error ?? workNumbersError} />;
   }
 
   return (
@@ -791,7 +806,7 @@ export default function DashboardPage() {
                   <TableCell>{report.reportDate}</TableCell>
                   <TableCell>{report.userName}</TableCell>
                   <TableCell>{report.customerName}</TableCell>
-                  <TableCell>{report.systemName}</TableCell>
+                  <TableCell>{resolveSystemDisplayName(report)}</TableCell>
                   <TableCell className="max-w-xs truncate" title={report.workDescription}>
                     {report.workDescription}
                   </TableCell>

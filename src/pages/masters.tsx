@@ -15,7 +15,6 @@ import {
   useWorkTypes, useAddWorkType, useUpdateWorkType, useDeleteWorkType,
 } from "@/hooks/use-sharepoint";
 import type { Customer, System, WorkNumber, WorkType } from "@/types/sharepoint";
-import { toast } from "sonner";
 
 type CustomerFormData = {
   name: string;
@@ -134,14 +133,6 @@ export default function MastersPage() {
 
   const handleSaveSystem = async (data: SystemFormData) => {
     const workNumberText = data.workNumber.trim();
-    const parsedWorkNumber = workNumberText === "" ? null : Number(workNumberText);
-    if (
-      parsedWorkNumber != null
-      && (!Number.isInteger(parsedWorkNumber) || Number.isNaN(parsedWorkNumber) || parsedWorkNumber < 0)
-    ) {
-      toast.error("工番は 0 以上の整数で入力してください。");
-      return;
-    }
 
     const systemFields = {
       Title: data.name,
@@ -161,7 +152,7 @@ export default function MastersPage() {
           )
         : Number((await addSystem.mutateAsync(systemFields)).id);
 
-      if (editingWorkNumber && parsedWorkNumber == null) {
+      if (editingWorkNumber && !workNumberText) {
         try {
           await deleteWorkNumber.mutateAsync(editingWorkNumber.id);
         } catch (error) {
@@ -169,12 +160,12 @@ export default function MastersPage() {
             throw error;
           }
         }
-      } else if (editingWorkNumber && parsedWorkNumber != null) {
+      } else if (editingWorkNumber && workNumberText) {
         try {
           await updateWorkNumber.mutateAsync({
             itemId: editingWorkNumber.id,
             fields: {
-              workNumber: parsedWorkNumber,
+              workNumber: workNumberText,
               systemId,
             },
           });
@@ -183,13 +174,13 @@ export default function MastersPage() {
             throw error;
           }
           await addWorkNumber.mutateAsync({
-            workNumber: parsedWorkNumber,
+            workNumber: workNumberText,
             systemId,
           });
         }
-      } else if (parsedWorkNumber != null) {
+      } else if (workNumberText) {
         await addWorkNumber.mutateAsync({
-          workNumber: parsedWorkNumber,
+          workNumber: workNumberText,
           systemId,
         });
       }
@@ -528,7 +519,7 @@ function SystemForm({
     customerId: system?.customerId || "",
     description: system?.description || "",
     sortOrder: system?.sortOrder ?? 10,
-    workNumber: workNumber?.workNumber?.toString() ?? "",
+    workNumber: workNumber?.workNumber ?? "",
   });
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
@@ -540,9 +531,6 @@ function SystemForm({
         <Label htmlFor="workNumber">工番</Label>
         <Input
           id="workNumber"
-          type="number"
-          min={0}
-          step={1}
           value={formData.workNumber}
           onChange={(e) => setFormData({ ...formData, workNumber: e.target.value })}
         />

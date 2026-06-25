@@ -43,6 +43,22 @@ function Ensure-Field {
   Add-PnPField -List $ListTitle -DisplayName $DisplayName -InternalName $InternalName -Type $Type -Required:$Required -AddToDefaultView:$false | Out-Null
 }
 
+function Remove-FieldIfExists {
+  param(
+    [string]$ListTitle,
+    [string]$InternalName
+  )
+
+  $field = Get-PnPField -List $ListTitle -Identity $InternalName -ErrorAction SilentlyContinue
+  if ($null -eq $field) {
+    Write-Host "[SKIP] Field not found: $ListTitle.$InternalName"
+    return
+  }
+
+  Write-Host "[DELETE] Field: $ListTitle.$InternalName"
+  Remove-PnPField -List $ListTitle -Identity $InternalName -Force | Out-Null
+}
+
 function Ensure-ChoiceField {
   param(
     [string]$ListTitle,
@@ -124,7 +140,7 @@ Ensure-LookupField -ListTitle "システムマスタ" -InternalName "Customer" -
 Ensure-Field -ListTitle "システムマスタ" -InternalName "Description" -DisplayName "説明" -Type "Note"
 
 Write-Host "[STEP] Ensure columns: 工番マスタ"
-Ensure-Field -ListTitle "工番マスタ" -InternalName "WorkNumber" -DisplayName "工番" -Type "Number"
+Remove-FieldIfExists -ListTitle "工番マスタ" -InternalName "WorkNumber"
 Ensure-Field -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -DisplayName "システムID" -Type "Number" -Required $true
 
 Write-Host "[STEP] Ensure columns: 作業種別マスタ"

@@ -334,11 +334,21 @@ export default function DailyEntryPage() {
     () => new Map(
       workNumbers.map((workNumber) => [
         workNumber.id,
-        workNumber.systemName || workNumber.workNumber?.toString() || "",
+        workNumber.systemName || workNumber.workNumber || "",
       ]),
     ),
     [workNumbers],
   );
+  const resolveReportRowSystemDisplayName = (row: ReportTableRow) =>
+    row.systemName
+    || workNumberDisplayMap.get(row.workNumberId)
+    || row.workNumber
+    || "―";
+  const resolvePlanSystemDisplayName = (plan: WorkPlan) =>
+    plan.systemName
+    || workNumberDisplayMap.get(plan.workNumberId)
+    || plan.workNumber
+    || "―";
   const totalWorkHours = useMemo(() => reports.reduce((sum, report) => sum + report.workHours, 0), [reports]);
   const nextPlanDate = useMemo(
     () => plans.reduce<string | null>((nearest, plan) => (!nearest || plan.planDate < nearest ? plan.planDate : nearest), null),
@@ -923,7 +933,6 @@ export default function DailyEntryPage() {
                     <TableHead>報告日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
-                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead>作業内容</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
@@ -978,12 +987,7 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : row.systemName || "―"}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {row.workNumberId
-                            ? workNumberDisplayMap.get(row.workNumberId) || row.workNumber || "―"
-                            : row.workNumber || "―"}
-                        </TableCell>
+                        ) : resolveReportRowSystemDisplayName(row)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
@@ -1069,7 +1073,6 @@ export default function DailyEntryPage() {
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
-                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead>案件</TableHead>
@@ -1111,12 +1114,7 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : plan.systemName || "―"}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {plan.workNumberId
-                            ? workNumberDisplayMap.get(plan.workNumberId) || plan.workNumber || "―"
-                            : plan.workNumber || "―"}
-                        </TableCell>
+                        ) : resolvePlanSystemDisplayName(plan)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlinePlanEdit.workTypeId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">

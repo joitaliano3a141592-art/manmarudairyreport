@@ -3,16 +3,42 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataErrorState } from "@/components/data-error-state";
 import { ActionLoadingOverlay } from "@/components/action-loading-overlay";
-import { usePlans, useUpdatePlan, useDeletePlan } from "@/hooks/use-sharepoint";
+import { FormModal } from "@/components/form-modal";
+import {
+  useCustomers,
+  useSystems,
+  useWorkNumbers,
+  useWorkTypes,
+  usePlans,
+  useUpdatePlan,
+  useDeletePlan,
+} from "@/hooks/use-sharepoint";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { WorkPlan } from "@/types/sharepoint";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 import { toast } from "sonner";
+
+const EMPTY_LOOKUP_SELECT_VALUE = "__empty_lookup__";
+
+type PlanFormState = {
+  planDate: string;
+  customerId: string;
+  systemId: string;
+  workNumberId: string;
+  workTypeId: string;
+  workDescription: string;
+  plannedHours: string;
+  isProject: boolean;
+};
 
 function toLocalDate(date: Date): string {
   const y = date.getFullYear();
@@ -20,23 +46,65 @@ function toLocalDate(date: Date): string {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
-const today = new Date();
-const tomorrow = new Date(today);
-tomorrow.setDate(tomorrow.getDate() + 1);
+
+function emptyPlanForm(): PlanFormState {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return {
+    planDate: toLocalDate(tomorrow),
+    customerId: "",
+    systemId: "",
+    workNumberId: "",
+    workTypeId: "",
+    workDescription: "",
+    plannedHours: "0",
+    isProject: false,
+  };
+}
+
+function toLookupSelectValue(value: string): string {
+  return value || EMPTY_LOOKUP_SELECT_VALUE;
+}
+
+function applySystemSelection<T extends { systemId: string; workNumberId: string }>(prev: T, rawValue: string): T {
+  const systemId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
+  return {
+    ...prev,
+    systemId,
+    workNumberId: systemId ? "" : prev.workNumberId,
+  };
+}
+
+function applyWorkNumberSelection<T extends { systemId: string; workNumberId: string }>(prev: T, rawValue: string): T {
+  const workNumberId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
+  return {
+    ...prev,
+    systemId: workNumberId ? "" : prev.systemId,
+    workNumberId,
+  };
+}
 
 export default function WorkPlanListPage() {
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
+  const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nextDay = new Date(today);
+  nextDay.setDate(nextDay.getDate() + 1);
   const [startDate, setStartDate] = useState(toLocalDate(monthStart));
-  const [endDate, setEndDate] = useState(toLocalDate(tomorrow));
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState("");
-  const [editPlanDate, setEditPlanDate] = useState("");
+  const [endDate, setEndDate] = useState(toLocalDate(nextDay));
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [planForm, setPlanForm] = useState<PlanFormState>(emptyPlanForm());
+  const [planSubmitError, setPlanSubmitError] = useState("");
 
-  const { data: plans = [], isLoading, isError, error } = usePlans(startDate, endDate || undefined);
+  const { data: customers = [], isLoading: customersLoading, isError: customersErrorState, error: customersError } = useCustomers();
+  const { data: systems = [], isLoading: systemsLoading, isError: systemsErrorState, error: systemsError } = useSystems();
+  const { data: workNumbers = [], isLoading: workNumbersLoading, isError: workNumbersErrorState, error: workNumbersError } = useWorkNumbers();
+  const { data: workTypes = [], isLoading: workTypesLoading, isError: workTypesErrorState, error: workTypesError } = useWorkTypes();
+  const { data: plans = [], isLoading: plansLoading, isError: plansErrorState, error: plansError } = usePlans(startDate, endDate || undefined);
   const updateMutation = useUpdatePlan();
   const deleteMutation = useDeletePlan();
   const actionLoadingMessage = updateMutation.isPending
@@ -51,39 +119,107 @@ export default function WorkPlanListPage() {
     [currentUser.name, plans],
   );
 
-  const handleEdit = (plan: WorkPlan) => {
-    setEditingId(plan.id);
-    setEditDescription(plan.workDescription);
-    setEditPlanDate(plan.planDate);
+  const filteredSystems = useMemo(
+    () => systems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId),
+    [planForm.customerId, systems],
+  );
+
+  const filteredWorkNumbers = useMemo(() => {
+    if (!planForm.customerId) {
+      return [];
+    }
+
+    const customerSystemIds = new Set(
+      systems
+        .filter((system) => system.customerId === planForm.customerId)
+        .map((system) => system.id),
+    );
+
+    return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+  }, [planForm.customerId, systems, workNumbers]);
+
+  const workNumberDisplayMap = useMemo(
+    () => new Map(
+      workNumbers.map((workNumber) => [
+        workNumber.id,
+        workNumber.systemName || workNumber.workNumber || "",
+      ]),
+    ),
+    [workNumbers],
+  );
+
+  const resolveSystemDisplayName = (plan: WorkPlan) =>
+    plan.systemName
+    || workNumberDisplayMap.get(plan.workNumberId)
+    || plan.workNumber
+    || "―";
+
+  const closePlanModal = () => {
+    setPlanModalOpen(false);
+    setEditingPlanId(null);
+    setPlanForm(emptyPlanForm());
+    setPlanSubmitError("");
   };
 
-  const handleSave = (plan: WorkPlan) => {
-    if (!editPlanDate) {
-      toast.warning("予定日を入力してください。");
+  const openEditPlanModal = (plan: WorkPlan) => {
+    setEditingPlanId(plan.id);
+    setPlanForm({
+      planDate: plan.planDate,
+      customerId: plan.customerId,
+      systemId: plan.workNumberId ? "" : plan.systemId,
+      workNumberId: plan.workNumberId,
+      workTypeId: plan.workTypeId,
+      workDescription: plan.workDescription,
+      plannedHours: String(plan.plannedHours ?? 0),
+      isProject: plan.isProject,
+    });
+    setPlanSubmitError("");
+    setPlanModalOpen(true);
+  };
+
+  const savePlan = async () => {
+    if (!editingPlanId) return;
+    if (!planForm.customerId) {
+      setPlanSubmitError("必須項目を入力してください。");
       return;
     }
 
-    updateMutation.mutate({
-      itemId: plan.id,
-      fields: {
-        PlanDate: `${editPlanDate}T00:00:00+09:00`,
-        WorkDescription: editDescription,
-        AssigneeName: currentUser.name,
-      },
-    });
-    setEditingId(null);
-  };
+    const plannedHours = Number(planForm.plannedHours);
+    if (Number.isNaN(plannedHours) || plannedHours < 0) {
+      setPlanSubmitError("予定時間は 0 以上で入力してください。");
+      return;
+    }
 
-  const handleDelete = (id: string) => {
-    setDeleteTargetId(id);
+    const customer = customers.find((item) => item.id === planForm.customerId);
+    const workNumber = filteredWorkNumbers.find((item) => item.id === planForm.workNumberId) ?? null;
+    const fields = {
+      Title: `予定-${customer?.name ?? ""}`,
+      PlanDate: `${planForm.planDate}T00:00:00+09:00`,
+      CustomerLookupId: Number(planForm.customerId),
+      SystemLookupId: planForm.systemId ? Number(planForm.systemId) : null,
+      WorkTypeLookupId: planForm.workTypeId ? Number(planForm.workTypeId) : null,
+      WorkNumberLookupId: workNumber ? Number(workNumber.id) : null,
+      WorkDescription: planForm.workDescription,
+      PlannedHours: plannedHours,
+      IsProject: planForm.isProject,
+      AssigneeName: currentUser.name,
+    };
+
+    try {
+      await updateMutation.mutateAsync({ itemId: editingPlanId, fields });
+      toast.success("作業予定を更新しました。", { duration: 2200 });
+      closePlanModal();
+    } catch (error) {
+      setPlanSubmitError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const handleDeleteTap = (id: string) => {
     if (deleteMutation.isPending) return;
-    handleDelete(id);
+    setDeleteTargetId(id);
   };
 
-  if (isLoading) {
+  if (plansLoading || customersLoading || systemsLoading || workNumbersLoading || workTypesLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
@@ -94,8 +230,13 @@ export default function WorkPlanListPage() {
     );
   }
 
-  if (isError) {
-    return <DataErrorState title="作業予定を取得できませんでした" error={error} />;
+  if (plansErrorState || customersErrorState || systemsErrorState || workNumbersErrorState || workTypesErrorState) {
+    return (
+      <DataErrorState
+        title="作業予定を取得できませんでした"
+        error={plansError ?? customersError ?? systemsError ?? workNumbersError ?? workTypesError}
+      />
+    );
   }
 
   return (
@@ -160,56 +301,28 @@ export default function WorkPlanListPage() {
               <TableBody>
                 {filteredPlans.map((plan) => (
                   <TableRow key={plan.id}>
-                    <TableCell>
-                      {editingId === plan.id ? (
-                        <input
-                          type="date"
-                          className="w-full rounded-md border border-input px-2 py-1 text-sm"
-                          value={editPlanDate}
-                          onChange={(e) => setEditPlanDate(e.target.value)}
-                        />
-                      ) : (
-                        plan.planDate
-                      )}
-                    </TableCell>
+                    <TableCell>{plan.planDate}</TableCell>
                     <TableCell>{plan.customerName}</TableCell>
-                    <TableCell>{plan.systemName}</TableCell>
+                    <TableCell>{resolveSystemDisplayName(plan)}</TableCell>
                     <TableCell className="max-w-xs truncate" title={plan.workDescription}>
-                      {editingId === plan.id ? (
-                        <textarea
-                          className="w-full rounded-md border border-input p-2 text-sm"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                        />
-                      ) : (
-                        plan.workDescription
-                      )}
+                      {plan.workDescription}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
-                        {editingId === plan.id ? (
-                          <>
-                            <Button size="sm" onClick={() => handleSave(plan)}>保存</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>キャンセル</Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(plan)}>編集</Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              disabled={deleteMutation.isPending}
-                              onClick={() => handleDeleteTap(plan.id)}
-                              onTouchEnd={(e) => {
-                                e.preventDefault();
-                                handleDeleteTap(plan.id);
-                              }}
-                            >
-                              削除
-                            </Button>
-                          </>
-                        )}
+                        <Button size="sm" variant="outline" onClick={() => openEditPlanModal(plan)}>編集</Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => handleDeleteTap(plan.id)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleDeleteTap(plan.id);
+                          }}
+                        >
+                          削除
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -219,6 +332,117 @@ export default function WorkPlanListPage() {
           )}
         </CardContent>
       </Card>
+
+      <FormModal
+        open={planModalOpen}
+        onOpenChange={(open) => {
+          if (!open) closePlanModal();
+        }}
+        title="作業予定を編集"
+        description=""
+        onCancel={closePlanModal}
+        onSave={() => {
+          void savePlan();
+        }}
+        saveLabel="更新"
+        isSaving={updateMutation.isPending}
+      >
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-1">
+            <div className="space-y-1.5">
+              <Label>予定日</Label>
+              <Input type="date" value={planForm.planDate} onChange={(e) => setPlanForm({ ...planForm, planDate: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-1">
+            <div className="space-y-1.5">
+              <Label>顧客</Label>
+              <Select value={planForm.customerId} onValueChange={(value) => setPlanForm({ ...planForm, customerId: value, systemId: "", workNumberId: "" })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="顧客を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>システム</Label>
+              <Select
+                value={toLookupSelectValue(planForm.systemId)}
+                onValueChange={(value) => setPlanForm((prev) => applySystemSelection(prev, value))}
+                disabled={!planForm.customerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="システムを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  {filteredSystems.map((system) => (
+                    <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>工番</Label>
+              <Select
+                value={toLookupSelectValue(planForm.workNumberId)}
+                onValueChange={(value) => setPlanForm((prev) => applyWorkNumberSelection(prev, value))}
+                disabled={!planForm.customerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="工番を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  {filteredWorkNumbers.map((workNumber) => (
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.systemName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>作業区分</Label>
+              <Select value={toLookupSelectValue(planForm.workTypeId)} onValueChange={(value) => setPlanForm({ ...planForm, workTypeId: value === EMPTY_LOOKUP_SELECT_VALUE ? "" : value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="作業区分を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  {workTypes.map((workType) => (
+                    <SelectItem key={workType.id} value={workType.id}>{workType.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>予定時間</Label>
+              <Input type="number" min="0" step="0.25" value={planForm.plannedHours} onChange={(e) => setPlanForm({ ...planForm, plannedHours: e.target.value })} />
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>案件</Label>
+              <div className="flex h-10 items-center gap-2">
+                <Checkbox checked={planForm.isProject} onCheckedChange={(checked) => setPlanForm({ ...planForm, isProject: checked === true })} />
+                <span className="text-sm">案件</span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>作業内容</Label>
+            <Textarea value={planForm.workDescription} onChange={(e) => setPlanForm({ ...planForm, workDescription: e.target.value })} rows={4} />
+          </div>
+          {planSubmitError && <p className="text-sm text-destructive">登録できませんでした: {planSubmitError}</p>}
+        </div>
+      </FormModal>
 
       <ConfirmDialog
         open={deleteTargetId !== null}
