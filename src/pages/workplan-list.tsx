@@ -138,11 +138,11 @@ export default function WorkPlanListPage() {
     return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
   }, [planForm.customerId, systems, workNumbers]);
 
-  const workNumberDisplayMap = useMemo(
+  const workNumberNameMap = useMemo(
     () => new Map(
       workNumbers.map((workNumber) => [
         workNumber.id,
-        workNumber.systemName || workNumber.workNumber || "",
+        workNumber.workNumberName || workNumber.workNumber || "",
       ]),
     ),
     [workNumbers],
@@ -150,7 +150,7 @@ export default function WorkPlanListPage() {
 
   const resolveSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
-    || workNumberDisplayMap.get(plan.workNumberId)
+    || workNumberNameMap.get(plan.workNumberId)
     || plan.workNumber
     || "―";
 
@@ -401,7 +401,7 @@ export default function WorkPlanListPage() {
                 <SelectContent>
                   <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
                   {filteredWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.systemName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

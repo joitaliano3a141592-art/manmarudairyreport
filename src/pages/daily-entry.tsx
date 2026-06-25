@@ -330,23 +330,23 @@ export default function DailyEntryPage() {
     },
     [planForm.customerId, systems, workNumbers],
   );
-  const workNumberDisplayMap = useMemo(
+  const workNumberNameMap = useMemo(
     () => new Map(
       workNumbers.map((workNumber) => [
         workNumber.id,
-        workNumber.systemName || workNumber.workNumber || "",
+        workNumber.workNumberName || workNumber.workNumber || "",
       ]),
     ),
     [workNumbers],
   );
   const resolveReportRowSystemDisplayName = (row: ReportTableRow) =>
     row.systemName
-    || workNumberDisplayMap.get(row.workNumberId)
+    || workNumberNameMap.get(row.workNumberId)
     || row.workNumber
     || "―";
   const resolvePlanSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
-    || workNumberDisplayMap.get(plan.workNumberId)
+    || workNumberNameMap.get(plan.workNumberId)
     || plan.workNumber
     || "―";
   const totalWorkHours = useMemo(() => reports.reduce((sum, report) => sum + report.workHours, 0), [reports]);
@@ -1263,7 +1263,7 @@ export default function DailyEntryPage() {
                 <SelectContent>
                   <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
                   {filteredReportWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.systemName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1375,7 +1375,7 @@ export default function DailyEntryPage() {
                 <SelectContent>
                   <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
                   {filteredPlanWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.systemName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -122,6 +122,7 @@ import type {
 } from "@/types/sharepoint";
 
 const WORK_NUMBER_SYSTEM_ID_FIELD = "_x30b7__x30b9__x30c6__x30e0_ID";
+const WORK_NUMBER_NAME_FIELD = "WorkNumberName";
 
 function toNullableInteger(value: unknown): number | null {
   if (value == null || value === "") return null;
@@ -199,11 +200,14 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
         .map((item) => {
           const systemId = String(toNullableInteger(item.fields[WORK_NUMBER_SYSTEM_ID_FIELD]) ?? "");
           const linkedSystem = systemMap.get(systemId);
+          const workNumber = formatWorkNumber(item.fields.Title);
+          const workNumberName = formatWorkNumber(item.fields.WorkNumberName) || workNumber;
           return {
             id: item.id,
-            workNumber: formatWorkNumber(item.fields.Title),
+            workNumber,
+            workNumberName,
             systemId,
-            systemName: linkedSystem?.name ?? item.fields.Title,
+            systemName: linkedSystem?.name ?? workNumber,
             sortOrder: linkedSystem?.sortOrder ?? 10,
           };
         })
@@ -211,6 +215,7 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
           (a, b) =>
             a.sortOrder - b.sortOrder
             || a.systemName.localeCompare(b.systemName, "ja")
+            || a.workNumberName.localeCompare(b.workNumberName, "ja")
             || a.workNumber.localeCompare(b.workNumber, "ja", { numeric: true }),
         );
     },
@@ -485,12 +490,13 @@ export function useUpdateWorkDay() {
 export function useAddWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { workNumber: string; systemId: number }) => {
+    mutationFn: async (fields: { workNumber: string; workNumberName: string; systemId: number }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
       return createListItem(SP_LISTS.workNumbers, {
         Title: fields.workNumber,
+        [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
       });
     },
@@ -512,13 +518,14 @@ export function useUpdateWorkNumber() {
       fields,
     }: {
       itemId: string;
-      fields: { workNumber: string; systemId: number };
+      fields: { workNumber: string; workNumberName: string; systemId: number };
     }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工番マスタリストが未設定です。");
       }
       return updateListItem(SP_LISTS.workNumbers, itemId, {
         Title: fields.workNumber,
+        [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
       });
     },

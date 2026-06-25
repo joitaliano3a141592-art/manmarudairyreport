@@ -92,9 +92,17 @@ export default function DashboardPage() {
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
     [workNumbers],
   );
+  const workNumberNameMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.workNumberName || workNumber.workNumber])),
+    [workNumbers],
+  );
 
-  const resolveSystemDisplayName = (report: WorkReport): string => {
+  const resolveSystemAggregationName = (report: WorkReport): string => {
     return report.systemName || workNumberSystemNameMap.get(report.workNumberId) || report.workNumber || "(未設定)";
+  };
+
+  const resolveSystemTableDisplayName = (report: WorkReport): string => {
+    return report.systemName || workNumberNameMap.get(report.workNumberId) || report.workNumber || "(未設定)";
   };
 
   const uniqueUsers = useMemo(
@@ -251,7 +259,7 @@ export default function DashboardPage() {
   const systemStackData = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
     filteredReports.forEach((report: WorkReport) => {
-      const system = resolveSystemDisplayName(report);
+      const system = resolveSystemAggregationName(report);
       if (!map.has(system)) {
         map.set(system, new Map());
       }
@@ -377,7 +385,7 @@ export default function DashboardPage() {
       report.reportDate,
       report.userName,
       report.customerName,
-      resolveSystemDisplayName(report),
+      resolveSystemAggregationName(report),
       report.workDescription,
       report.workTypeName,
       report.workHours,
@@ -806,7 +814,7 @@ export default function DashboardPage() {
                   <TableCell>{report.reportDate}</TableCell>
                   <TableCell>{report.userName}</TableCell>
                   <TableCell>{report.customerName}</TableCell>
-                  <TableCell>{resolveSystemDisplayName(report)}</TableCell>
+                  <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
                   <TableCell className="max-w-xs truncate" title={report.workDescription}>
                     {report.workDescription}
                   </TableCell>

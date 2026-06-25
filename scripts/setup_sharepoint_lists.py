@@ -199,12 +199,25 @@ def ensure_text_column(site_id: str, list_id: str, name: str, display_name: str,
 
 def ensure_number_column(site_id: str, list_id: str, name: str, display_name: str, cols: dict, *, required: bool = False):
     if name in cols:
-        print(f"[SKIP] Column exists: {name}")
+        column = cols[name]
+        patch: dict[str, object] = {}
+        if column.get("displayName") != display_name:
+            patch["displayName"] = display_name
+        if column.get("required") != required:
+            patch["required"] = required
+        if column.get("enforceUniqueValues"):
+            patch["enforceUniqueValues"] = False
+        if patch:
+            graph_patch(f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}", patch)
+            print(f"[UPDATE] Column settings: {name} -> {patch}")
+        else:
+            print(f"[SKIP] Column exists: {name}")
         return
     body = {
         "name": name,
         "displayName": display_name,
         "required": required,
+        "enforceUniqueValues": False,
         "number": {"decimalPlaces": "one"},
     }
     graph_post(f"/sites/{site_id}/lists/{list_id}/columns", body)
@@ -357,6 +370,7 @@ def main():
     # 工番マスタ
     worknumber_cols = get_columns(site_id, worknumber_list_id)
     delete_column(site_id, worknumber_list_id, "WorkNumber", worknumber_cols)
+    ensure_text_column(site_id, worknumber_list_id, "WorkNumberName", "工番名", worknumber_cols)
     ensure_number_column(site_id, worknumber_list_id, "_x30b7__x30b9__x30c6__x30e0_ID", "システムID", worknumber_cols, required=True)
 
     # 作業種別マスタ

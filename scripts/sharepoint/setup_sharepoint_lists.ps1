@@ -39,6 +39,28 @@ function Ensure-Field {
     return
   }
 
+  function Set-FieldUniqueConstraint {
+    param(
+      [string]$ListTitle,
+      [string]$InternalName,
+      [bool]$EnforceUniqueValues
+    )
+
+    $field = Get-PnPField -List $ListTitle -Identity $InternalName -ErrorAction SilentlyContinue
+    if ($null -eq $field) {
+      Write-Host "[SKIP] Field not found: $ListTitle.$InternalName"
+      return
+    }
+
+    if ([bool]$field.EnforceUniqueValues -eq $EnforceUniqueValues) {
+      Write-Host "[SKIP] Unique constraint unchanged: $ListTitle.$InternalName"
+      return
+    }
+
+    Write-Host "[UPDATE] Unique constraint: $ListTitle.$InternalName -> $EnforceUniqueValues"
+    Set-PnPField -List $ListTitle -Identity $InternalName -Values @{ EnforceUniqueValues = $EnforceUniqueValues } | Out-Null
+  }
+
   Write-Host "[CREATE] Field: $ListTitle.$InternalName ($Type)"
   Add-PnPField -List $ListTitle -DisplayName $DisplayName -InternalName $InternalName -Type $Type -Required:$Required -AddToDefaultView:$false | Out-Null
 }
@@ -141,7 +163,9 @@ Ensure-Field -ListTitle "システムマスタ" -InternalName "Description" -Dis
 
 Write-Host "[STEP] Ensure columns: 工番マスタ"
 Remove-FieldIfExists -ListTitle "工番マスタ" -InternalName "WorkNumber"
+Ensure-Field -ListTitle "工番マスタ" -InternalName "WorkNumberName" -DisplayName "工番名" -Type "Text"
 Ensure-Field -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -DisplayName "システムID" -Type "Number" -Required $true
+Set-FieldUniqueConstraint -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -EnforceUniqueValues $false
 
 Write-Host "[STEP] Ensure columns: 作業種別マスタ"
 Ensure-ChoiceField -ListTitle "作業種別マスタ" -InternalName "Category" -DisplayName "カテゴリ" -Choices @("開発", "保守", "運用", "会議", "その他")

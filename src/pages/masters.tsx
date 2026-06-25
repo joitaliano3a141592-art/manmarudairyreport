@@ -26,7 +26,11 @@ type SystemFormData = {
   customerId: string;
   description: string;
   sortOrder: number;
-  workNumber: string;
+  workNumbers: Array<{
+    id?: string;
+    workNumber: string;
+    workNumberName: string;
+  }>;
 };
 
 type WorkTypeFormData = {
@@ -70,7 +74,7 @@ export default function MastersPage() {
 
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingSystem, setEditingSystem] = useState<System | null>(null);
-  const [editingWorkNumber, setEditingWorkNumber] = useState<WorkNumber | null>(null);
+  const [editingWorkNumbers, setEditingWorkNumbers] = useState<WorkNumber[]>([]);
   const [editingWorkType, setEditingWorkType] = useState<WorkType | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const actionLoadingMessage = addCustomer.isPending
@@ -128,11 +132,17 @@ export default function MastersPage() {
   const closeSystemDialog = () => {
     setSystemDialog(false);
     setEditingSystem(null);
-    setEditingWorkNumber(null);
+    setEditingWorkNumbers([]);
   };
 
   const handleSaveSystem = async (data: SystemFormData) => {
-    const workNumberText = data.workNumber.trim();
+    const normalizedWorkNumbers = data.workNumbers
+      .map((item) => ({
+        id: item.id,
+        workNumber: item.workNumber.trim(),
+        workNumberName: item.workNumberName.trim(),
+      }))
+      .filter((item) => item.workNumber || item.workNumberName);
 
     const systemFields = {
       Title: data.name,
@@ -152,37 +162,53 @@ export default function MastersPage() {
           )
         : Number((await addSystem.mutateAsync(systemFields)).id);
 
-      if (editingWorkNumber && !workNumberText) {
+      const nextWorkNumberIds = new Set(
+        normalizedWorkNumbers
+          .map((item) => item.id)
+          .filter((item): item is string => !!item),
+      );
+
+      for (const existingWorkNumber of editingWorkNumbers) {
+        if (nextWorkNumberIds.has(existingWorkNumber.id)) {
+          continue;
+        }
         try {
-          await deleteWorkNumber.mutateAsync(editingWorkNumber.id);
+          await deleteWorkNumber.mutateAsync(existingWorkNumber.id);
         } catch (error) {
           if (!isGraphItemNotFoundError(error)) {
             throw error;
           }
         }
-      } else if (editingWorkNumber && workNumberText) {
-        try {
-          await updateWorkNumber.mutateAsync({
-            itemId: editingWorkNumber.id,
-            fields: {
-              workNumber: workNumberText,
+      }
+
+      for (const workNumber of normalizedWorkNumbers) {
+        if (workNumber.id) {
+          try {
+            await updateWorkNumber.mutateAsync({
+              itemId: workNumber.id,
+              fields: {
+                workNumber: workNumber.workNumber,
+                workNumberName: workNumber.workNumberName,
+                systemId,
+              },
+            });
+          } catch (error) {
+            if (!isGraphItemNotFoundError(error)) {
+              throw error;
+            }
+            await addWorkNumber.mutateAsync({
+              workNumber: workNumber.workNumber,
+              workNumberName: workNumber.workNumberName,
               systemId,
-            },
-          });
-        } catch (error) {
-          if (!isGraphItemNotFoundError(error)) {
-            throw error;
+            });
           }
+        } else {
           await addWorkNumber.mutateAsync({
-            workNumber: workNumberText,
+            workNumber: workNumber.workNumber,
+            workNumberName: workNumber.workNumberName,
             systemId,
           });
         }
-      } else if (workNumberText) {
-        await addWorkNumber.mutateAsync({
-          workNumber: workNumberText,
-          systemId,
-        });
       }
 
       closeSystemDialog();
@@ -325,21 +351,21 @@ export default function MastersPage() {
                     setSystemDialog(open);
                     if (!open) {
                       setEditingSystem(null);
-                      setEditingWorkNumber(null);
+                      setEditingWorkNumbers([]);
                     }
                   }}
                 >
                   <DialogTrigger asChild>
-                    <Button onClick={() => { setEditingSystem(null); setEditingWorkNumber(null); }}>新規追加</Button>
+                    <Button onClick={() => { setEditingSystem(null); setEditingWorkNumbers([]); }}>新規追加</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-3xl">
                     <DialogHeader>
                       <DialogTitle>{editingSystem ? "システム編集" : "システム追加"}</DialogTitle>
                     </DialogHeader>
                     <SystemForm
-                      key={`${editingSystem?.id ?? "new"}-${editingWorkNumber?.id ?? "new"}`}
+                      key={`${editingSystem?.id ?? "new"}-${editingWorkNumbers.map((item) => item.id).join("-")}`}
                       system={editingSystem}
-                      workNumber={editingWorkNumber}
+                      workNumbers={editingWorkNumbers}
                       customers={customers}
                       onSave={handleSaveSystem}
                       onCancel={closeSystemDialog}
@@ -356,23 +382,45 @@ export default function MastersPage() {
                     <TableHead>システム名</TableHead>
                     <TableHead>所有顧客</TableHead>
                     <TableHead>工番</TableHead>
+                    <TableHead>工番名</TableHead>
                     <TableHead>説明</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {systems.map((system) => {
-                    const workNumber = workNumbers.find((item) => item.systemId === system.id);
+                    const relatedWorkNumbers = workNumbers.filter((item) => item.systemId === system.id);
                     return (
                       <TableRow key={system.id}>
                         <TableCell className="text-center">{system.sortOrder}</TableCell>
                         <TableCell>{system.name}</TableCell>
                         <TableCell>{system.customerName}</TableCell>
-                        <TableCell>{workNumber?.workNumber ?? ""}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {relatedWorkNumbers.length > 0
+                              ? relatedWorkNumbers.map((workNumber) => (
+                                  <span key={workNumber.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">
+                                    {workNumber.workNumber}
+                                  </span>
+                                ))
+                              : "―"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {relatedWorkNumbers.length > 0
+                              ? relatedWorkNumbers.map((workNumber) => (
+                                  <span key={workNumber.id} className="rounded bg-sky-100 px-2 py-0.5 text-xs dark:bg-sky-950">
+                                    {workNumber.workNumberName}
+                                  </span>
+                                ))
+                              : "―"}
+                          </div>
+                        </TableCell>
                         <TableCell>{system.description}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setEditingWorkNumber(workNumber ?? null); setSystemDialog(true); }}>編集</Button>
+                            <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setEditingWorkNumbers(relatedWorkNumbers); setSystemDialog(true); }}>編集</Button>
                             <Button
                               size="sm"
                               variant="destructive"
@@ -472,6 +520,163 @@ export default function MastersPage() {
   );
 }
 
+type SystemWorkNumberInput = {
+  id?: string;
+  workNumber: string;
+  workNumberName: string;
+};
+
+function createEmptySystemWorkNumber(): SystemWorkNumberInput {
+  return {
+    workNumber: "",
+    workNumberName: "",
+  };
+}
+
+function SystemForm({
+  system,
+  workNumbers,
+  customers,
+  onSave,
+  onCancel,
+}: {
+  system: System | null;
+  workNumbers: WorkNumber[];
+  customers: Customer[];
+  onSave: (data: SystemFormData) => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState<SystemFormData>({
+    name: system?.name || "",
+    customerId: system?.customerId || "",
+    description: system?.description || "",
+    sortOrder: system?.sortOrder ?? 10,
+    workNumbers: workNumbers.map((workNumber) => ({
+      id: workNumber.id,
+      workNumber: workNumber.workNumber,
+      workNumberName: workNumber.workNumberName,
+    })),
+  });
+  const [submitError, setSubmitError] = useState("");
+
+  const updateWorkNumberRow = (index: number, nextRow: SystemWorkNumberInput) => {
+    setFormData((prev) => ({
+      ...prev,
+      workNumbers: prev.workNumbers.map((row, rowIndex) => (rowIndex === index ? nextRow : row)),
+    }));
+  };
+
+  const removeWorkNumberRow = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      workNumbers: prev.workNumbers.filter((_, rowIndex) => rowIndex !== index),
+    }));
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const normalizedWorkNumbers = formData.workNumbers
+          .map((item) => ({
+            ...item,
+            workNumber: item.workNumber.trim(),
+            workNumberName: item.workNumberName.trim(),
+          }))
+          .filter((item) => item.workNumber || item.workNumberName);
+
+        if (normalizedWorkNumbers.some((item) => !item.workNumber || !item.workNumberName)) {
+          setSubmitError("工番と工番名はセットで入力してください。");
+          return;
+        }
+
+        setSubmitError("");
+        onSave({ ...formData, workNumbers: normalizedWorkNumbers });
+      }}
+      className="space-y-4"
+    >
+      <div>
+        <Label htmlFor="sysName">システム名</Label>
+        <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="custId">所有顧客</Label>
+        <select id="custId" className="w-full p-2 border rounded" value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} required>
+          <option value="">顧客を選択</option>
+          {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="desc">説明</Label>
+        <Input id="desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+      </div>
+      <div>
+        <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
+        <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label>工番一覧</Label>
+            <p className="text-sm text-muted-foreground"></p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setSubmitError("");
+              setFormData((prev) => ({
+                ...prev,
+                workNumbers: [...prev.workNumbers, createEmptySystemWorkNumber()],
+              }));
+            }}
+          >
+            工番を追加
+          </Button>
+        </div>
+        {formData.workNumbers.length === 0 ? (
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            登録済みの工番はありません。
+          </div>
+        ) : (
+          formData.workNumbers.map((workNumber, index) => (
+            <div key={workNumber.id ?? `new-${index}`} className="rounded-md border p-3">
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <div>
+                  <Label htmlFor={`workNumber-${index}`}>工番</Label>
+                  <Input
+                    id={`workNumber-${index}`}
+                    value={workNumber.workNumber}
+                    onChange={(e) => updateWorkNumberRow(index, { ...workNumber, workNumber: e.target.value })}
+                    placeholder="工番を入力"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`workNumberName-${index}`}>工番名</Label>
+                  <Input
+                    id={`workNumberName-${index}`}
+                    value={workNumber.workNumberName}
+                    onChange={(e) => updateWorkNumberRow(index, { ...workNumber, workNumberName: e.target.value })}
+                    placeholder="工番名を入力"
+                  />
+                </div>
+                <Button type="button" variant="destructive" onClick={() => removeWorkNumberRow(index)}>
+                  削除
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      {submitError && <p className="text-sm text-destructive">{submitError}</p>}
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
+        <Button type="submit">保存</Button>
+      </div>
+    </form>
+  );
+}
+
 function CustomerForm({
   customer,
   onSave,
@@ -492,63 +697,6 @@ function CustomerForm({
       <div>
         <Label htmlFor="custSortOrder">表示順（小さいほど上位。99=最下位）</Label>
         <Input id="custSortOrder" type="number" min={1} max={999} value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} required />
-      </div>
-      <div className="flex gap-2 justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
-        <Button type="submit">保存</Button>
-      </div>
-    </form>
-  );
-}
-
-function SystemForm({
-  system,
-  workNumber,
-  customers,
-  onSave,
-  onCancel,
-}: {
-  system: System | null;
-  workNumber: WorkNumber | null;
-  customers: Customer[];
-  onSave: (data: SystemFormData) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    name: system?.name || "",
-    customerId: system?.customerId || "",
-    description: system?.description || "",
-    sortOrder: system?.sortOrder ?? 10,
-    workNumber: workNumber?.workNumber ?? "",
-  });
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-4">
-      <div>
-        <Label htmlFor="sysName">システム名</Label>
-        <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-      </div>
-      <div>
-        <Label htmlFor="workNumber">工番</Label>
-        <Input
-          id="workNumber"
-          value={formData.workNumber}
-          onChange={(e) => setFormData({ ...formData, workNumber: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label htmlFor="custId">所有顧客</Label>
-        <select id="custId" className="w-full p-2 border rounded" value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} required>
-          <option value="">顧客を選択</option>
-          {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
-        </select>
-      </div>
-      <div>
-        <Label htmlFor="desc">説明</Label>
-        <Input id="desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-      </div>
-      <div>
-        <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
-        <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
