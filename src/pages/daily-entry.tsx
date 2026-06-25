@@ -950,7 +950,15 @@ export default function DailyEntryPage() {
                     const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
 
                     return (
-                      <TableRow key={row.rowKey}>
+                      <TableRow
+                        key={row.rowKey}
+                        onDoubleClick={() => {
+                          if (!isEditing) {
+                            openEditReportModal(row);
+                          }
+                        }}
+                        className={!isEditing ? "cursor-pointer" : undefined}
+                      >
                         <TableCell className="whitespace-nowrap">
                           <span
                             className={row.source === "report"
@@ -1090,7 +1098,15 @@ export default function DailyEntryPage() {
                     const systemOptions = systems.filter((system) => !activeCustomerId || system.customerId === activeCustomerId);
 
                     return (
-                      <TableRow key={plan.id}>
+                      <TableRow
+                        key={plan.id}
+                        onDoubleClick={() => {
+                          if (!isEditing) {
+                            openEditPlanModal(plan);
+                          }
+                        }}
+                        className={!isEditing ? "cursor-pointer" : undefined}
+                      >
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Input type="date" value={inlinePlanEdit.planDate} onChange={(e) => setInlinePlanEdit({ ...inlinePlanEdit, planDate: e.target.value })} className="min-w-[130px]" />
                         ) : plan.planDate}</TableCell>

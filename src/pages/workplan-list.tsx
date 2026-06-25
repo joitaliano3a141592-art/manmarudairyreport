@@ -301,7 +301,7 @@ export default function WorkPlanListPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredPlans.map((plan) => (
-                    <TableRow key={plan.id}>
+                    <TableRow key={plan.id} onDoubleClick={() => openEditPlanModal(plan)} className="cursor-pointer">
                       <TableCell>{plan.planDate}</TableCell>
                       <TableCell>{plan.customerName}</TableCell>
                       <TableCell>{resolveSystemDisplayName(plan)}</TableCell>

@@ -317,7 +317,7 @@ export default function WorkReportListPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredReports.map((report) => (
-                    <TableRow key={report.id}>
+                    <TableRow key={report.id} onDoubleClick={() => openEditReportModal(report)} className="cursor-pointer">
                       <TableCell>{report.reportDate}</TableCell>
                       <TableCell>{report.customerName}</TableCell>
                       <TableCell>{resolveSystemDisplayName(report)}</TableCell>

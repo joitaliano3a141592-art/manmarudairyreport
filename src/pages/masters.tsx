@@ -129,6 +129,11 @@ export default function MastersPage() {
     setDeleteTarget({ type: "customer", id, label: "この顧客を削除しますか？" });
   };
 
+  const openEditCustomerDialog = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setCustomerDialog(true);
+  };
+
   const closeSystemDialog = () => {
     setSystemDialog(false);
     setEditingSystem(null);
@@ -221,6 +226,12 @@ export default function MastersPage() {
     setDeleteTarget({ type: "system", id, label: "このシステムを削除しますか？" });
   };
 
+  const openEditSystemDialog = (system: System, relatedWorkNumbers: WorkNumber[]) => {
+    setEditingSystem(system);
+    setEditingWorkNumbers(relatedWorkNumbers);
+    setSystemDialog(true);
+  };
+
   const handleSaveWorkType = (data: WorkTypeFormData) => {
     if (editingWorkType) {
       updateWorkType.mutate({
@@ -236,6 +247,11 @@ export default function MastersPage() {
 
   const handleDeleteWorkType = (id: string) => {
     setDeleteTarget({ type: "workType", id, label: "この作業区分を削除しますか？" });
+  };
+
+  const openEditWorkTypeDialog = (workType: WorkType) => {
+    setEditingWorkType(workType);
+    setWorkTypeDialog(true);
   };
 
   const confirmDelete = () => {
@@ -315,12 +331,12 @@ export default function MastersPage() {
                   </TableHeader>
                   <TableBody>
                     {customers.map((customer) => (
-                      <TableRow key={customer.id}>
+                      <TableRow key={customer.id} onDoubleClick={() => openEditCustomerDialog(customer)} className="cursor-pointer">
                         <TableCell className="text-center">{customer.sortOrder}</TableCell>
                         <TableCell>{customer.name}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => { setEditingCustomer(customer); setCustomerDialog(true); }}>編集</Button>
+                            <Button size="sm" variant="outline" onClick={() => openEditCustomerDialog(customer)}>編集</Button>
                             <Button
                               size="sm"
                               variant="destructive"
@@ -394,7 +410,7 @@ export default function MastersPage() {
                   {systems.map((system) => {
                     const relatedWorkNumbers = workNumbers.filter((item) => item.systemId === system.id);
                     return (
-                      <TableRow key={system.id}>
+                      <TableRow key={system.id} onDoubleClick={() => openEditSystemDialog(system, relatedWorkNumbers)} className="cursor-pointer">
                         <TableCell className="text-center">{system.sortOrder}</TableCell>
                         <TableCell>{system.name}</TableCell>
                         <TableCell>{system.customerName}</TableCell>
@@ -423,7 +439,7 @@ export default function MastersPage() {
                         <TableCell>{system.description}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => { setEditingSystem(system); setEditingWorkNumbers(relatedWorkNumbers); setSystemDialog(true); }}>編集</Button>
+                            <Button size="sm" variant="outline" onClick={() => openEditSystemDialog(system, relatedWorkNumbers)}>編集</Button>
                             <Button
                               size="sm"
                               variant="destructive"
@@ -481,13 +497,13 @@ export default function MastersPage() {
                   </TableHeader>
                   <TableBody>
                     {workTypes.map((workType) => (
-                      <TableRow key={workType.id}>
+                      <TableRow key={workType.id} onDoubleClick={() => openEditWorkTypeDialog(workType)} className="cursor-pointer">
                         <TableCell className="text-center">{workType.sortOrder}</TableCell>
                         <TableCell>{workType.name}</TableCell>
                         <TableCell>{workType.category}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => { setEditingWorkType(workType); setWorkTypeDialog(true); }}>編集</Button>
+                            <Button size="sm" variant="outline" onClick={() => openEditWorkTypeDialog(workType)}>編集</Button>
                             <Button
                               size="sm"
                               variant="destructive"
