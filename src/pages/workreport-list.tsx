@@ -72,7 +72,7 @@ function applySystemSelection<T extends { systemId: string; workNumberId: string
   return {
     ...prev,
     systemId,
-    workNumberId: systemId ? "" : prev.workNumberId,
+    workNumberId: "",
   };
 }
 
@@ -80,7 +80,6 @@ function applyWorkNumberSelection<T extends { systemId: string; workNumberId: st
   const workNumberId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
   return {
     ...prev,
-    systemId: workNumberId ? "" : prev.systemId,
     workNumberId,
   };
 }
@@ -131,29 +130,23 @@ export default function WorkReportListPage() {
     [activeSystems, reportForm.customerId],
   );
 
-  const filteredWorkNumbers = useMemo(() => {
-    if (!reportForm.customerId) {
-      return [];
-    }
-
-    const customerSystemIds = new Set(
-      activeSystems
-        .filter((system) => system.customerId === reportForm.customerId)
-        .map((system) => system.id),
-    );
-
-    return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
-  }, [activeSystems, reportForm.customerId, workNumbers]);
-
-  const workNumberNameMap = useMemo(
-    () => new Map(
-      workNumbers.map((workNumber) => [
-        workNumber.id,
-        workNumber.workNumberName || workNumber.workNumber || "",
-      ]),
-    ),
+  const workNumberMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber])),
     [workNumbers],
   );
+  const filteredWorkNumbers = useMemo(() => {
+    if (!reportForm.systemId) {
+      return [];
+    }
+    return workNumbers.filter((workNumber) => workNumber.systemId === reportForm.systemId);
+  }, [reportForm.systemId, workNumbers]);
+
+  const workNumberSystemNameMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
+    [workNumbers],
+  );
+  const resolveLinkedSystemId = (systemId: string, workNumberId: string) =>
+    systemId || workNumberMap.get(workNumberId)?.systemId || "";
 
   const totalWorkHours = useMemo(
     () => filteredReports.reduce((sum, report) => sum + report.workHours, 0),
@@ -162,8 +155,7 @@ export default function WorkReportListPage() {
 
   const resolveSystemDisplayName = (report: WorkReport) =>
     report.systemName
-    || workNumberNameMap.get(report.workNumberId)
-    || report.workNumber
+    || workNumberSystemNameMap.get(report.workNumberId)
     || "―";
 
   const closeReportModal = () => {
@@ -178,7 +170,7 @@ export default function WorkReportListPage() {
     setReportForm({
       reportDate: report.reportDate,
       customerId: report.customerId,
-      systemId: report.workNumberId ? "" : report.systemId,
+      systemId: resolveLinkedSystemId(report.systemId, report.workNumberId),
       workNumberId: report.workNumberId,
       workTypeId: report.workTypeId,
       workDescription: report.workDescription,
@@ -192,7 +184,7 @@ export default function WorkReportListPage() {
 
   const saveReport = async () => {
     if (!editingReportId) return;
-    if (!reportForm.customerId || !reportForm.workTypeId) {
+    if (!reportForm.customerId || !reportForm.systemId || !reportForm.workTypeId) {
       setReportSubmitError("必須項目を入力してください。");
       return;
     }
@@ -397,18 +389,17 @@ export default function WorkReportListPage() {
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
-                value={toLookupSelectValue(reportForm.systemId)}
+                value={reportForm.systemId}
                 onValueChange={(value) => setReportForm((prev) => applySystemSelection(prev, value))}
                 disabled={!reportForm.customerId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="システムを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
-                  {filteredSystems.map((system) => (
-                    <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                  ))}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSystems.map((system) => (
+                      <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -417,7 +408,7 @@ export default function WorkReportListPage() {
               <Select
                 value={toLookupSelectValue(reportForm.workNumberId)}
                 onValueChange={(value) => setReportForm((prev) => applyWorkNumberSelection(prev, value))}
-                disabled={!reportForm.customerId}
+                disabled={!reportForm.systemId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="工番を選択" />

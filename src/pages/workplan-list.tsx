@@ -71,7 +71,7 @@ function applySystemSelection<T extends { systemId: string; workNumberId: string
   return {
     ...prev,
     systemId,
-    workNumberId: systemId ? "" : prev.workNumberId,
+    workNumberId: "",
   };
 }
 
@@ -79,7 +79,6 @@ function applyWorkNumberSelection<T extends { systemId: string; workNumberId: st
   const workNumberId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
   return {
     ...prev,
-    systemId: workNumberId ? "" : prev.systemId,
     workNumberId,
   };
 }
@@ -129,33 +128,26 @@ export default function WorkPlanListPage() {
   );
 
   const filteredWorkNumbers = useMemo(() => {
-    if (!planForm.customerId) {
+    if (!planForm.systemId) {
       return [];
     }
+    return workNumbers.filter((workNumber) => workNumber.systemId === planForm.systemId);
+  }, [planForm.systemId, workNumbers]);
 
-    const customerSystemIds = new Set(
-      activeSystems
-        .filter((system) => system.customerId === planForm.customerId)
-        .map((system) => system.id),
-    );
-
-    return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
-  }, [activeSystems, planForm.customerId, workNumbers]);
-
-  const workNumberNameMap = useMemo(
-    () => new Map(
-      workNumbers.map((workNumber) => [
-        workNumber.id,
-        workNumber.workNumberName || workNumber.workNumber || "",
-      ]),
-    ),
+  const workNumberMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber])),
     [workNumbers],
   );
+  const workNumberSystemNameMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
+    [workNumbers],
+  );
+  const resolveLinkedSystemId = (systemId: string, workNumberId: string) =>
+    systemId || workNumberMap.get(workNumberId)?.systemId || "";
 
   const resolveSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
-    || workNumberNameMap.get(plan.workNumberId)
-    || plan.workNumber
+    || workNumberSystemNameMap.get(plan.workNumberId)
     || "―";
 
   const closePlanModal = () => {
@@ -170,7 +162,7 @@ export default function WorkPlanListPage() {
     setPlanForm({
       planDate: plan.planDate,
       customerId: plan.customerId,
-      systemId: plan.workNumberId ? "" : plan.systemId,
+      systemId: resolveLinkedSystemId(plan.systemId, plan.workNumberId),
       workNumberId: plan.workNumberId,
       workTypeId: plan.workTypeId,
       workDescription: plan.workDescription,
@@ -183,7 +175,7 @@ export default function WorkPlanListPage() {
 
   const savePlan = async () => {
     if (!editingPlanId) return;
-    if (!planForm.customerId) {
+    if (!planForm.customerId || !planForm.systemId) {
       setPlanSubmitError("必須項目を入力してください。");
       return;
     }
@@ -379,18 +371,17 @@ export default function WorkPlanListPage() {
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
-                value={toLookupSelectValue(planForm.systemId)}
+                value={planForm.systemId}
                 onValueChange={(value) => setPlanForm((prev) => applySystemSelection(prev, value))}
                 disabled={!planForm.customerId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="システムを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
-                  {filteredSystems.map((system) => (
-                    <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                  ))}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSystems.map((system) => (
+                      <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -399,7 +390,7 @@ export default function WorkPlanListPage() {
               <Select
                 value={toLookupSelectValue(planForm.workNumberId)}
                 onValueChange={(value) => setPlanForm((prev) => applyWorkNumberSelection(prev, value))}
-                disabled={!planForm.customerId}
+                disabled={!planForm.systemId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="工番を選択" />

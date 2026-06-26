@@ -173,21 +173,18 @@ function toLookupSelectValue(value: string): string {
 
 function applySystemSelection<T extends { systemId: string; workNumberId: string; isProject: boolean }>(prev: T, rawValue: string): T {
   const systemId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
-  const workNumberId = systemId ? "" : prev.workNumberId;
   return {
     ...prev,
     systemId,
-    workNumberId,
-    isProject: !!workNumberId,
+    workNumberId: "",
+    isProject: false,
   };
 }
 
 function applyWorkNumberSelection<T extends { systemId: string; workNumberId: string; isProject: boolean }>(prev: T, rawValue: string): T {
   const workNumberId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
-  const systemId = workNumberId ? "" : prev.systemId;
   return {
     ...prev,
-    systemId,
     workNumberId,
     isProject: !!workNumberId,
   };
@@ -311,25 +308,31 @@ export default function DailyEntryPage() {
   const activeSystems = useMemo(() => systems.filter((system) => !system.isDisabled), [systems]);
   const filteredReportSystems = activeSystems.filter((system) => !reportForm.customerId || system.customerId === reportForm.customerId);
   const filteredPlanSystems = activeSystems.filter((system) => !planForm.customerId || system.customerId === planForm.customerId);
+  const workNumberMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber])),
+    [workNumbers],
+  );
   const filteredReportWorkNumbers = useMemo(
     () => {
-      if (!reportForm.customerId) {
+      if (!reportForm.systemId) {
         return [];
       }
-      const customerSystemIds = new Set(activeSystems.filter((system) => system.customerId === reportForm.customerId).map((system) => system.id));
-      return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+      return workNumbers.filter((workNumber) => workNumber.systemId === reportForm.systemId);
     },
-    [activeSystems, reportForm.customerId, workNumbers],
+    [reportForm.systemId, workNumbers],
   );
   const filteredPlanWorkNumbers = useMemo(
     () => {
-      if (!planForm.customerId) {
+      if (!planForm.systemId) {
         return [];
       }
-      const customerSystemIds = new Set(activeSystems.filter((system) => system.customerId === planForm.customerId).map((system) => system.id));
-      return workNumbers.filter((workNumber) => customerSystemIds.has(workNumber.systemId));
+      return workNumbers.filter((workNumber) => workNumber.systemId === planForm.systemId);
     },
-    [activeSystems, planForm.customerId, workNumbers],
+    [planForm.systemId, workNumbers],
+  );
+  const workNumberSystemNameMap = useMemo(
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
+    [workNumbers],
   );
   const workNumberNameMap = useMemo(
     () => new Map(
@@ -340,14 +343,22 @@ export default function DailyEntryPage() {
     ),
     [workNumbers],
   );
+  const resolveLinkedSystemId = (systemId: string, workNumberId: string) =>
+    systemId || workNumberMap.get(workNumberId)?.systemId || "";
   const resolveReportRowSystemDisplayName = (row: ReportTableRow) =>
     row.systemName
-    || workNumberNameMap.get(row.workNumberId)
+    || workNumberSystemNameMap.get(row.workNumberId)
+    || "―";
+  const resolveReportRowWorkNumberDisplayName = (row: ReportTableRow) =>
+    workNumberNameMap.get(row.workNumberId)
     || row.workNumber
     || "―";
   const resolvePlanSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
-    || workNumberNameMap.get(plan.workNumberId)
+    || workNumberSystemNameMap.get(plan.workNumberId)
+    || "―";
+  const resolvePlanWorkNumberDisplayName = (plan: WorkPlan) =>
+    workNumberNameMap.get(plan.workNumberId)
     || plan.workNumber
     || "―";
   const totalWorkHours = useMemo(() => reports.reduce((sum, report) => sum + report.workHours, 0), [reports]);
@@ -502,7 +513,7 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === inlineEdit.customerId);
-    const workNumber = filteredReportWorkNumbers.find((item) => item.id === inlineEdit.workNumberId);
+    const workNumber = workNumberMap.get(inlineEdit.workNumberId);
     const systemLookupId = inlineEdit.systemId ? Number(inlineEdit.systemId) : null;
     const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
 
@@ -569,7 +580,7 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === inlinePlanEdit.customerId);
-    const workNumber = filteredPlanWorkNumbers.find((item) => item.id === inlinePlanEdit.workNumberId);
+    const workNumber = workNumberMap.get(inlinePlanEdit.workNumberId);
     const systemLookupId = inlinePlanEdit.systemId ? Number(inlinePlanEdit.systemId) : null;
     const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
 
@@ -623,7 +634,7 @@ export default function DailyEntryPage() {
   };
 
   const saveReport = async () => {
-    if (!reportForm.customerId || !reportForm.workTypeId) {
+    if (!reportForm.customerId || !reportForm.systemId || !reportForm.workTypeId) {
       setReportSubmitError("必須項目を入力してください。");
       return;
     }
@@ -674,7 +685,7 @@ export default function DailyEntryPage() {
   };
 
   const savePlan = async () => {
-    if (!planForm.customerId || !planForm.workTypeId) {
+    if (!planForm.customerId || !planForm.systemId || !planForm.workTypeId) {
       setPlanSubmitError("必須項目を入力してください。");
       return;
     }
@@ -758,7 +769,7 @@ export default function DailyEntryPage() {
     setReportForm({
       reportDate: row.reportDate,
       customerId: row.customerId,
-      systemId: row.workNumberId ? "" : row.systemId,
+      systemId: resolveLinkedSystemId(row.systemId, row.workNumberId),
       workNumberId: row.workNumberId,
       workTypeId: row.workTypeId,
       workDescription: row.workDescription,
@@ -783,7 +794,7 @@ export default function DailyEntryPage() {
     setPlanForm({
       planDate: plan.planDate,
       customerId: plan.customerId,
-      systemId: plan.workNumberId ? "" : plan.systemId,
+      systemId: resolveLinkedSystemId(plan.systemId, plan.workNumberId),
       workNumberId: plan.workNumberId,
       workTypeId: plan.workTypeId,
       workDescription: plan.workDescription,
@@ -935,6 +946,7 @@ export default function DailyEntryPage() {
                     <TableHead>報告日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
+                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead>作業内容</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
@@ -975,7 +987,7 @@ export default function DailyEntryPage() {
                           <Input type="date" value={inlineEdit.reportDate} onChange={(e) => setInlineEdit({ ...inlineEdit, reportDate: e.target.value })} className="min-w-[130px]" />
                         ) : row.reportDate}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
-                          <Select value={inlineEdit.customerId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, customerId: value, systemId: "" })}>
+                          <Select value={inlineEdit.customerId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, customerId: value, systemId: "", workNumberId: "", isProject: false })}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="顧客" />
                             </SelectTrigger>
@@ -987,7 +999,7 @@ export default function DailyEntryPage() {
                           </Select>
                         ) : row.customerName}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
-                          <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, systemId: value })} disabled={!inlineEdit.customerId}>
+                          <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlineEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="システム" />
                             </SelectTrigger>
@@ -998,6 +1010,27 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowSystemDisplayName(row)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select
+                            value={toLookupSelectValue(inlineEdit.workNumberId)}
+                            onValueChange={(value) => {
+                              setInlineEdit((prev) => prev ? applyWorkNumberSelection(prev, value) : prev);
+                            }}
+                            disabled={!inlineEdit.systemId}
+                          >
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="工番" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                              {workNumbers
+                                .filter((workNumber) => workNumber.systemId === inlineEdit.systemId)
+                                .map((workNumber) => (
+                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        ) : resolveReportRowWorkNumberDisplayName(row)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlineEdit.workTypeId} onValueChange={(value) => setInlineEdit({ ...inlineEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
@@ -1085,6 +1118,7 @@ export default function DailyEntryPage() {
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
+                    <TableHead>工番</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead>案件</TableHead>
@@ -1112,7 +1146,7 @@ export default function DailyEntryPage() {
                           <Input type="date" value={inlinePlanEdit.planDate} onChange={(e) => setInlinePlanEdit({ ...inlinePlanEdit, planDate: e.target.value })} className="min-w-[130px]" />
                         ) : plan.planDate}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
-                          <Select value={inlinePlanEdit.customerId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, customerId: value, systemId: "" })}>
+                          <Select value={inlinePlanEdit.customerId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, customerId: value, systemId: "", workNumberId: "", isProject: false })}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="顧客" />
                             </SelectTrigger>
@@ -1124,7 +1158,7 @@ export default function DailyEntryPage() {
                           </Select>
                         ) : plan.customerName}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
-                          <Select value={inlinePlanEdit.systemId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, systemId: value })} disabled={!inlinePlanEdit.customerId}>
+                          <Select value={inlinePlanEdit.systemId} onValueChange={(value) => setInlinePlanEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlinePlanEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">
                               <SelectValue placeholder="システム" />
                             </SelectTrigger>
@@ -1135,6 +1169,27 @@ export default function DailyEntryPage() {
                             </SelectContent>
                           </Select>
                         ) : resolvePlanSystemDisplayName(plan)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isEditing ? (
+                          <Select
+                            value={toLookupSelectValue(inlinePlanEdit.workNumberId)}
+                            onValueChange={(value) => {
+                              setInlinePlanEdit((prev) => prev ? applyWorkNumberSelection(prev, value) : prev);
+                            }}
+                            disabled={!inlinePlanEdit.systemId}
+                          >
+                            <SelectTrigger className="min-w-[140px]">
+                              <SelectValue placeholder="工番" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                              {workNumbers
+                                .filter((workNumber) => workNumber.systemId === inlinePlanEdit.systemId)
+                                .map((workNumber) => (
+                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        ) : resolvePlanWorkNumberDisplayName(plan)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlinePlanEdit.workTypeId} onValueChange={(value) => setInlinePlanEdit({ ...inlinePlanEdit, workTypeId: value })}>
                             <SelectTrigger className="min-w-[130px]">
@@ -1254,7 +1309,7 @@ export default function DailyEntryPage() {
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
-                value={toLookupSelectValue(reportForm.systemId)}
+                value={reportForm.systemId}
                 onValueChange={(value) => setReportForm((prev) => applySystemSelection(prev, value))}
                 disabled={!reportForm.customerId}
               >
@@ -1262,7 +1317,6 @@ export default function DailyEntryPage() {
                   <SelectValue placeholder="システムを選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
                   {filteredReportSystems.map((system) => (
                     <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
                   ))}
@@ -1276,7 +1330,7 @@ export default function DailyEntryPage() {
                 onValueChange={(value) => {
                   setReportForm((prev) => applyWorkNumberSelection(prev, value));
                 }}
-                disabled={!reportForm.customerId}
+                disabled={!reportForm.systemId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="工番を選択" />
@@ -1366,7 +1420,7 @@ export default function DailyEntryPage() {
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
-                value={toLookupSelectValue(planForm.systemId)}
+                value={planForm.systemId}
                 onValueChange={(value) => setPlanForm((prev) => applySystemSelection(prev, value))}
                 disabled={!planForm.customerId}
               >
@@ -1374,7 +1428,6 @@ export default function DailyEntryPage() {
                   <SelectValue placeholder="システムを選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
                   {filteredPlanSystems.map((system) => (
                     <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
                   ))}
@@ -1388,7 +1441,7 @@ export default function DailyEntryPage() {
                 onValueChange={(value) => {
                   setPlanForm((prev) => applyWorkNumberSelection(prev, value));
                 }}
-                disabled={!planForm.customerId}
+                disabled={!planForm.systemId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="工番を選択" />
