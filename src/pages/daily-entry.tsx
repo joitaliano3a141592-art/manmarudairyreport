@@ -372,23 +372,25 @@ export default function DailyEntryPage() {
   );
   const reportTableRows = useMemo<ReportTableRow[]>(() => {
     const buildKey = (parts: Array<string | null | undefined>) => parts.map((part) => (part == null ? "__missing__" : part)).join("|");
+    const buildPlanConversionKey = (item: {
+      reportDate?: string;
+      planDate?: string;
+      customerId: string;
+      systemId: string;
+      workTypeId: string;
+      workNumberId: string;
+    }) => buildKey([
+      item.reportDate ?? item.planDate ?? "",
+      item.customerId,
+      resolveLinkedSystemId(item.systemId, item.workNumberId),
+      item.workTypeId,
+      item.workNumberId,
+    ]);
     const convertedPlanKeys = new Set(
-      reports.map((report) => buildKey([
-        report.reportDate,
-        report.customerId,
-        report.systemId,
-        report.workTypeId,
-        report.workNumberId,
-      ])),
+      reports.map((report) => buildPlanConversionKey(report)),
     );
     const visibleTodayPlans = todayPlans.filter((plan) => {
-      const key = buildKey([
-        plan.planDate,
-        plan.customerId,
-        plan.systemId,
-        plan.workTypeId,
-        plan.workNumberId,
-      ]);
+      const key = buildPlanConversionKey(plan);
       return !convertedPlanKeys.has(key);
     });
 
@@ -396,13 +398,7 @@ export default function DailyEntryPage() {
       rowKey: `report-${report.id}`,
       source: "report",
       sourceId: report.id,
-      displayType: convertedPlanKeys.has(buildKey([
-        report.reportDate,
-        report.customerId,
-        report.systemId,
-        report.workTypeId,
-        report.workNumberId,
-      ]))
+      displayType: convertedPlanKeys.has(buildPlanConversionKey(report))
         && report.plannedHours > 0
         ? "予定"
         : "予定外",
@@ -448,7 +444,7 @@ export default function DailyEntryPage() {
       }
       return left.rowKey.localeCompare(right.rowKey);
     });
-  }, [reports, todayPlans]);
+  }, [reports, resolveLinkedSystemId, todayPlans]);
   const publishReportGroups = useMemo(() => {
     const groups = new Map<string, typeof reports>();
     for (const report of reports) {
