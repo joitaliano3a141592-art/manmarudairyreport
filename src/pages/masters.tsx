@@ -443,7 +443,7 @@ export default function MastersPage() {
                             {relatedWorkNumbers.length > 0
                               ? relatedWorkNumbers.map((workNumber) => (
                                   <span key={workNumber.id} className="rounded bg-sky-100 px-2 py-0.5 text-xs dark:bg-sky-950">
-                                    {workNumber.displayName}{workNumber.isDisabled ? " (無効)" : ""}
+                                    {workNumber.workNumberName}{workNumber.isDisabled ? " (無効)" : ""}
                                   </span>
                                 ))
                               : "―"}

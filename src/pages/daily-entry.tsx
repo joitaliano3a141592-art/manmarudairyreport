@@ -299,6 +299,10 @@ export default function DailyEntryPage() {
     () => workDayItems.find((item) => item.workDate === today && isCurrentUserRecord(item.userName)) ?? null,
     [workDayItems, currentUserKeys],
   );
+  const customerNameMap = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer.name])),
+    [customers],
+  );
 
   useEffect(() => {
     if (!currentWorkDay) {
@@ -360,6 +364,10 @@ export default function DailyEntryPage() {
     row.systemName
     || workNumberSystemNameMap.get(row.workNumberId)
     || "―";
+  const resolveReportRowCustomerDisplayName = (row: ReportTableRow) =>
+    customerNameMap.get(row.customerId)
+    || row.customerName
+    || "―";
   const resolveReportRowWorkNumberDisplayName = (row: ReportTableRow) =>
     workNumberNameMap.get(row.workNumberId)
     || row.workNumber
@@ -367,6 +375,10 @@ export default function DailyEntryPage() {
   const resolvePlanSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
     || workNumberSystemNameMap.get(plan.workNumberId)
+    || "―";
+  const resolvePlanCustomerDisplayName = (plan: WorkPlan) =>
+    customerNameMap.get(plan.customerId)
+    || plan.customerName
     || "―";
   const resolvePlanWorkNumberDisplayName = (plan: WorkPlan) =>
     workNumberNameMap.get(plan.workNumberId)
@@ -1004,7 +1016,7 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : row.customerName}</TableCell>
+                        ) : resolveReportRowCustomerDisplayName(row)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlineEdit.systemId} onValueChange={(value) => setInlineEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlineEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">
@@ -1171,7 +1183,7 @@ export default function DailyEntryPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : plan.customerName}</TableCell>
+                        ) : resolvePlanCustomerDisplayName(plan)}</TableCell>
                         <TableCell className="whitespace-nowrap">{isEditing ? (
                           <Select value={inlinePlanEdit.systemId} onValueChange={(value) => setInlinePlanEdit((prev) => prev ? applySystemSelection(prev, value) : prev)} disabled={!inlinePlanEdit.customerId}>
                             <SelectTrigger className="min-w-[140px]">

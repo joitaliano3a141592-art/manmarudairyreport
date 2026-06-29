@@ -131,6 +131,10 @@ export default function WorkReportListPage() {
     () => reports.filter((report) => report.userName === currentUser.name),
     [currentUser.name, reports],
   );
+  const customerNameMap = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer.name])),
+    [customers],
+  );
   const activeSystems = useMemo(
     () => systems.filter((system) => !system.isDisabled),
     [systems],
@@ -167,6 +171,10 @@ export default function WorkReportListPage() {
   const resolveSystemDisplayName = (report: WorkReport) =>
     report.systemName
     || workNumberSystemNameMap.get(report.workNumberId)
+    || "―";
+  const resolveCustomerDisplayName = (report: WorkReport) =>
+    customerNameMap.get(report.customerId)
+    || report.customerName
     || "―";
 
   const closeReportModal = () => {
@@ -327,7 +335,7 @@ export default function WorkReportListPage() {
                   {filteredReports.map((report) => (
                     <TableRow key={report.id} onDoubleClick={() => openEditReportModal(report)} className="cursor-pointer">
                       <TableCell>{report.reportDate}</TableCell>
-                      <TableCell>{report.customerName}</TableCell>
+                      <TableCell>{resolveCustomerDisplayName(report)}</TableCell>
                       <TableCell>{resolveSystemDisplayName(report)}</TableCell>
                       <TableCell className="max-w-xs truncate" title={report.workDescription}>
                         {report.workDescription}

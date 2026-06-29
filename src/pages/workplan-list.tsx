@@ -117,6 +117,10 @@ export default function WorkPlanListPage() {
     () => plans.filter((plan) => plan.userName === currentUser.name),
     [currentUser.name, plans],
   );
+  const customerNameMap = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer.name])),
+    [customers],
+  );
   const activeSystems = useMemo(
     () => systems.filter((system) => !system.isDisabled),
     [systems],
@@ -148,6 +152,10 @@ export default function WorkPlanListPage() {
   const resolveSystemDisplayName = (plan: WorkPlan) =>
     plan.systemName
     || workNumberSystemNameMap.get(plan.workNumberId)
+    || "―";
+  const resolveCustomerDisplayName = (plan: WorkPlan) =>
+    customerNameMap.get(plan.customerId)
+    || plan.customerName
     || "―";
 
   const closePlanModal = () => {
@@ -299,7 +307,7 @@ export default function WorkPlanListPage() {
                   {filteredPlans.map((plan) => (
                     <TableRow key={plan.id} onDoubleClick={() => openEditPlanModal(plan)} className="cursor-pointer">
                       <TableCell>{plan.planDate}</TableCell>
-                      <TableCell>{plan.customerName}</TableCell>
+                      <TableCell>{resolveCustomerDisplayName(plan)}</TableCell>
                       <TableCell>{resolveSystemDisplayName(plan)}</TableCell>
                       <TableCell className="max-w-xs truncate" title={plan.workDescription}>
                         {plan.workDescription}

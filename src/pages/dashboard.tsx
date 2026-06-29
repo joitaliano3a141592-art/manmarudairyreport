@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
 import { Download, ChevronDown, ChevronUp, Medal } from "lucide-react";
-import { useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
+import { useCustomers, useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
 import { formatWorkHours } from "@/lib/utils";
 
@@ -80,6 +80,7 @@ export default function DashboardPage() {
   const [barTooltip, setBarTooltip] = useState<BarTooltipState | null>(null);
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
 
+  const { data: customers = [] } = useCustomers();
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
   const {
     data: workNumbers = [],
@@ -92,6 +93,10 @@ export default function DashboardPage() {
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
     [workNumbers],
   );
+  const customerNameMap = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer.name])),
+    [customers],
+  );
   const workNumberNameMap = useMemo(
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.displayName])),
     [workNumbers],
@@ -103,6 +108,9 @@ export default function DashboardPage() {
 
   const resolveSystemTableDisplayName = (report: WorkReport): string => {
     return report.systemName || workNumberNameMap.get(report.workNumberId) || report.workNumber || "(未設定)";
+  };
+  const resolveCustomerTableDisplayName = (report: WorkReport): string => {
+    return customerNameMap.get(report.customerId) || report.customerName || "(未設定)";
   };
 
   const uniqueUsers = useMemo(
@@ -814,7 +822,7 @@ export default function DashboardPage() {
                   <TableRow key={report.id}>
                     <TableCell>{report.reportDate}</TableCell>
                     <TableCell>{report.userName}</TableCell>
-                    <TableCell>{report.customerName}</TableCell>
+                    <TableCell>{resolveCustomerTableDisplayName(report)}</TableCell>
                     <TableCell>{resolveSystemTableDisplayName(report)}</TableCell>
                     <TableCell className="max-w-xs truncate" title={report.workDescription}>
                       {report.workDescription}
