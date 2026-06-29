@@ -19,7 +19,7 @@ import type { Customer, System, WorkNumber, WorkType } from "@/types/sharepoint"
 
 type CustomerFormData = {
   name: string;
-  sortOrder: number;
+  customerNumber: number;
 };
 
 type SystemFormData = {
@@ -119,9 +119,9 @@ export default function MastersPage() {
 
   const handleSaveCustomer = (data: CustomerFormData) => {
     if (editingCustomer) {
-      updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name, sortOrder: data.sortOrder });
+      updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name, customerNumber: data.customerNumber });
     } else {
-      addCustomer.mutate({ name: data.name, sortOrder: data.sortOrder });
+      addCustomer.mutate({ name: data.name, customerNumber: data.customerNumber });
     }
     setCustomerDialog(false);
     setEditingCustomer(null);
@@ -327,7 +327,7 @@ export default function MastersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-16">表示順</TableHead>
+                      <TableHead className="w-24">顧客番号</TableHead>
                       <TableHead>顧客名</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
@@ -335,7 +335,7 @@ export default function MastersPage() {
                   <TableBody>
                     {customers.map((customer) => (
                       <TableRow key={customer.id} onDoubleClick={() => openEditCustomerDialog(customer)} className="cursor-pointer">
-                        <TableCell className="text-center">{customer.sortOrder}</TableCell>
+                        <TableCell className="text-center">{customer.customerNumber}</TableCell>
                         <TableCell>{customer.name}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -722,16 +722,16 @@ function CustomerForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState(customer?.name || "");
-  const [sortOrder, setSortOrder] = useState<number>(customer?.sortOrder ?? 10);
+  const [customerNumber, setCustomerNumber] = useState<number>(customer?.customerNumber ?? 10);
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, sortOrder }); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, customerNumber }); }} className="space-y-4">
       <div>
         <Label htmlFor="name">顧客名</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div>
-        <Label htmlFor="custSortOrder">表示順（小さいほど上位。99=最下位）</Label>
-        <Input id="custSortOrder" type="number" min={1} max={999} value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} required />
+        <Label htmlFor="custCustomerNumber">顧客番号</Label>
+        <Input id="custCustomerNumber" type="number" min={1} max={999} value={customerNumber} onChange={(e) => setCustomerNumber(Number(e.target.value))} required />
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>

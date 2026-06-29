@@ -75,7 +75,7 @@ export type SPWorkDayFields = {
 export type Customer = {
   id: string;
   name: string;
-  sortOrder: number;
+  customerNumber: number;
 };
 
 export type System = {

@@ -38,6 +38,12 @@ DEFAULT_SORT_ORDER = 10
 OTHER_SORT_ORDER = 99
 
 
+def get_sortorder_display_name(list_name: str) -> str:
+    if list_name == "顧客マスタ":
+        return "顧客番号"
+    return "表示順"
+
+
 def _get_credential() -> DeviceCodeCredential:
     cache_options = TokenCachePersistenceOptions(
         name="graph_token_cache_v4",
@@ -122,11 +128,21 @@ def get_list_items(site_id: str, list_id: str) -> list[dict]:
 def ensure_sortorder_column(site_id: str, list_id: str, list_name: str) -> None:
     cols = get_columns(site_id, list_id)
     if "SortOrder" in cols:
-        print(f"[SKIP] Column exists: {list_name}.SortOrder")
+        column = cols["SortOrder"]
+        desired_display_name = get_sortorder_display_name(list_name)
+        current_display_name = column.get("displayName")
+        if current_display_name != desired_display_name:
+            graph_patch(
+                f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}",
+                {"displayName": desired_display_name},
+            )
+            print(f"[UPDATE] Column display name: {list_name}.SortOrder => {desired_display_name}")
+        else:
+            print(f"[SKIP] Column exists: {list_name}.SortOrder")
         return
     body = {
         "name": "SortOrder",
-        "displayName": "表示順",
+        "displayName": get_sortorder_display_name(list_name),
         "required": False,
         "number": {"decimalPlaces": "none"},
         "defaultValue": {"value": str(DEFAULT_SORT_ORDER)},

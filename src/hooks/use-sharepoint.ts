@@ -146,9 +146,9 @@ export function useCustomers(): UseQueryResult<Customer[]> {
         .map((item) => ({
           id: item.id,
           name: item.fields.Title,
-          sortOrder: item.fields.SortOrder ?? 10,
+          customerNumber: item.fields.SortOrder ?? 10,
         }))
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
+        .sort((a, b) => a.customerNumber - b.customerNumber || a.name.localeCompare(b.name, "ja"));
     },
   });
 }
@@ -687,8 +687,8 @@ export function useDeletePlan() {
 export function useAddCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, sortOrder }: { name: string; sortOrder: number }) => {
-      return createListItem(SP_LISTS.customers, { Title: name, SortOrder: sortOrder });
+    mutationFn: async ({ name, customerNumber }: { name: string; customerNumber: number }) => {
+      return createListItem(SP_LISTS.customers, { Title: name, SortOrder: customerNumber });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
@@ -699,8 +699,8 @@ export function useAddCustomer() {
 export function useUpdateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ itemId, name, sortOrder }: { itemId: string; name: string; sortOrder: number }) => {
-      return updateListItem(SP_LISTS.customers, itemId, { Title: name, SortOrder: sortOrder });
+    mutationFn: async ({ itemId, name, customerNumber }: { itemId: string; name: string; customerNumber: number }) => {
+      return updateListItem(SP_LISTS.customers, itemId, { Title: name, SortOrder: customerNumber });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
