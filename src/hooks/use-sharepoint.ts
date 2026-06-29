@@ -12,6 +12,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { SP_LISTS } from "@/lib/sharepointConfig";
+import { formatCustomerDisplay, formatWorkNumberDisplay } from "@/lib/master-display";
 
 /**
  * SharePoint の UTC 日時文字列をブラウザのローカルタイムゾーン（JST等）で
@@ -135,6 +136,19 @@ function formatWorkNumber(value: string | null | undefined): string {
   return value?.trim() ?? "";
 }
 
+function resolveAchievement(fields: SPReportFields): "○" | "△" | "✕" | null {
+  if (fields.Achievement === "○" || fields.Achievement === "△" || fields.Achievement === "✕") {
+    return fields.Achievement;
+  }
+  if (fields.IsComplete === true) {
+    return "○";
+  }
+  if (fields.IsComplete === false) {
+    return "✕";
+  }
+  return null;
+}
+
 // ==================== 顧客マスタ ====================
 
 export function useCustomers(): UseQueryResult<Customer[]> {
@@ -147,6 +161,7 @@ export function useCustomers(): UseQueryResult<Customer[]> {
           id: item.id,
           name: item.fields.Title,
           customerNumber: item.fields.SortOrder ?? 10,
+          displayName: formatCustomerDisplay(item.fields.SortOrder ?? 10, item.fields.Title),
         }))
         .sort((a, b) => a.customerNumber - b.customerNumber || a.name.localeCompare(b.name, "ja"));
     },
@@ -171,7 +186,7 @@ export function useSystems(options: UseSystemsOptions = {}): UseQueryResult<Syst
     },
     select: (items) => {
       const custMap = new Map(
-        (customers ?? []).map((c) => [c.id, c.name])
+        (customers ?? []).map((c) => [c.id, c.displayName])
       );
       return items
         .map((item) => ({
@@ -190,13 +205,18 @@ export function useSystems(options: UseSystemsOptions = {}): UseQueryResult<Syst
   });
 }
 
-// ==================== 工番マスタ ====================
+// ==================== 工事番号マスタ ====================
 
-export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
+type UseWorkNumbersOptions = {
+  includeDisabled?: boolean;
+};
+
+export function useWorkNumbers(options: UseWorkNumbersOptions = {}): UseQueryResult<WorkNumber[]> {
   const { data: systems } = useSystems({ includeDisabled: true });
+  const includeDisabled = options.includeDisabled ?? true;
 
   return useQuery({
-    queryKey: ["sp", "workNumbers"],
+    queryKey: ["sp", "workNumbers", includeDisabled],
     queryFn: async () => {
       if (!SP_LISTS.workNumbers) return [];
       return fetchListItems<SPWorkNumberFields>(SP_LISTS.workNumbers);
@@ -213,11 +233,14 @@ export function useWorkNumbers(): UseQueryResult<WorkNumber[]> {
             id: item.id,
             workNumber,
             workNumberName,
+            displayName: formatWorkNumberDisplay(workNumber, workNumberName),
             systemId,
             systemName: linkedSystem?.name ?? workNumber,
             sortOrder: linkedSystem?.sortOrder ?? 10,
+            isDisabled: item.fields.IsDisabled === true,
           };
         })
+        .filter((workNumber) => includeDisabled || !workNumber.isDisabled)
         .sort(
           (a, b) =>
             a.sortOrder - b.sortOrder
@@ -263,7 +286,7 @@ export function useLookupMaps(): LookupMaps {
 
   return useMemo(
     () => ({
-      customerMap: new Map((customers ?? []).map((c) => [c.id, c.name])),
+      customerMap: new Map((customers ?? []).map((c) => [c.id, c.displayName])),
       systemMap: new Map((systems ?? []).map((s) => [s.id, s.name])),
       workTypeMap: new Map((workTypes ?? []).map((w) => [w.id, w.name])),
     }),
@@ -346,7 +369,7 @@ export function useReportsByDateField(
           workHours: f.WorkHours ?? 0,
           userName: resolveUserDisplayName(f.ReporterName, f.Title, item.createdByName),
           isProject: f.IsProject !== false,
-          isComplete: f.IsComplete !== false,
+          achievement: resolveAchievement(f),
         };
       }).sort((left, right) => {
         const dateCompare = left.reportDate.localeCompare(right.reportDate);
@@ -492,19 +515,20 @@ export function useUpdateWorkDay() {
   });
 }
 
-// ==================== 工番マスタ CRUD ====================
+// ==================== 工事番号マスタ CRUD ====================
 
 export function useAddWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { workNumber: string; workNumberName: string; systemId: number }) => {
+    mutationFn: async (fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean }) => {
       if (!SP_LISTS.workNumbers) {
-        throw new Error("工番マスタリストが未設定です。");
+        throw new Error("工事番号マスタリストが未設定です。");
       }
       return createListItem(SP_LISTS.workNumbers, {
         Title: fields.workNumber,
         [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
+        IsDisabled: fields.isDisabled === true,
       });
     },
     onSuccess: () => {
@@ -512,7 +536,7 @@ export function useAddWorkNumber() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`工番マスタの登録に失敗しました。\n${message}`);
+      toast.error(`工事番号マスタの登録に失敗しました。\n${message}`);
     },
   });
 }
@@ -525,15 +549,16 @@ export function useUpdateWorkNumber() {
       fields,
     }: {
       itemId: string;
-      fields: { workNumber: string; workNumberName: string; systemId: number };
+      fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean };
     }) => {
       if (!SP_LISTS.workNumbers) {
-        throw new Error("工番マスタリストが未設定です。");
+        throw new Error("工事番号マスタリストが未設定です。");
       }
       return updateListItem(SP_LISTS.workNumbers, itemId, {
         Title: fields.workNumber,
         [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
+        IsDisabled: fields.isDisabled === true,
       });
     },
     onSuccess: () => {
@@ -541,7 +566,7 @@ export function useUpdateWorkNumber() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`工番マスタの更新に失敗しました。\n${message}`);
+      toast.error(`工事番号マスタの更新に失敗しました。\n${message}`);
     },
   });
 }
@@ -551,7 +576,7 @@ export function useDeleteWorkNumber() {
   return useMutation({
     mutationFn: async (itemId: string) => {
       if (!SP_LISTS.workNumbers) {
-        throw new Error("工番マスタリストが未設定です。");
+        throw new Error("工事番号マスタリストが未設定です。");
       }
       return deleteListItem(SP_LISTS.workNumbers, itemId);
     },
@@ -560,7 +585,7 @@ export function useDeleteWorkNumber() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(`工番マスタの削除に失敗しました。\n${message}`);
+      toast.error(`工事番号マスタの削除に失敗しました。\n${message}`);
     },
   });
 }

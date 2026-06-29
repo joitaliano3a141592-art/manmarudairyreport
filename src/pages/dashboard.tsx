@@ -93,7 +93,7 @@ export default function DashboardPage() {
     [workNumbers],
   );
   const workNumberNameMap = useMemo(
-    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.workNumberName || workNumber.workNumber])),
+    () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.displayName])),
     [workNumbers],
   );
 

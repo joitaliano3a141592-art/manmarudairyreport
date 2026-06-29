@@ -361,7 +361,7 @@ export default function WorkPlanListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -386,19 +386,19 @@ export default function WorkPlanListPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>工番</Label>
+              <Label>工事番号</Label>
               <Select
                 value={toLookupSelectValue(planForm.workNumberId)}
                 onValueChange={(value) => setPlanForm((prev) => applyWorkNumberSelection(prev, value))}
                 disabled={!planForm.systemId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="工番を選択" />
+                  <SelectValue placeholder="工事番号を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                   {filteredWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -36,7 +36,7 @@ import { TEAMS_CONFIG } from "@/lib/sharepointConfig";
 import { formatWorkHours } from "@/lib/utils";
 import * as microsoftTeams from "@microsoft/teams-js";
 import { toast } from "sonner";
-import type { WorkPlan } from "@/types/sharepoint";
+import type { Achievement, WorkPlan } from "@/types/sharepoint";
 
 function toLocalDate(date: Date): string {
   const year = date.getFullYear();
@@ -52,6 +52,8 @@ const tomorrow = (() => {
   return toLocalDate(date);
 })();
 const EMPTY_LOOKUP_SELECT_VALUE = "__empty_lookup__";
+const EMPTY_ACHIEVEMENT_SELECT_VALUE = "__empty_achievement__";
+const ACHIEVEMENT_OPTIONS: Exclude<Achievement, null>[] = ["○", "△", "✕"];
 
 type TeamsPublishTarget = {
   teamId: string;
@@ -68,7 +70,7 @@ type ReportFormState = {
   plannedHours: string;
   workTime: string;
   isProject: boolean;
-  isComplete: boolean;
+  achievement: Achievement;
 };
 
 type PlanFormState = {
@@ -106,7 +108,7 @@ type ReportTableRow = {
   workNumber: string;
   plannedHours: number;
   workHours: number;
-  isComplete: boolean;
+  achievement: Achievement;
   isProject: boolean;
   workDescription: string;
 };
@@ -122,7 +124,7 @@ type InlineEditState = {
   workTypeId: string;
   plannedHours: string;
   workTime: string;
-  isComplete: boolean;
+  achievement: Achievement;
   isProject: boolean;
   workDescription: string;
 };
@@ -150,7 +152,7 @@ function emptyReportForm(): ReportFormState {
     plannedHours: "0",
     workTime: "0",
     isProject: true,
-    isComplete: true,
+    achievement: null,
   };
 }
 
@@ -169,6 +171,14 @@ function emptyPlanForm(): PlanFormState {
 
 function toLookupSelectValue(value: string): string {
   return value || EMPTY_LOOKUP_SELECT_VALUE;
+}
+
+function toAchievementSelectValue(value: Achievement): string {
+  return value ?? EMPTY_ACHIEVEMENT_SELECT_VALUE;
+}
+
+function fromAchievementSelectValue(value: string): Achievement {
+  return value === EMPTY_ACHIEVEMENT_SELECT_VALUE ? null : value as Exclude<Achievement, null>;
 }
 
 function applySystemSelection<T extends { systemId: string; workNumberId: string; isProject: boolean }>(prev: T, rawValue: string): T {
@@ -224,6 +234,7 @@ export default function DailyEntryPage() {
   const { data: customers = [], isError: custError, error: customersError } = useCustomers();
   const { data: systems = [], isError: sysError, error: systemsError } = useSystems();
   const { data: workNumbers = [] } = useWorkNumbers();
+  const { data: activeWorkNumbers = [] } = useWorkNumbers({ includeDisabled: false });
   const { data: workTypes = [], isError: wtError, error: workTypesError } = useWorkTypes();
   const { data: reportItems = [], isLoading: reportsLoading, isError: reportsErrorState, error: reportsError } = useReportsByDateField("RegistrationDate", today, today);
   const { data: todayPlanItems = [], isLoading: todayPlansLoading, isError: todayPlansErrorState, error: todayPlansError } = usePlans(today, today);
@@ -317,18 +328,18 @@ export default function DailyEntryPage() {
       if (!reportForm.systemId) {
         return [];
       }
-      return workNumbers.filter((workNumber) => workNumber.systemId === reportForm.systemId);
+      return activeWorkNumbers.filter((workNumber) => workNumber.systemId === reportForm.systemId);
     },
-    [reportForm.systemId, workNumbers],
+    [activeWorkNumbers, reportForm.systemId],
   );
   const filteredPlanWorkNumbers = useMemo(
     () => {
       if (!planForm.systemId) {
         return [];
       }
-      return workNumbers.filter((workNumber) => workNumber.systemId === planForm.systemId);
+      return activeWorkNumbers.filter((workNumber) => workNumber.systemId === planForm.systemId);
     },
-    [planForm.systemId, workNumbers],
+    [activeWorkNumbers, planForm.systemId],
   );
   const workNumberSystemNameMap = useMemo(
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.systemName])),
@@ -338,7 +349,7 @@ export default function DailyEntryPage() {
     () => new Map(
       workNumbers.map((workNumber) => [
         workNumber.id,
-        workNumber.workNumberName || workNumber.workNumber || "",
+        workNumber.displayName,
       ]),
     ),
     [workNumbers],
@@ -413,7 +424,7 @@ export default function DailyEntryPage() {
       workNumber: report.workNumber,
       plannedHours: report.plannedHours,
       workHours: report.workHours,
-      isComplete: report.isComplete,
+      achievement: report.achievement,
       isProject: report.isProject,
       workDescription: report.workDescription,
     }));
@@ -433,7 +444,7 @@ export default function DailyEntryPage() {
       workNumber: plan.workNumber,
       plannedHours: plan.plannedHours,
       workHours: 0,
-      isComplete: false,
+      achievement: null,
       isProject: plan.isProject,
       workDescription: plan.workDescription,
     }));
@@ -530,7 +541,7 @@ export default function DailyEntryPage() {
             WorkHours: workHours,
             ReporterName: currentUser.name,
             IsProject: inlineEdit.isProject,
-            IsComplete: inlineEdit.isComplete,
+            Achievement: inlineEdit.achievement,
           },
         });
         toast.success("作業実績を更新しました。", { duration: 2200 });
@@ -548,7 +559,7 @@ export default function DailyEntryPage() {
           WorkHours: workHours,
           ReporterName: currentUser.name,
           IsProject: inlineEdit.isProject,
-          IsComplete: inlineEdit.isComplete,
+          Achievement: inlineEdit.achievement,
         });
         toast.success("本日予定から作業実績を登録しました。", { duration: 2200 });
       }
@@ -663,7 +674,7 @@ export default function DailyEntryPage() {
       WorkHours: workHours,
       ReporterName: currentUser.name,
       IsProject: !!workNumber,
-      IsComplete: reportForm.isComplete,
+      Achievement: reportForm.achievement,
     };
 
     try {
@@ -772,7 +783,7 @@ export default function DailyEntryPage() {
       plannedHours: String(row.plannedHours ?? 0),
       workTime: String(row.workHours ?? 0),
       isProject: row.isProject,
-      isComplete: row.isComplete,
+      achievement: row.achievement,
     });
     setReportSubmitError("");
     setReportModalOpen(true);
@@ -942,13 +953,13 @@ export default function DailyEntryPage() {
                     <TableHead>報告日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
-                    <TableHead>工番</TableHead>
+                    <TableHead>工事番号</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead>作業内容</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead className="text-right">実績時間</TableHead>
                     <TableHead className="text-center">案件</TableHead>
-                    <TableHead className="text-center">完了</TableHead>
+                    <TableHead className="text-center">達成度</TableHead>
                     <TableHead className="w-[260px]">操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -989,7 +1000,7 @@ export default function DailyEntryPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -1015,14 +1026,14 @@ export default function DailyEntryPage() {
                             disabled={!inlineEdit.systemId}
                           >
                             <SelectTrigger className="min-w-[140px]">
-                              <SelectValue placeholder="工番" />
+                              <SelectValue placeholder="工事番号" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                               {workNumbers
-                                .filter((workNumber) => workNumber.systemId === inlineEdit.systemId)
+                                .filter((workNumber) => workNumber.systemId === inlineEdit.systemId && !workNumber.isDisabled)
                                 .map((workNumber) => (
-                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                                 ))}
                             </SelectContent>
                           </Select>
@@ -1056,10 +1067,18 @@ export default function DailyEntryPage() {
                           </div>
                         ) : row.isProject ? "○" : "―"}</TableCell>
                         <TableCell className="text-center">{isEditing ? (
-                          <div className="flex justify-center">
-                            <Checkbox checked={inlineEdit.isComplete} onCheckedChange={(checked) => setInlineEdit({ ...inlineEdit, isComplete: checked === true })} />
-                          </div>
-                        ) : row.isComplete ? "○" : "―"}</TableCell>
+                          <Select value={toAchievementSelectValue(inlineEdit.achievement)} onValueChange={(value) => setInlineEdit({ ...inlineEdit, achievement: fromAchievementSelectValue(value) })}>
+                            <SelectTrigger className="min-w-[90px]">
+                              <SelectValue placeholder="達成度" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={EMPTY_ACHIEVEMENT_SELECT_VALUE}>達成度を選択</SelectItem>
+                              {ACHIEVEMENT_OPTIONS.map((achievement) => (
+                                <SelectItem key={achievement} value={achievement}>{achievement}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (row.achievement ?? "―")}</TableCell>
                         <TableCell className="w-[260px]">
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             {isEditing ? (
@@ -1114,7 +1133,7 @@ export default function DailyEntryPage() {
                     <TableHead>予定日</TableHead>
                     <TableHead>顧客</TableHead>
                     <TableHead>システム</TableHead>
-                    <TableHead>工番</TableHead>
+                    <TableHead>工事番号</TableHead>
                     <TableHead>区分</TableHead>
                     <TableHead className="text-right">予定時間</TableHead>
                     <TableHead>案件</TableHead>
@@ -1148,7 +1167,7 @@ export default function DailyEntryPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                                <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -1174,14 +1193,14 @@ export default function DailyEntryPage() {
                             disabled={!inlinePlanEdit.systemId}
                           >
                             <SelectTrigger className="min-w-[140px]">
-                              <SelectValue placeholder="工番" />
+                              <SelectValue placeholder="工事番号" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                              <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                               {workNumbers
-                                .filter((workNumber) => workNumber.systemId === inlinePlanEdit.systemId)
+                                .filter((workNumber) => workNumber.systemId === inlinePlanEdit.systemId && !workNumber.isDisabled)
                                 .map((workNumber) => (
-                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                                  <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                                 ))}
                             </SelectContent>
                           </Select>
@@ -1278,6 +1297,7 @@ export default function DailyEntryPage() {
         }}
         saveLabel={reportEditingId ? "更新" : "登録"}
         isSaving={addReportMutation.isPending || updateReportMutation.isPending}
+        maxWidth="full"
       >
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-1">
@@ -1295,13 +1315,13 @@ export default function DailyEntryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
@@ -1320,7 +1340,7 @@ export default function DailyEntryPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>工番</Label>
+              <Label>工事番号</Label>
               <Select
                 value={toLookupSelectValue(reportForm.workNumberId)}
                 onValueChange={(value) => {
@@ -1329,12 +1349,12 @@ export default function DailyEntryPage() {
                 disabled={!reportForm.systemId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="工番を選択" />
+                  <SelectValue placeholder="工事番号を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                   {filteredReportWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1361,11 +1381,18 @@ export default function DailyEntryPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>完了</Label>
-              <div className="flex h-10 items-center gap-2">
-                <Checkbox checked={reportForm.isComplete} onCheckedChange={(checked) => setReportForm({ ...reportForm, isComplete: checked === true })} />
-                <span className="text-sm">完了</span>
-              </div>
+              <Label>達成度</Label>
+              <Select value={toAchievementSelectValue(reportForm.achievement)} onValueChange={(value) => setReportForm({ ...reportForm, achievement: fromAchievementSelectValue(value) })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="達成度を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_ACHIEVEMENT_SELECT_VALUE}>達成度を選択</SelectItem>
+                  {ACHIEVEMENT_OPTIONS.map((achievement) => (
+                    <SelectItem key={achievement} value={achievement}>{achievement}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1.5">
@@ -1389,6 +1416,7 @@ export default function DailyEntryPage() {
         }}
         saveLabel={planEditingId ? "更新" : "登録"}
         isSaving={addPlanMutation.isPending || updatePlanMutation.isPending}
+        maxWidth="full"
       >
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-1">
@@ -1406,13 +1434,13 @@ export default function DailyEntryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             <div className="space-y-1.5">
               <Label>システム</Label>
               <Select
@@ -1431,7 +1459,7 @@ export default function DailyEntryPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>工番</Label>
+              <Label>工事番号</Label>
               <Select
                 value={toLookupSelectValue(planForm.workNumberId)}
                 onValueChange={(value) => {
@@ -1440,12 +1468,12 @@ export default function DailyEntryPage() {
                 disabled={!planForm.systemId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="工番を選択" />
+                  <SelectValue placeholder="工事番号を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                   {filteredPlanWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1491,6 +1519,7 @@ export default function DailyEntryPage() {
         }}
         saveLabel={workDayId ? "更新" : "登録"}
         isSaving={addWorkDayMutation.isPending || updateWorkDayMutation.isPending}
+        maxWidth="full"
       >
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">

@@ -75,6 +75,7 @@ ALLOWED_FIELDS_BY_LIST = {
         "WorkHours",
         "ReporterName",
         "IsProject",
+        "Achievement",
         "IsComplete",
     },
     "作業予定": {
@@ -247,7 +248,7 @@ def ensure_target_schema(target_site_id: str, target_lists: dict[str, str], exec
         print("[DRY-RUN] target schema sync")
         print("  - システムマスタ: Customer, Description")
         print("  - 作業種別マスタ: Category")
-        print("  - 作業報告: ReportDate, RegistrationDate, Customer, System, WorkType, WorkDescription, PlannedHours, WorkHours, Reporter, ReporterName, IsProject, IsComplete")
+        print("  - 作業報告: ReportDate, RegistrationDate, Customer, System, WorkType, WorkDescription, PlannedHours, WorkHours, Reporter, ReporterName, IsProject, Achievement")
         print("  - 作業予定: PlanDate, Customer, System, WorkType, WorkDescription, PlannedHours, IsProject, AssigneeName, Assignee, Status")
         print("  - 作業日: WorkDate, WorkStartTime, WorkEndTime, BreakHours, TodayNote, ReporterName")
         return
@@ -277,7 +278,7 @@ def ensure_target_schema(target_site_id: str, target_lists: dict[str, str], exec
     ensure_text_column(target_site_id, report_list_id, "ReporterName", "報告者名", rpt_cols)
     ensure_person_column(target_site_id, report_list_id, "Reporter", "報告者", rpt_cols)
     ensure_boolean_column(target_site_id, report_list_id, "IsProject", "案件", rpt_cols, default_value=True)
-    ensure_boolean_column(target_site_id, report_list_id, "IsComplete", "完了", rpt_cols, default_value=True)
+    ensure_choice_column(target_site_id, report_list_id, "Achievement", "達成度", ["○", "△", "✕"], rpt_cols, required=False)
 
     plan_cols = get_columns(target_site_id, plan_list_id)
     ensure_datetime_column(target_site_id, plan_list_id, "PlanDate", "予定日", plan_cols, required=True)
@@ -470,6 +471,15 @@ def copy_work_items(
         mapped_customer = map_lookup_id(fields.get("CustomerLookupId"), customer_id_map)
         mapped_system = map_lookup_id(fields.get("SystemLookupId"), system_id_map)
         mapped_worktype = map_lookup_id(fields.get("WorkTypeLookupId"), worktype_id_map)
+        if list_name == "作業報告" and "Achievement" not in fields:
+            legacy_complete = fields.get("IsComplete")
+            if legacy_complete is True:
+                fields["Achievement"] = "○"
+            elif legacy_complete is False:
+                fields["Achievement"] = "✕"
+            else:
+                fields["Achievement"] = None
+        fields.pop("IsComplete", None)
 
         if mapped_customer is not None:
             fields["CustomerLookupId"] = mapped_customer

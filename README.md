@@ -89,7 +89,7 @@ SharePoint サイト: manmarusystem テナント内の Teams チャネル専用�
 |--------|-------------|
 | 顧客マスタ | `VITE_SP_LIST_CUSTOMERS` |
 | システムマスタ | `VITE_SP_LIST_SYSTEMS` |
-| 工番マスタ | `VITE_SP_LIST_WORKNUMBERS` |
+| 工事番号マスタ | `VITE_SP_LIST_WORKNUMBERS` |
 | 作業種別マスタ | `VITE_SP_LIST_WORKTYPES` |
 | 作業報告 | `VITE_SP_LIST_REPORTS` |
 | 作業予定 | `VITE_SP_LIST_PLANS` |
@@ -121,7 +121,7 @@ VITE_MSAL_CLIENT_ID=<Azure AD クライアント ID>
 VITE_SP_SITE_ID=<SharePoint サイト ID>
 VITE_SP_LIST_CUSTOMERS=<顧客マスタ リスト ID>
 VITE_SP_LIST_SYSTEMS=<システムマスタ リスト ID>
-VITE_SP_LIST_WORKNUMBERS=<工番マスタ リスト ID>
+VITE_SP_LIST_WORKNUMBERS=<工事番号マスタ リスト ID>
 VITE_SP_LIST_WORKTYPES=<作業種別マスタ リスト ID>
 VITE_SP_LIST_REPORTS=<作業報告 リスト ID>
 VITE_SP_LIST_PLANS=<作業予定 リスト ID>
@@ -159,7 +159,7 @@ SharePoint 関連は共有フォルダリンクではなく、対象サイトの
 | VITE_SP_SITE_ID | SharePoint サイト ID |
 | VITE_SP_LIST_CUSTOMERS | 顧客マスタ リスト ID |
 | VITE_SP_LIST_SYSTEMS | システムマスタ リスト ID |
-| VITE_SP_LIST_WORKNUMBERS | 工番マスタ リスト ID |
+| VITE_SP_LIST_WORKNUMBERS | 工事番号マスタ リスト ID |
 | VITE_SP_LIST_WORKTYPES | 作業種別マスタ リスト ID |
 | VITE_SP_LIST_REPORTS | 作業報告 リスト ID |
 | VITE_SP_LIST_PLANS | 作業予定 リスト ID |

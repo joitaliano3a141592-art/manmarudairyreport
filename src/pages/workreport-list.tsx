@@ -27,8 +27,11 @@ import type { WorkReport } from "@/types/sharepoint";
 import { ChevronDown, ChevronUp, Megaphone } from "lucide-react";
 import { formatWorkHours } from "@/lib/utils";
 import { toast } from "sonner";
+import type { Achievement } from "@/types/sharepoint";
 
 const EMPTY_LOOKUP_SELECT_VALUE = "__empty_lookup__";
+const EMPTY_ACHIEVEMENT_SELECT_VALUE = "__empty_achievement__";
+const ACHIEVEMENT_OPTIONS: Exclude<Achievement, null>[] = ["○", "△", "✕"];
 
 type ReportFormState = {
   reportDate: string;
@@ -39,7 +42,7 @@ type ReportFormState = {
   workDescription: string;
   workTime: string;
   isProject: boolean;
-  isComplete: boolean;
+  achievement: Achievement;
 };
 
 function toLocalDate(date: Date): string {
@@ -59,12 +62,20 @@ function emptyReportForm(): ReportFormState {
     workDescription: "",
     workTime: "0",
     isProject: false,
-    isComplete: true,
+    achievement: null,
   };
 }
 
 function toLookupSelectValue(value: string): string {
   return value || EMPTY_LOOKUP_SELECT_VALUE;
+}
+
+function toAchievementSelectValue(value: Achievement): string {
+  return value ?? EMPTY_ACHIEVEMENT_SELECT_VALUE;
+}
+
+function fromAchievementSelectValue(value: string): Achievement {
+  return value === EMPTY_ACHIEVEMENT_SELECT_VALUE ? null : value as Exclude<Achievement, null>;
 }
 
 function applySystemSelection<T extends { systemId: string; workNumberId: string }>(prev: T, rawValue: string): T {
@@ -176,7 +187,7 @@ export default function WorkReportListPage() {
       workDescription: report.workDescription,
       workTime: String(report.workHours ?? 0),
       isProject: report.isProject,
-      isComplete: report.isComplete,
+      achievement: report.achievement,
     });
     setReportSubmitError("");
     setReportModalOpen(true);
@@ -208,7 +219,7 @@ export default function WorkReportListPage() {
       WorkHours: workHours,
       ReporterName: currentUser.name,
       IsProject: reportForm.isProject,
-      IsComplete: reportForm.isComplete,
+      Achievement: reportForm.achievement,
     };
 
     try {
@@ -308,6 +319,7 @@ export default function WorkReportListPage() {
                     <TableHead>区分</TableHead>
                     <TableHead>時間</TableHead>
                     <TableHead>案件</TableHead>
+                    <TableHead>達成度</TableHead>
                     <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -323,6 +335,7 @@ export default function WorkReportListPage() {
                       <TableCell>{report.workTypeName || "―"}</TableCell>
                       <TableCell>{formatWorkHours(report.workHours)}h</TableCell>
                       <TableCell className="text-center">{report.isProject ? "○" : "―"}</TableCell>
+                      <TableCell className="text-center">{report.achievement ?? "―"}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" onClick={() => openEditReportModal(report)}>編集</Button>
@@ -379,7 +392,7 @@ export default function WorkReportListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -404,19 +417,19 @@ export default function WorkReportListPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>工番</Label>
+              <Label>工事番号</Label>
               <Select
                 value={toLookupSelectValue(reportForm.workNumberId)}
                 onValueChange={(value) => setReportForm((prev) => applyWorkNumberSelection(prev, value))}
                 disabled={!reportForm.systemId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="工番を選択" />
+                  <SelectValue placeholder="工事番号を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>未選択</SelectItem>
+                  <SelectItem value={EMPTY_LOOKUP_SELECT_VALUE}>工事番号なし</SelectItem>
                   {filteredWorkNumbers.map((workNumber) => (
-                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.workNumberName}</SelectItem>
+                    <SelectItem key={workNumber.id} value={workNumber.id}>{workNumber.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -450,11 +463,18 @@ export default function WorkReportListPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>完了</Label>
-              <div className="flex h-10 items-center gap-2">
-                <Checkbox checked={reportForm.isComplete} onCheckedChange={(checked) => setReportForm({ ...reportForm, isComplete: checked === true })} />
-                <span className="text-sm">完了</span>
-              </div>
+              <Label>達成度</Label>
+              <Select value={toAchievementSelectValue(reportForm.achievement)} onValueChange={(value) => setReportForm({ ...reportForm, achievement: fromAchievementSelectValue(value) })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="達成度を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_ACHIEVEMENT_SELECT_VALUE}>達成度を選択</SelectItem>
+                  {ACHIEVEMENT_OPTIONS.map((achievement) => (
+                    <SelectItem key={achievement} value={achievement}>{achievement}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1.5">

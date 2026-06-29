@@ -1,9 +1,9 @@
 """
-工番マスタの SharePoint スキーマと既存データを補正するスクリプト
+工事番号マスタの SharePoint スキーマと既存データを補正するスクリプト
 
 - 既存データのうち `WorkNumber` 列にのみ値があるものは Title へ移行
 - `WorkNumberName` 列が空の既存データは Title を初期値として補完
-- `システムID` 列の一意制約を解除して同一システムへ複数工番を登録可能にする
+- `システムID` 列の一意制約を解除して同一システムへ複数工事番号を登録可能にする
 - 不要になった `WorkNumber` 列を削除
 """
 
@@ -65,7 +65,7 @@ def normalize_worknumber_items(site_id: str, worknumber_list_id: str) -> int:
 
         sp.graph_patch(f"/sites/{site_id}/lists/{worknumber_list_id}/items/{item_id}/fields", patch)
         updated_count += 1
-        print(f"[UPDATE] 工番マスタ item={item_id} fields={patch}")
+        print(f"[UPDATE] 工事番号マスタ item={item_id} fields={patch}")
 
     return updated_count
 
@@ -76,9 +76,11 @@ def main() -> None:
 
     print("[STEP] 列設定を補正")
     worknumber_cols = sp.get_columns(site_id, worknumber_list_id)
-    sp.ensure_text_column(site_id, worknumber_list_id, WORK_NUMBER_NAME_FIELD, "工番名", worknumber_cols)
+    sp.ensure_text_column(site_id, worknumber_list_id, "Title", "工事番号", worknumber_cols)
+    sp.ensure_text_column(site_id, worknumber_list_id, WORK_NUMBER_NAME_FIELD, "工事番号名", worknumber_cols)
     worknumber_cols = sp.get_columns(site_id, worknumber_list_id)
     sp.ensure_number_column(site_id, worknumber_list_id, SYSTEM_ID_FIELD, "システムID", worknumber_cols, required=True)
+    sp.ensure_boolean_column(site_id, worknumber_list_id, "IsDisabled", "無効", worknumber_cols, default_value=False)
 
     print("[STEP] 既存データを補正")
     updated_count = normalize_worknumber_items(site_id, worknumber_list_id)
@@ -87,7 +89,7 @@ def main() -> None:
     worknumber_cols = sp.get_columns(site_id, worknumber_list_id)
     sp.delete_column(site_id, worknumber_list_id, WORK_NUMBER_FIELD, worknumber_cols)
 
-    print("[DONE] 工番マスタの補正が完了しました。")
+    print("[DONE] 工事番号マスタの補正が完了しました。")
     print(f"  更新件数: {updated_count}")
 
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +32,7 @@ type SystemFormData = {
     id?: string;
     workNumber: string;
     workNumberName: string;
+    isDisabled: boolean;
   }>;
 };
 
@@ -56,6 +57,10 @@ export default function MastersPage() {
   const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems({ includeDisabled: true });
   const { data: workNumbers = [], isLoading: wnLoading, isError: wnError, error: workNumbersError } = useWorkNumbers();
   const { data: workTypes = [], isLoading: wtLoading, isError: wtError, error: workTypesError } = useWorkTypes();
+  const customerNameMap = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer.name])),
+    [customers],
+  );
 
   const addCustomer = useAddCustomer();
   const updateCustomer = useUpdateCustomer();
@@ -92,11 +97,11 @@ export default function MastersPage() {
             : deleteSystemMut.isPending
               ? "システムを削除しています..."
               : addWorkNumber.isPending
-                ? "工番を登録しています..."
+                ? "工事番号を登録しています..."
                 : updateWorkNumber.isPending
-                  ? "工番を更新しています..."
+                  ? "工事番号を更新しています..."
                   : deleteWorkNumber.isPending
-                   ? "工番を削除しています..."
+                   ? "工事番号を削除しています..."
                   : addWorkType.isPending
                    ? "作業区分を登録しています..."
                    : updateWorkType.isPending
@@ -148,6 +153,7 @@ export default function MastersPage() {
         id: item.id,
         workNumber: item.workNumber.trim(),
         workNumberName: item.workNumberName.trim(),
+        isDisabled: item.isDisabled,
       }))
       .filter((item) => item.workNumber || item.workNumberName);
 
@@ -198,6 +204,7 @@ export default function MastersPage() {
                 workNumber: workNumber.workNumber,
                 workNumberName: workNumber.workNumberName,
                 systemId,
+                isDisabled: workNumber.isDisabled,
               },
             });
           } catch (error) {
@@ -208,6 +215,7 @@ export default function MastersPage() {
               workNumber: workNumber.workNumber,
               workNumberName: workNumber.workNumberName,
               systemId,
+              isDisabled: workNumber.isDisabled,
             });
           }
         } else {
@@ -215,6 +223,7 @@ export default function MastersPage() {
             workNumber: workNumber.workNumber,
             workNumberName: workNumber.workNumberName,
             systemId,
+            isDisabled: workNumber.isDisabled,
           });
         }
       }
@@ -401,10 +410,10 @@ export default function MastersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-16">表示順</TableHead>
+                    <TableHead>顧客名</TableHead>
                     <TableHead>システム名</TableHead>
-                    <TableHead>所有顧客</TableHead>
-                    <TableHead>工番</TableHead>
-                    <TableHead>工番名</TableHead>
+                    <TableHead>工事番号</TableHead>
+                    <TableHead>工事番号名</TableHead>
                     <TableHead>説明</TableHead>
                     <TableHead>無効</TableHead>
                     <TableHead>操作</TableHead>
@@ -416,14 +425,14 @@ export default function MastersPage() {
                     return (
                       <TableRow key={system.id} onDoubleClick={() => openEditSystemDialog(system, relatedWorkNumbers)} className="cursor-pointer">
                         <TableCell className="text-center">{system.sortOrder}</TableCell>
+                        <TableCell>{customerNameMap.get(system.customerId) ?? ""}</TableCell>
                         <TableCell>{system.name}</TableCell>
-                        <TableCell>{system.customerName}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {relatedWorkNumbers.length > 0
                               ? relatedWorkNumbers.map((workNumber) => (
                                   <span key={workNumber.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">
-                                    {workNumber.workNumber}
+                                    {workNumber.workNumber}{workNumber.isDisabled ? " (無効)" : ""}
                                   </span>
                                 ))
                               : "―"}
@@ -434,7 +443,7 @@ export default function MastersPage() {
                             {relatedWorkNumbers.length > 0
                               ? relatedWorkNumbers.map((workNumber) => (
                                   <span key={workNumber.id} className="rounded bg-sky-100 px-2 py-0.5 text-xs dark:bg-sky-950">
-                                    {workNumber.workNumberName}
+                                    {workNumber.displayName}{workNumber.isDisabled ? " (無効)" : ""}
                                   </span>
                                 ))
                               : "―"}
@@ -551,12 +560,14 @@ type SystemWorkNumberInput = {
   id?: string;
   workNumber: string;
   workNumberName: string;
+  isDisabled: boolean;
 };
 
 function createEmptySystemWorkNumber(): SystemWorkNumberInput {
   return {
     workNumber: "",
     workNumberName: "",
+    isDisabled: false,
   };
 }
 
@@ -583,6 +594,7 @@ function SystemForm({
       id: workNumber.id,
       workNumber: workNumber.workNumber,
       workNumberName: workNumber.workNumberName,
+      isDisabled: workNumber.isDisabled,
     })),
   });
   const [submitError, setSubmitError] = useState("");
@@ -610,11 +622,12 @@ function SystemForm({
             ...item,
             workNumber: item.workNumber.trim(),
             workNumberName: item.workNumberName.trim(),
+            isDisabled: item.isDisabled,
           }))
           .filter((item) => item.workNumber || item.workNumberName);
 
         if (normalizedWorkNumbers.some((item) => !item.workNumber || !item.workNumberName)) {
-          setSubmitError("工番と工番名はセットで入力してください。");
+          setSubmitError("工事番号と工事番号名はセットで入力してください。");
           return;
         }
 
@@ -624,23 +637,23 @@ function SystemForm({
       className="space-y-4"
     >
       <div>
-        <Label htmlFor="sysName">システム名</Label>
-        <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+        <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
+        <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
       </div>
       <div>
-        <Label htmlFor="custId">所有顧客</Label>
+        <Label htmlFor="custId">顧客名</Label>
         <select id="custId" className="w-full p-2 border rounded" value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} required>
           <option value="">顧客を選択</option>
           {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
         </select>
       </div>
       <div>
-        <Label htmlFor="desc">説明</Label>
-        <Input id="desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+        <Label htmlFor="sysName">システム名</Label>
+        <Input id="sysName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
       </div>
       <div>
-        <Label htmlFor="sysSortOrder">表示順（小さいほど上位。99=最下位）</Label>
-        <Input id="sysSortOrder" type="number" min={1} max={999} value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} required />
+        <Label htmlFor="desc">説明</Label>
+        <Input id="desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
       </div>
       <div>
         <Label>無効</Label>
@@ -652,7 +665,7 @@ function SystemForm({
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <Label>工番一覧</Label>
+            <Label>工事番号一覧</Label>
             <p className="text-sm text-muted-foreground"></p>
           </div>
           <Button
@@ -666,34 +679,41 @@ function SystemForm({
               }));
             }}
           >
-            工番を追加
+            工事番号を追加
           </Button>
         </div>
         {formData.workNumbers.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            登録済みの工番はありません。
+            登録済みの工事番号はありません。
           </div>
         ) : (
           formData.workNumbers.map((workNumber, index) => (
             <div key={workNumber.id ?? `new-${index}`} className="rounded-md border p-3">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
                 <div>
-                  <Label htmlFor={`workNumber-${index}`}>工番</Label>
+                  <Label htmlFor={`workNumber-${index}`}>工事番号</Label>
                   <Input
                     id={`workNumber-${index}`}
                     value={workNumber.workNumber}
                     onChange={(e) => updateWorkNumberRow(index, { ...workNumber, workNumber: e.target.value })}
-                    placeholder="工番を入力"
+                    placeholder="工事番号を入力"
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`workNumberName-${index}`}>工番名</Label>
+                  <Label htmlFor={`workNumberName-${index}`}>工事番号名</Label>
                   <Input
                     id={`workNumberName-${index}`}
                     value={workNumber.workNumberName}
                     onChange={(e) => updateWorkNumberRow(index, { ...workNumber, workNumberName: e.target.value })}
-                    placeholder="工番名を入力"
+                    placeholder="工事番号名を入力"
                   />
+                </div>
+                <div className="flex h-10 items-center gap-2">
+                  <Checkbox
+                    checked={workNumber.isDisabled}
+                    onCheckedChange={(checked) => updateWorkNumberRow(index, { ...workNumber, isDisabled: checked === true })}
+                  />
+                  <span className="text-sm">無効</span>
                 </div>
                 <Button type="button" variant="destructive" onClick={() => removeWorkNumberRow(index)}>
                   削除

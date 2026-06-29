@@ -99,7 +99,7 @@ export default function WorkPlanInputPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

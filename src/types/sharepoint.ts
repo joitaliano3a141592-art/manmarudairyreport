@@ -21,6 +21,7 @@ export type SPWorkNumberFields = {
   Title: string;
   WorkNumberName?: string;
   _x30b7__x30b9__x30c6__x30e0_ID?: number | string | null;
+  IsDisabled?: boolean;
 };
 
 export type SPWorkTypeFields = {
@@ -43,6 +44,7 @@ export type SPReportFields = {
   ReporterLookupId?: number;
   ReporterName?: string;
   IsProject?: boolean;
+  Achievement?: "○" | "△" | "✕";
   IsComplete?: boolean;
 };
 
@@ -76,6 +78,7 @@ export type Customer = {
   id: string;
   name: string;
   customerNumber: number;
+  displayName: string;
 };
 
 export type System = {
@@ -92,9 +95,11 @@ export type WorkNumber = {
   id: string;
   workNumber: string;
   workNumberName: string;
+  displayName: string;
   systemId: string;
   systemName: string;
   sortOrder: number;
+  isDisabled: boolean;
 };
 
 export type WorkType = {
@@ -103,6 +108,8 @@ export type WorkType = {
   category: string;
   sortOrder: number;
 };
+
+export type Achievement = "○" | "△" | "✕" | null;
 
 export type WorkReport = {
   id: string;
@@ -122,7 +129,7 @@ export type WorkReport = {
   workHours: number;
   userName: string;
   isProject: boolean;
-  isComplete: boolean;
+  achievement: Achievement;
 };
 
 export type WorkPlan = {

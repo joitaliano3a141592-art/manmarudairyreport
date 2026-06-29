@@ -146,12 +146,19 @@ def get_lists(site_id: str) -> dict[str, dict]:
     return {lst["displayName"]: lst for lst in resp.get("value", [])}
 
 
-def ensure_list(site_id: str, display_name: str, existing: dict[str, dict]) -> str:
+def ensure_list(site_id: str, display_name: str, existing: dict[str, dict], aliases: tuple[str, ...] = ()) -> str:
     """リストを作成し list ID を返す。既存なら skip。"""
     if display_name in existing:
         list_id = existing[display_name]["id"]
         print(f"[SKIP] List exists: {display_name} ({list_id})")
         return list_id
+
+    for alias in aliases:
+        if alias in existing:
+            list_id = existing[alias]["id"]
+            graph_patch(f"/sites/{site_id}/lists/{list_id}", {"displayName": display_name})
+            print(f"[UPDATE] List display name: {alias} -> {display_name} ({list_id})")
+            return list_id
 
     body = {
         "displayName": display_name,
@@ -181,7 +188,17 @@ def delete_column(site_id: str, list_id: str, name: str, cols: dict[str, dict]):
 
 def ensure_text_column(site_id: str, list_id: str, name: str, display_name: str, cols: dict, *, required: bool = False, multi_line: bool = False):
     if name in cols:
-        print(f"[SKIP] Column exists: {name}")
+        column = cols[name]
+        patch: dict[str, object] = {}
+        if column.get("displayName") != display_name:
+            patch["displayName"] = display_name
+        if column.get("required") != required:
+            patch["required"] = required
+        if patch:
+            graph_patch(f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}", patch)
+            print(f"[UPDATE] Column settings: {name} -> {patch}")
+        else:
+            print(f"[SKIP] Column exists: {name}")
         return
     body: dict = {
         "name": name,
@@ -240,7 +257,22 @@ def ensure_datetime_column(site_id: str, list_id: str, name: str, display_name: 
 
 def ensure_choice_column(site_id: str, list_id: str, name: str, display_name: str, choices: list[str], cols: dict, *, required: bool = False):
     if name in cols:
-        print(f"[SKIP] Column exists: {name}")
+        column = cols[name]
+        patch: dict[str, object] = {}
+        if column.get("displayName") != display_name:
+            patch["displayName"] = display_name
+        if column.get("required") != required:
+            patch["required"] = required
+        if column.get("choice", {}).get("choices") != choices:
+            patch["choice"] = {
+                "allowTextEntry": False,
+                "choices": choices,
+            }
+        if patch:
+            graph_patch(f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}", patch)
+            print(f"[UPDATE] Column settings: {name} -> {patch}")
+        else:
+            print(f"[SKIP] Column exists: {name}")
         return
     body = {
         "name": name,
@@ -274,7 +306,15 @@ def ensure_person_column(site_id: str, list_id: str, name: str, display_name: st
 
 def ensure_boolean_column(site_id: str, list_id: str, name: str, display_name: str, cols: dict, *, default_value: bool = True):
     if name in cols:
-        print(f"[SKIP] Column exists: {name}")
+        column = cols[name]
+        patch: dict[str, object] = {}
+        if column.get("displayName") != display_name:
+            patch["displayName"] = display_name
+        if patch:
+            graph_patch(f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}", patch)
+            print(f"[UPDATE] Column settings: {name} -> {patch}")
+        else:
+            print(f"[SKIP] Column exists: {name}")
         return
     body = {
         "name": name,
@@ -288,7 +328,17 @@ def ensure_boolean_column(site_id: str, list_id: str, name: str, display_name: s
 
 def ensure_lookup_column(site_id: str, list_id: str, name: str, display_name: str, lookup_list_id: str, cols: dict, *, required: bool = False):
     if name in cols:
-        print(f"[SKIP] Column exists: {name}")
+        column = cols[name]
+        patch: dict[str, object] = {}
+        if column.get("displayName") != display_name:
+            patch["displayName"] = display_name
+        if column.get("required") != required:
+            patch["required"] = required
+        if patch:
+            graph_patch(f"/sites/{site_id}/lists/{list_id}/columns/{column['id']}", patch)
+            print(f"[UPDATE] Column settings: {name} -> {patch}")
+        else:
+            print(f"[SKIP] Column exists: {name}")
         return
     body = {
         "name": name,
@@ -350,7 +400,7 @@ def main():
     print("\n[STEP 2] リスト作成")
     customer_list_id = ensure_list(site_id, "顧客マスタ", existing_lists)
     system_list_id = ensure_list(site_id, "システムマスタ", existing_lists)
-    worknumber_list_id = ensure_list(site_id, "工番マスタ", existing_lists)
+    worknumber_list_id = ensure_list(site_id, "工事番号マスタ", existing_lists, aliases=("工番マスタ",))
     worktype_list_id = ensure_list(site_id, "作業種別マスタ", existing_lists)
     report_list_id = ensure_list(site_id, "作業報告", existing_lists)
     plan_list_id = ensure_list(site_id, "作業予定", existing_lists)
@@ -368,11 +418,13 @@ def main():
     ensure_text_column(site_id, system_list_id, "Description", "説明", sys_cols, multi_line=True)
     ensure_boolean_column(site_id, system_list_id, "IsDisabled", "無効", sys_cols, default_value=False)
 
-    # 工番マスタ
+    # 工事番号マスタ
     worknumber_cols = get_columns(site_id, worknumber_list_id)
     delete_column(site_id, worknumber_list_id, "WorkNumber", worknumber_cols)
-    ensure_text_column(site_id, worknumber_list_id, "WorkNumberName", "工番名", worknumber_cols)
+    ensure_text_column(site_id, worknumber_list_id, "Title", "工事番号", worknumber_cols)
+    ensure_text_column(site_id, worknumber_list_id, "WorkNumberName", "工事番号名", worknumber_cols)
     ensure_number_column(site_id, worknumber_list_id, "_x30b7__x30b9__x30c6__x30e0_ID", "システムID", worknumber_cols, required=True)
+    ensure_boolean_column(site_id, worknumber_list_id, "IsDisabled", "無効", worknumber_cols, default_value=False)
 
     # 作業種別マスタ
     wt_cols = get_columns(site_id, worktype_list_id)
@@ -385,13 +437,14 @@ def main():
     ensure_lookup_column(site_id, report_list_id, "Customer", "顧客", customer_list_id, rpt_cols, required=True)
     ensure_lookup_column(site_id, report_list_id, "System", "システム", system_list_id, rpt_cols, required=True)
     ensure_lookup_column(site_id, report_list_id, "WorkType", "作業種別", worktype_list_id, rpt_cols, required=True)
-    ensure_lookup_column(site_id, report_list_id, "WorkNumber", "工番", worknumber_list_id, rpt_cols, required=False)
+    ensure_lookup_column(site_id, report_list_id, "WorkNumber", "工事番号", worknumber_list_id, rpt_cols, required=False)
     ensure_text_column(site_id, report_list_id, "WorkDescription", "作業内容", rpt_cols, required=True, multi_line=True)
     ensure_number_column(site_id, report_list_id, "PlannedHours", "予定時間", rpt_cols, required=False)
     ensure_number_column(site_id, report_list_id, "WorkHours", "作業時間", rpt_cols, required=True)
     ensure_text_column(site_id, report_list_id, "ReporterName", "報告者名", rpt_cols)
     ensure_person_column(site_id, report_list_id, "Reporter", "報告者", rpt_cols)
-    ensure_boolean_column(site_id, report_list_id, "IsComplete", "完了", rpt_cols, default_value=True)
+    ensure_choice_column(site_id, report_list_id, "Achievement", "達成度", ["○", "△", "✕"], rpt_cols, required=False)
+    delete_column(site_id, report_list_id, "IsComplete", rpt_cols)
 
     # 作業予定
     plan_cols = get_columns(site_id, plan_list_id)
@@ -399,7 +452,7 @@ def main():
     ensure_lookup_column(site_id, plan_list_id, "Customer", "顧客", customer_list_id, plan_cols, required=True)
     ensure_lookup_column(site_id, plan_list_id, "System", "システム", system_list_id, plan_cols, required=True)
     ensure_lookup_column(site_id, plan_list_id, "WorkType", "作業種別", worktype_list_id, plan_cols, required=False)
-    ensure_lookup_column(site_id, plan_list_id, "WorkNumber", "工番", worknumber_list_id, plan_cols, required=False)
+    ensure_lookup_column(site_id, plan_list_id, "WorkNumber", "工事番号", worknumber_list_id, plan_cols, required=False)
     ensure_text_column(site_id, plan_list_id, "WorkDescription", "作業内容", plan_cols, required=True, multi_line=True)
     ensure_number_column(site_id, plan_list_id, "PlannedHours", "作業予定時間", plan_cols, required=False)
     ensure_boolean_column(site_id, plan_list_id, "IsProject", "案件", plan_cols, default_value=True)
@@ -483,7 +536,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "WorkDescription": "画面設計と実装（ダッシュボード機能）",
             "PlannedHours": 4.0,
             "WorkHours": 4.5,
-            "IsComplete": True,
+            "Achievement": "○",
         })
         add_item(site_id, report_list_id, {
             "Title": "日報-テスト",
@@ -495,7 +548,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "WorkDescription": "結合テスト実施とバグ修正",
             "PlannedHours": 3.0,
             "WorkHours": 3.0,
-            "IsComplete": True,
+            "Achievement": "○",
         })
         add_item(site_id, report_list_id, {
             "Title": "日報-定例会議",
@@ -507,7 +560,7 @@ def seed_demo_data(site_id: str, customer_list_id: str, system_list_id: str, wor
             "WorkDescription": "週次定例ミーティング",
             "PlannedHours": 1.0,
             "WorkHours": 1.0,
-            "IsComplete": True,
+            "Achievement": "○",
         })
     else:
         print("  [SKIP] Already has data")

@@ -10,11 +10,21 @@ $ErrorActionPreference = "Stop"
 function Ensure-List {
   param(
     [string]$Title,
-    [string]$Template = "GenericList"
+    [string]$Template = "GenericList",
+    [string[]]$Aliases = @()
   )
 
   $existing = Get-PnPList -Identity $Title -ErrorAction SilentlyContinue
   if ($null -eq $existing) {
+    foreach ($alias in $Aliases) {
+      $legacy = Get-PnPList -Identity $alias -ErrorAction SilentlyContinue
+      if ($null -ne $legacy) {
+        Write-Host "[UPDATE] List title: $alias -> $Title"
+        Set-PnPList -Identity $legacy -Title $Title | Out-Null
+        return Get-PnPList -Identity $Title
+      }
+    }
+
     Write-Host "[CREATE] List: $Title"
     New-PnPList -Title $Title -Template $Template -OnQuickLaunch | Out-Null
     return Get-PnPList -Identity $Title
@@ -35,7 +45,19 @@ function Ensure-Field {
 
   $field = Get-PnPField -List $ListTitle -Identity $InternalName -ErrorAction SilentlyContinue
   if ($null -ne $field) {
-    Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    $values = @{}
+    if ([string]$field.Title -ne $DisplayName) {
+      $values["Title"] = $DisplayName
+    }
+    if ([bool]$field.Required -ne $Required) {
+      $values["Required"] = $Required
+    }
+    if ($values.Count -gt 0) {
+      Write-Host "[UPDATE] Field settings: $ListTitle.$InternalName"
+      Set-PnPField -List $ListTitle -Identity $InternalName -Values $values | Out-Null
+    } else {
+      Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    }
     return
   }
 
@@ -92,7 +114,13 @@ function Ensure-ChoiceField {
 
   $field = Get-PnPField -List $ListTitle -Identity $InternalName -ErrorAction SilentlyContinue
   if ($null -ne $field) {
-    Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    if ([string]$field.Title -ne $DisplayName) {
+      Write-Host "[UPDATE] Field display name: $ListTitle.$InternalName -> $DisplayName"
+      Set-PnPField -List $ListTitle -Identity $InternalName -Values @{ Title = $DisplayName } | Out-Null
+    }
+    else {
+      Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    }
     return
   }
 
@@ -116,7 +144,13 @@ function Ensure-LookupField {
 
   $field = Get-PnPField -List $ListTitle -Identity $InternalName -ErrorAction SilentlyContinue
   if ($null -ne $field) {
-    Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    if ([string]$field.Title -ne $DisplayName) {
+      Write-Host "[UPDATE] Field display name: $ListTitle.$InternalName -> $DisplayName"
+      Set-PnPField -List $ListTitle -Identity $InternalName -Values @{ Title = $DisplayName } | Out-Null
+    }
+    else {
+      Write-Host "[SKIP] Field exists: $ListTitle.$InternalName"
+    }
     return
   }
 
@@ -148,7 +182,7 @@ Connect-PnPOnline -Url $SiteUrl -Interactive
 Write-Host "[STEP] Ensure lists"
 $customers = Ensure-List -Title "顧客マスタ"
 $systems = Ensure-List -Title "システムマスタ"
-$workNumbers = Ensure-List -Title "工番マスタ"
+$workNumbers = Ensure-List -Title "工事番号マスタ" -Aliases @("工番マスタ")
 $workTypes = Ensure-List -Title "作業種別マスタ"
 $workReports = Ensure-List -Title "作業報告"
 $workPlans = Ensure-List -Title "作業予定"
@@ -162,11 +196,13 @@ Ensure-LookupField -ListTitle "システムマスタ" -InternalName "Customer" -
 Ensure-Field -ListTitle "システムマスタ" -InternalName "Description" -DisplayName "説明" -Type "Note"
 Ensure-Field -ListTitle "システムマスタ" -InternalName "IsDisabled" -DisplayName "無効" -Type "Boolean"
 
-Write-Host "[STEP] Ensure columns: 工番マスタ"
-Remove-FieldIfExists -ListTitle "工番マスタ" -InternalName "WorkNumber"
-Ensure-Field -ListTitle "工番マスタ" -InternalName "WorkNumberName" -DisplayName "工番名" -Type "Text"
-Ensure-Field -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -DisplayName "システムID" -Type "Number" -Required $true
-Set-FieldUniqueConstraint -ListTitle "工番マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -EnforceUniqueValues $false
+Write-Host "[STEP] Ensure columns: 工事番号マスタ"
+Remove-FieldIfExists -ListTitle "工事番号マスタ" -InternalName "WorkNumber"
+Ensure-Field -ListTitle "工事番号マスタ" -InternalName "Title" -DisplayName "工事番号" -Type "Text"
+Ensure-Field -ListTitle "工事番号マスタ" -InternalName "WorkNumberName" -DisplayName "工事番号名" -Type "Text"
+Ensure-Field -ListTitle "工事番号マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -DisplayName "システムID" -Type "Number" -Required $true
+Ensure-Field -ListTitle "工事番号マスタ" -InternalName "IsDisabled" -DisplayName "無効" -Type "Boolean"
+Set-FieldUniqueConstraint -ListTitle "工事番号マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -EnforceUniqueValues $false
 
 Write-Host "[STEP] Ensure columns: 作業種別マスタ"
 Ensure-ChoiceField -ListTitle "作業種別マスタ" -InternalName "Category" -DisplayName "カテゴリ" -Choices @("開発", "保守", "運用", "会議", "その他")
@@ -177,21 +213,22 @@ Ensure-Field -ListTitle "作業報告" -InternalName "RegistrationDate" -Display
 Ensure-LookupField -ListTitle "作業報告" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes -Required $true
-Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkNumber" -DisplayName "工番" -LookupList $workNumbers
+Ensure-LookupField -ListTitle "作業報告" -InternalName "WorkNumber" -DisplayName "工事番号" -LookupList $workNumbers
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
 Ensure-Field -ListTitle "作業報告" -InternalName "PlannedHours" -DisplayName "予定時間" -Type "Number"
 Ensure-Field -ListTitle "作業報告" -InternalName "WorkHours" -DisplayName "作業時間" -Type "Number" -Required $true
 Ensure-Field -ListTitle "作業報告" -InternalName "ReporterName" -DisplayName "報告者名" -Type "Text"
 Ensure-Field -ListTitle "作業報告" -InternalName "Reporter" -DisplayName "報告者" -Type "User"
 Ensure-Field -ListTitle "作業報告" -InternalName "IsProject" -DisplayName "案件" -Type "Boolean"
-Ensure-Field -ListTitle "作業報告" -InternalName "IsComplete" -DisplayName "完了" -Type "Boolean"
+Ensure-ChoiceField -ListTitle "作業報告" -InternalName "Achievement" -DisplayName "達成度" -Choices @("○", "△", "✕") -Required $false
+Remove-FieldIfExists -ListTitle "作業報告" -InternalName "IsComplete"
 
 Write-Host "[STEP] Ensure columns: 作業予定"
 Ensure-Field -ListTitle "作業予定" -InternalName "PlanDate" -DisplayName "予定日" -Type "DateTime" -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "System" -DisplayName "システム" -LookupList $systems -Required $true
 Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkType" -DisplayName "作業種別" -LookupList $workTypes
-Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkNumber" -DisplayName "工番" -LookupList $workNumbers
+Ensure-LookupField -ListTitle "作業予定" -InternalName "WorkNumber" -DisplayName "工事番号" -LookupList $workNumbers
 Ensure-Field -ListTitle "作業予定" -InternalName "WorkDescription" -DisplayName "作業内容" -Type "Note" -Required $true
 Ensure-Field -ListTitle "作業予定" -InternalName "PlannedHours" -DisplayName "作業予定時間" -Type "Number"
 Ensure-Field -ListTitle "作業予定" -InternalName "IsProject" -DisplayName "案件" -Type "Boolean"
@@ -288,7 +325,7 @@ if ($SeedDemoData) {
       WorkHours = 4.5
       ReporterName = "サンプル報告者"
       IsProject = $true
-      IsComplete = $true
+      Achievement = "○"
     } | Out-Null
 
     Add-PnPListItem -List "作業報告" -Values @{
@@ -303,7 +340,7 @@ if ($SeedDemoData) {
       WorkHours = 3.0
       ReporterName = "サンプル報告者"
       IsProject = $true
-      IsComplete = $true
+      Achievement = "○"
     } | Out-Null
   }
 
