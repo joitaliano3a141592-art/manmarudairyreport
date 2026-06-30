@@ -311,6 +311,10 @@ export default function DailyEntryPage() {
     () => new Map(customers.map((customer) => [customer.id, customer.name])),
     [customers],
   );
+  const customerSortOrderMap = useMemo(
+    () => new Map(customers.map((customer, index) => [customer.id, index])),
+    [customers],
+  );
 
   useEffect(() => {
     if (!currentWorkDay) {
@@ -913,8 +917,34 @@ export default function DailyEntryPage() {
         || stripCustomerNumberPrefix(customerName)
         || "未設定"
       );
+      const comparePublishItems = (
+        left: { customerId: string; customerName: string; workTypeName: string; workDescription: string },
+        right: { customerId: string; customerName: string; workTypeName: string; workDescription: string },
+      ) => {
+        const leftOrder = customerSortOrderMap.get(left.customerId) ?? Number.MAX_SAFE_INTEGER;
+        const rightOrder = customerSortOrderMap.get(right.customerId) ?? Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+
+        const customerNameCompare = resolveTeamsCustomerName(left.customerId, left.customerName)
+          .localeCompare(resolveTeamsCustomerName(right.customerId, right.customerName), "ja");
+        if (customerNameCompare !== 0) {
+          return customerNameCompare;
+        }
+
+        const workTypeCompare = normalizeInlineText(left.workTypeName).localeCompare(normalizeInlineText(right.workTypeName), "ja");
+        if (workTypeCompare !== 0) {
+          return workTypeCompare;
+        }
+
+        return normalizeInlineText(left.workDescription).localeCompare(normalizeInlineText(right.workDescription), "ja");
+      };
       const buildCustomerLines = (items: Array<{ customerId: string; customerName: string; workTypeName: string; workDescription: string }>) => {
-        return items.map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription))}</p>`).join("");
+        return [...items]
+          .sort(comparePublishItems)
+          .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
+          .join("");
       };
       const reportSections = publishReportGroups.map(([reportDate, groupedReports]) => `
     <p>■ ${formatMonthDay(reportDate)}</p>
