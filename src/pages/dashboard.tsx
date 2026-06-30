@@ -112,6 +112,20 @@ export default function DashboardPage() {
   const resolveCustomerTableDisplayName = (report: WorkReport): string => {
     return customerNameMap.get(report.customerId) || report.customerName || "(未設定)";
   };
+  const resolveCustomerCsvDisplayName = (report: WorkReport): string => {
+    const resolved = customerNameMap.get(report.customerId);
+    if (resolved) {
+      return resolved;
+    }
+    const fallback = report.customerName || "";
+    const separatorIndex = fallback.indexOf("：");
+    if (separatorIndex <= 0) {
+      return fallback || "(未設定)";
+    }
+    const prefix = fallback.slice(0, separatorIndex).trim();
+    const suffix = fallback.slice(separatorIndex + 1).trim();
+    return /^\d+$/.test(prefix) && suffix ? suffix : fallback;
+  };
 
   const uniqueUsers = useMemo(
     () => Array.from(new Set(reports.map((report) => report.userName))),
@@ -392,7 +406,7 @@ export default function DashboardPage() {
     const rows = filteredReports.map((report: WorkReport) => [
       report.reportDate,
       report.userName,
-      report.customerName,
+      resolveCustomerCsvDisplayName(report),
       resolveSystemAggregationName(report),
       report.workDescription,
       report.workTypeName,
