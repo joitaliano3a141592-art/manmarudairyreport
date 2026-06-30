@@ -45,6 +45,14 @@ function toLocalDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function normalizeInlineText(value: string): string {
+  return value.replaceAll(/\s+/g, " ").trim();
+}
+
+function stripCustomerNumberPrefix(value: string): string {
+  return value.replace(/^\s*\d+\s*[：:]\s*/, "").trim();
+}
+
 const today = toLocalDate(new Date());
 const tomorrow = (() => {
   const date = new Date();
@@ -395,36 +403,69 @@ export default function DailyEntryPage() {
   );
   const reportTableRows = useMemo<ReportTableRow[]>(() => {
     const buildKey = (parts: Array<string | null | undefined>) => parts.map((part) => (part == null ? "__missing__" : part)).join("|");
-    const buildPlanConversionKey = (item: {
-      reportDate?: string;
-      planDate?: string;
-      customerId: string;
-      systemId: string;
-      workTypeId: string;
-      workNumberId: string;
-    }) => buildKey([
+    const buildPlanMatchKey = (
+      item: {
+        reportDate?: string;
+        planDate?: string;
+        customerId: string;
+        systemId: string;
+        workTypeId: string;
+        workNumberId: string;
+        workDescription?: string;
+      },
+      options?: { ignoreWorkNumber?: boolean },
+    ) => buildKey([
       item.reportDate ?? item.planDate ?? "",
       item.customerId,
       resolveLinkedSystemId(item.systemId, item.workNumberId),
       item.workTypeId,
-      item.workNumberId,
+      options?.ignoreWorkNumber ? "" : item.workNumberId,
+      normalizeInlineText(item.workDescription ?? ""),
     ]);
-    const convertedPlanKeys = new Set(
-      reports.map((report) => buildPlanConversionKey(report)),
-    );
-    const visibleTodayPlans = todayPlans.filter((plan) => {
-      const key = buildPlanConversionKey(plan);
-      return !convertedPlanKeys.has(key);
+    const planQueueByKey = new Map<string, WorkPlan[]>();
+    const enqueuePlan = (key: string, plan: WorkPlan) => {
+      const existing = planQueueByKey.get(key);
+      if (existing) {
+        existing.push(plan);
+      } else {
+        planQueueByKey.set(key, [plan]);
+      }
+    };
+    const matchedPlanIds = new Set<string>();
+    const matchedReportIds = new Set<string>();
+    const consumeMatchedPlan = (keys: string[]) => {
+      for (const key of keys) {
+        const queue = planQueueByKey.get(key);
+        while (queue && queue.length > 0) {
+          const plan = queue.shift();
+          if (plan && !matchedPlanIds.has(plan.id)) {
+            return plan;
+          }
+        }
+      }
+      return null;
+    };
+    todayPlans.forEach((plan) => {
+      enqueuePlan(buildPlanMatchKey(plan), plan);
+      enqueuePlan(buildPlanMatchKey(plan, { ignoreWorkNumber: true }), plan);
     });
+    reports.forEach((report) => {
+      const matchedPlan = consumeMatchedPlan([
+        buildPlanMatchKey(report),
+        buildPlanMatchKey(report, { ignoreWorkNumber: true }),
+      ]);
+      if (matchedPlan) {
+        matchedPlanIds.add(matchedPlan.id);
+        matchedReportIds.add(report.id);
+      }
+    });
+    const visibleTodayPlans = todayPlans.filter((plan) => !matchedPlanIds.has(plan.id));
 
     const reportRows: ReportTableRow[] = reports.map((report) => ({
       rowKey: `report-${report.id}`,
       source: "report",
       sourceId: report.id,
-      displayType: convertedPlanKeys.has(buildPlanConversionKey(report))
-        && report.plannedHours > 0
-        ? "予定"
-        : "予定外",
+      displayType: matchedReportIds.has(report.id) && report.plannedHours > 0 ? "予定" : "予定外",
       reportDate: report.reportDate,
       customerId: report.customerId,
       customerName: report.customerName,
@@ -670,7 +711,7 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === reportForm.customerId);
-    const workNumber = filteredReportWorkNumbers.find((item) => item.id === reportForm.workNumberId) ?? null;
+    const workNumber = workNumberMap.get(reportForm.workNumberId) ?? null;
     const systemLookupId = reportForm.systemId ? Number(reportForm.systemId) : null;
     const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
     const fields = {
@@ -716,7 +757,7 @@ export default function DailyEntryPage() {
     }
 
     const customer = customers.find((item) => item.id === planForm.customerId);
-    const workNumber = filteredPlanWorkNumbers.find((item) => item.id === planForm.workNumberId) ?? null;
+    const workNumber = workNumberMap.get(planForm.workNumberId) ?? null;
     const systemLookupId = planForm.systemId ? Number(planForm.systemId) : null;
     const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
     const fields = {
@@ -858,7 +899,6 @@ export default function DailyEntryPage() {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
-      const normalizeInlineText = (value: string) => value.replaceAll(/\s+/g, " ").trim();
       const formatMonthDay = (date: string) => {
         const [, month, day] = date.split("-");
         return `${Number(month)}/${Number(day)}`;
@@ -868,8 +908,13 @@ export default function DailyEntryPage() {
         const normalizedWorkDescription = normalizeInlineText(workDescription);
         return [normalizedWorkTypeName, normalizedWorkDescription].filter(Boolean).join(" ");
       };
-      const buildCustomerLines = (items: Array<{ customerName: string; workTypeName: string; workDescription: string }>) => {
-        return items.map((item) => `<p>【${escapeHtml(item.customerName.trim() || "未設定")}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription))}</p>`).join("");
+      const resolveTeamsCustomerName = (customerId: string, customerName: string) => (
+        customerNameMap.get(customerId)
+        || stripCustomerNumberPrefix(customerName)
+        || "未設定"
+      );
+      const buildCustomerLines = (items: Array<{ customerId: string; customerName: string; workTypeName: string; workDescription: string }>) => {
+        return items.map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription))}</p>`).join("");
       };
       const reportSections = publishReportGroups.map(([reportDate, groupedReports]) => `
     <p>■ ${formatMonthDay(reportDate)}</p>
