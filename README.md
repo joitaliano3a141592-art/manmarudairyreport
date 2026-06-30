@@ -209,12 +209,12 @@ dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA �
 
 ### Teamsタブでの認証フロー
 
-Teams タブ起動時は追加ログインを出さず、Teams / Microsoft 365 の既存サインイン状態を使って SSO する:
+Teams タブ起動時はまず追加ログインなしで Teams / Microsoft 365 の既存サインイン状態を使って SSO し、取れない場合のみ Teams 管理ポップアップで認証する:
 
 1. microsoftTeams.app.initialize() でコンテキスト確認
 2. Teams タブ内では MSAL の `ssoSilent()` で既存セッションからトークン取得
 3. 単体ブラウザ起動時のみ MSAL `loginRedirect()` で初回ログイン
-4. Teams 側で SSO 取得不可の場合は再ログインに進まず、サインイン状態や同意設定の確認を促す
+4. Teams 側で SSO 取得不可の場合のみ `microsoftTeams.authentication.authenticate()` でフォールバック認証
 
 ---
 

@@ -7,6 +7,9 @@ const NotFoundPage = lazy(() => import("@/pages/not-found"));
 // Teams チャネルタブ設定ページ
 const TeamsConfigPage = lazy(() => import("@/pages/teams-config"));
 
+// Teams 認証ポップアップ開始ページ（レイアウトなし）
+const TeamsAuthStartPage = lazy(() => import("@/pages/teams-auth-start"));
+
 // ダッシュボード
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 
@@ -56,6 +59,10 @@ export const router = createBrowserRouter(
     {
       path: "/teams-config",
       element: withSuspense(TeamsConfigPage),
+    },
+    {
+      path: "/teams-auth-start",
+      element: withSuspense(TeamsAuthStartPage),
     },
     {
       path: "/",

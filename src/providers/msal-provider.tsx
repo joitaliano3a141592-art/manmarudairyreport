@@ -12,7 +12,15 @@ import {
   type AuthenticationResult,
 } from "@azure/msal-browser";
 import { graphScopes, msalConfig, teamsScopes } from "@/lib/msalConfig";
-import { clearTeamsSessionReady, markTeamsSessionReady } from "@/lib/teamsAuthSession";
+import {
+  TEAMS_SESSION_READY_EVENT,
+  clearTeamsAuthPending,
+  clearTeamsSessionReady,
+  hasTeamsAuthPending,
+  hasTeamsSessionReady,
+  markTeamsAuthPending,
+  markTeamsSessionReady,
+} from "@/lib/teamsAuthSession";
 import * as microsoftTeams from "@microsoft/teams-js";
 
 const msalInstance = new PublicClientApplication(msalConfig);
@@ -31,6 +39,11 @@ export function getMsalInstance() {
 
 // iframe 内（Teams タブ・Power Apps 埋め込み等）かどうかを検出
 const isInIframe = window.self !== window.top;
+
+const isTeamsAuthPopup =
+  window.opener !== null &&
+  window.opener !== window &&
+  (location.search.includes("code=") || location.hash.length > 1 || hasTeamsAuthPending());
 
 type TeamsContext = Awaited<ReturnType<typeof microsoftTeams.app.getContext>>;
 
@@ -58,21 +71,86 @@ async function detectTeamsContext(): Promise<TeamsContext | null> {
   }
 }
 
+function buildTeamsAuthStartUrl(scopes: string[]): string {
+  const baseUrl = window.location.origin + import.meta.env.BASE_URL;
+  const params = new URLSearchParams({
+    scopes: scopes.join(" "),
+  });
+  return `${baseUrl}teams-auth-start?${params.toString()}`;
+}
+
+async function notifyTeamsAuthSuccess(result = "ok"): Promise<void> {
+  clearTeamsAuthPending();
+  markTeamsSessionReady();
+  try {
+    await microsoftTeams.app.initialize();
+    microsoftTeams.authentication.notifySuccess(result);
+  } catch {
+    window.close();
+  }
+}
+
+async function notifyTeamsAuthFailure(error: unknown): Promise<void> {
+  clearTeamsAuthPending();
+  try {
+    await microsoftTeams.app.initialize();
+    microsoftTeams.authentication.notifyFailure(String(error));
+  } catch {
+    window.close();
+  }
+}
+
 async function acquireTeamsSsoResult(
   scopes: string[],
   context: TeamsContext,
 ): Promise<AuthenticationResult> {
   const loginHint = getTeamsLoginHint(context);
-  if (!loginHint) {
-    throw new Error("Teams login hint is unavailable.");
+  const ssoRequests = [
+    loginHint ? { scopes, loginHint } : null,
+    { scopes },
+  ].filter((request): request is { scopes: string[]; loginHint?: string } => request !== null);
+
+  let lastError: unknown;
+  for (const request of ssoRequests) {
+    try {
+      const result = await msalInstance.ssoSilent(request);
+      setActiveAccount(result.account);
+      return result;
+    } catch (err) {
+      lastError = err;
+      console.warn("Teams SSO attempt failed:", err);
+    }
   }
 
-  const result = await msalInstance.ssoSilent({
-    scopes,
-    loginHint,
-  });
-  setActiveAccount(result.account);
-  return result;
+  throw lastError ?? new Error("Teams SSO is unavailable.");
+}
+
+async function acquireTeamsInteractiveResult(
+  scopes: string[],
+): Promise<AuthenticationResult> {
+  clearTeamsSessionReady();
+  markTeamsAuthPending();
+  try {
+    await microsoftTeams.authentication.authenticate({
+      url: buildTeamsAuthStartUrl(scopes),
+      width: 600,
+      height: 535,
+    });
+    clearTeamsAuthPending();
+    const accounts = msalInstance.getAllAccounts();
+    const account = accounts[0];
+    if (!account) {
+      throw new Error("Teams interactive auth completed without an MSAL account.");
+    }
+    setActiveAccount(account);
+    return await msalInstance.acquireTokenSilent({
+      scopes,
+      account,
+    });
+  } catch (err) {
+    clearTeamsAuthPending();
+    throw err;
+  }
 }
 
 async function acquireTokenInternal(scopes: string[]): Promise<string> {
@@ -96,10 +174,9 @@ async function acquireTokenInternal(scopes: string[]): Promise<string> {
         const result = await acquireTeamsSsoResult(scopes, teamsContext);
         return result.accessToken;
       } catch (err) {
-        console.error("Teams SSO token acquisition failed:", err);
-        throw new Error(
-          "Teams タブの SSO 認証に失敗しました。Teams のサインイン状態と必要な同意設定を確認してください。",
-        );
+        console.warn("Teams SSO token acquisition failed, falling back to interactive auth:", err);
+        const result = await acquireTeamsInteractiveResult(scopes);
+        return result.accessToken;
       }
     }
   }
@@ -127,6 +204,32 @@ function AutoLogin({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isTeamsAuthPopup) {
+      return;
+    }
+
+    const closePopupIfReady = async () => {
+      if (!hasTeamsSessionReady()) {
+        return;
+      }
+      await notifyTeamsAuthSuccess("session-ready");
+    };
+
+    const handleReady = () => {
+      void closePopupIfReady();
+    };
+
+    void closePopupIfReady();
+    window.addEventListener("storage", handleReady);
+    window.addEventListener(TEAMS_SESSION_READY_EVENT, handleReady as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleReady);
+      window.removeEventListener(TEAMS_SESSION_READY_EVENT, handleReady as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (inProgress !== "none") {
@@ -148,19 +251,22 @@ function AutoLogin({ children }: { children: ReactNode }) {
         void detectTeamsContext().then(async (teamsContext) => {
           if (isTeamsHostContext(teamsContext)) {
             try {
-              const silentRes = await acquireTeamsSsoResult(
-                graphScopes,
-                teamsContext,
-              );
+              const silentRes = await acquireTeamsSsoResult(graphScopes, teamsContext);
               if (!cancelled) {
                 setActiveAccount(silentRes.account);
               }
             } catch (err) {
-              console.error("Teams SSO failed:", err);
-              if (!cancelled) {
-                setAuthError(
-                  "Teams のサインイン情報を取得できませんでした。Teams にログイン済みか確認してから開き直してください。",
-                );
+              console.warn("Teams SSO failed, falling back to interactive auth:", err);
+              try {
+                const interactiveRes = await acquireTeamsInteractiveResult(graphScopes);
+                if (!cancelled) {
+                  setActiveAccount(interactiveRes.account);
+                }
+              } catch (interactiveErr) {
+                console.error("Teams interactive auth failed:", interactiveErr);
+                if (!cancelled) {
+                  setAuthError("認証に失敗しました。Teams から再度開き直してください。");
+                }
               }
             }
             return;
@@ -264,7 +370,26 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
 
     msalInstance
       .initialize()
-      .then(() => {
+      .then(async () => {
+        if (isTeamsAuthPopup) {
+          try {
+            const result = await msalInstance.handleRedirectPromise();
+            setActiveAccount(result?.account);
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+              setActiveAccount(accounts[0]);
+            }
+            if (result?.account || accounts.length > 0 || hasTeamsSessionReady()) {
+              await notifyTeamsAuthSuccess("ok");
+            } else {
+              setReady(true);
+            }
+          } catch (err) {
+            await notifyTeamsAuthFailure(err);
+          }
+          return;
+        }
+
         const promise = isInIframe
           ? Promise.resolve(null)
           : msalInstance.handleRedirectPromise();
@@ -292,7 +417,9 @@ export function MsalAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
-      clearTeamsSessionReady();
+      if (!isTeamsAuthPopup) {
+        clearTeamsSessionReady();
+      }
     };
   }, []);
 

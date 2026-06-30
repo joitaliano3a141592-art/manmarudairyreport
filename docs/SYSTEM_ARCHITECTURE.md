@@ -307,7 +307,7 @@ Teams タブは iframe 内で動くため、単体ブラウザとは認証の考
 
 1. **単体ブラウザ起動**: MSAL の `loginRedirect()` で初回ログインを行う
 2. **Teams タブ起動**: Teams / Microsoft 365 の既存ログイン状態を使い、MSAL の `ssoSilent()` で SSO する
-3. **Teams 側で SSO 取得不可**: 追加ログインポップアップは出さず、Teams のサインイン状態や必要な同意設定の確認を促す
+3. **Teams 側で SSO 取得不可**: `microsoftTeams.authentication.authenticate()` で Teams 管理ポップアップ認証にフォールバックする
 
 ### サーバーヘッダー設定（埋め込み許可）
 
