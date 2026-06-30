@@ -751,7 +751,7 @@ function CustomerForm({
       </div>
       <div>
         <Label htmlFor="custCustomerNumber">顧客番号</Label>
-        <Input id="custCustomerNumber" type="number" min={1} max={999} value={customerNumber} onChange={(e) => setCustomerNumber(Number(e.target.value))} required />
+        <Input id="custCustomerNumber" type="number" min={1} max={99999} value={customerNumber} onChange={(e) => setCustomerNumber(Number(e.target.value))} required />
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
