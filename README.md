@@ -209,12 +209,12 @@ dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA �
 
 ### Teamsタブでの認証フロー
 
-Teams iframe 内では loginRedirect が不可のため、Teams SDK 経由のポップアップ認証を使用:
+Teams タブ起動時は追加ログインを出さず、Teams / Microsoft 365 の既存サインイン状態を使って SSO する:
 
 1. microsoftTeams.app.initialize() でコンテキスト確認
-2. microsoftTeams.authentication.authenticate() でポップアップ起動
-3. ポップアップ側で MSAL loginRedirect → localStorage にトークン保存
-4. 親フレームがトークンを検出・利用
+2. Teams タブ内では MSAL の `ssoSilent()` で既存セッションからトークン取得
+3. 単体ブラウザ起動時のみ MSAL `loginRedirect()` で初回ログイン
+4. Teams 側で SSO 取得不可の場合は再ログインに進まず、サインイン状態や同意設定の確認を促す
 
 ---
 

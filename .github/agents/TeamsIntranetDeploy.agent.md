@@ -27,7 +27,6 @@ argument-hint: "例: 社内 URL を https 化して Teams マニフェストを�
   - contentUrl, configurationUrl, validDomains
 - 認証構成
   - src/providers/msal-provider.tsx
-  - src/pages/teams-auth-start.tsx
   - src/pages/teams-config.tsx
 - ルーティング
   - src/router.tsx
@@ -39,7 +38,7 @@ argument-hint: "例: 社内 URL を https 化して Teams マニフェストを�
 
 - Teams タブ表示時に「サインイン中」で止まる場合:
   - loginPopup のみで完結させない
-  - Teams authentication.authenticate 経由を優先
+  - Teams / Microsoft 365 の既存サインイン状態を使う `ssoSilent()` 前提で確認する
 - X-Frame-Options が DENY の場合:
   - Teams 埋め込み不可のため CSP frame-ancestors に置換
 - Windows で build:server が失敗する場合:

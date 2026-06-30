@@ -303,12 +303,11 @@
 
 ### 認証フローの重要ポイント
 
-Teams タブは iframe 内で動くため、通常の popup 認証（`window.open`）がブロックされる場合がある。
-そのため、Teams では次のフローを使う。
+Teams タブは iframe 内で動くため、単体ブラウザとは認証の考え方を分ける。
 
-1. `microsoftTeams.authentication.authenticate()` で Teams 管理ポップアップを開く
-2. 認証開始ページ（`/teams-auth-start`）で MSAL の `loginRedirect` を実行
-3. リダイレクト先で `handleRedirectPromise` 後に `notifySuccess` を返す
+1. **単体ブラウザ起動**: MSAL の `loginRedirect()` で初回ログインを行う
+2. **Teams タブ起動**: Teams / Microsoft 365 の既存ログイン状態を使い、MSAL の `ssoSilent()` で SSO する
+3. **Teams 側で SSO 取得不可**: 追加ログインポップアップは出さず、Teams のサインイン状態や必要な同意設定の確認を促す
 
 ### サーバーヘッダー設定（埋め込み許可）
 
