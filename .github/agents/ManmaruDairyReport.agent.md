@@ -37,7 +37,7 @@ argument-hint: "例: 日報一覧に検索フィルタを追加して、作業�
 ### Teams
 - **グループ ID**: `.env.production.local` の `VITE_TEAMS_TEAM_ID` / GitHub Secrets 参照
 - **チャネル ID**: `.env.production.local` の `VITE_TEAMS_CHANNEL_ID` / GitHub Secrets 参照
-- **マニフェストバージョン**: `1.0.2`（schema v1.17）
+- **マニフェストバージョン**: `1.0.6`（schema v1.17）
 - **共有チャネル対応**: `supportedChannelTypes: ["sharedChannels"]`
 
 ---

@@ -10,41 +10,16 @@
 
 ## システム構成
 
-`
-[ユーザー]
-    │
-    ├── ブラウザ ──► GitHub Pages (React SPA)
-    │                   https://joitaliano3a141592-art.github.io/manmarudairyreport/
-    │
-    └── Microsoft Teams タブ (同一 SPA を iframe 表示)
-            ├── チャネルタブ（チーム・グループチャット・共有チャネル）
-            └── 個人タブ（パーソナル）
+- フロントエンド: React + Vite の SPA
+- 認証: Microsoft Entra ID + MSAL.js
+- データ: SharePoint Online 7リスト（顧客 / システム / 工事番号 / 作業種別 / 作業報告 / 作業予定 / 作業日）
+- Teams 連携: Teams タブ表示、Teams チャネル発報
+- 配信: GitHub Pages / 社内サーバー（IIS・Nginx）
 
-[認証]
-    Microsoft Entra ID (Azure AD)
-    ├── テナント: <VITE_MSAL_TENANT_ID> ※ GitHub Secrets 管理
-    ├── クライアント: <VITE_MSAL_CLIENT_ID> ※ GitHub Secrets 管理
-    ├── 認証方式: MSAL.js SPA (PKCE)
-    └── スコープ: Sites.ReadWrite.All / Sites.Manage.All / User.Read / ChannelMessage.Send
+詳細は以下を参照してください。
 
-[データ]
-    SharePoint Online (manmarusystem テナント)
-    ├── 顧客マスタ (List1)
-    ├── システムマスタ (List2)
-    ├── 作業種別マスタ (List3)
-    ├── 作業報告 (List4)
-    └── 作業予定 (List5)
-    ※ サイト ID・リスト ID は GitHub Secrets / .env.production.local で管理
-
-[CI/CD]
-    GitHub Actions → GitHub Pages (main ブランチへの push で自動デプロイ)
-    シークレット管理: GitHub Secrets (VITE_* 環境変数)
-
-[Teams 通知]
-    Graph API ChannelMessage.Send
-    ├── グループ ID: <VITE_TEAMS_TEAM_ID> ※ GitHub Secrets 管理
-    └── チャネル ID: <VITE_TEAMS_CHANNEL_ID> ※ GitHub Secrets 管理
-`
+- [システム構成と認証フロー](./docs/SYSTEM_ARCHITECTURE.md)
+- [SharePoint リスト定義](./docs/SHAREPOINT_LIST_PLAN.md)
 
 ---
 
@@ -82,8 +57,7 @@
 
 ## SharePoint リスト構成
 
-SharePoint サイト: manmarusystem テナント内の Teams チャネル専用サイト
-※ サイト URL・リスト ID は機密情報のため `VITE_SP_*` 環境変数で管理
+SharePoint サイト ID とリスト ID は設定値で切り替えます。現在アプリが参照する主なリストは次の 7 つです。
 
 | リスト | 環境変数キー |
 |--------|-------------|
@@ -94,6 +68,8 @@ SharePoint サイト: manmarusystem テナント内の Teams チャネル専用�
 | 作業報告 | `VITE_SP_LIST_REPORTS` |
 | 作業予定 | `VITE_SP_LIST_PLANS` |
 | 作業日 | `VITE_SP_LIST_WORKDAYS` |
+
+列構成の詳細は [docs/SHAREPOINT_LIST_PLAN.md](./docs/SHAREPOINT_LIST_PLAN.md) を参照してください。
 
 ---
 
@@ -107,15 +83,15 @@ SharePoint サイト: manmarusystem テナント内の Teams チャネル専用�
 
 ### ローカル開発
 
-`ash
+```bash
 git clone https://github.com/joitaliano3a141592-art/manmarudairyreport.git
 cd manmarudairyreport
 npm install
-`
+```
 
 .env.local をプロジェクトルートに作成:
 
-`env
+```env
 VITE_MSAL_TENANT_ID=<Azure AD テナント ID>
 VITE_MSAL_CLIENT_ID=<Azure AD クライアント ID>
 VITE_SP_SITE_ID=<SharePoint サイト ID>
@@ -128,11 +104,11 @@ VITE_SP_LIST_PLANS=<作業予定 リスト ID>
 VITE_SP_LIST_WORKDAYS=<作業日 リスト ID>
 VITE_TEAMS_TEAM_ID=<Teams グループ ID>
 VITE_TEAMS_CHANNEL_ID=<Teams チャネル ID>
-`
+```
 
-`ash
+```bash
 npm run dev   # http://localhost:5173 で起動
-`
+```
 
 ---
 
@@ -142,9 +118,9 @@ npm run dev   # http://localhost:5173 で起動
 
 main ブランチへの push で GitHub Actions が自動的に実行されます。
 
-`ash
+```bash
 git push origin main   # → GitHub Actions → GitHub Pages へ自動デプロイ
-`
+```
 
 環境変数は GitHub Secrets で管理:
 **Settings → Secrets and variables → Actions**
@@ -183,10 +159,10 @@ SharePoint の参照先を変えるときに更新する Secret:
 
 .env.production.server をテンプレートに .env.production.local を作成してビルド:
 
-`ash
+```bash
 # .env.production.local を設定してから実行
 npm run build:server
-`
+```
 
 dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA のフォールバックルーティングを設定済み。
 
@@ -196,9 +172,9 @@ dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA �
 
 ### マニフェスト情報
 
-- バージョン: 1.0.2（スキーマ v1.17）
+- バージョン: 1.0.6（スキーマ v1.17）
 - ファイル: 	eams-app/manifest.json
-- ZIP: 	eams-manifest-github-v1.0.2.zip（デスクトップ）
+- ZIP: `teams-app.zip`
 
 ### タブ種別
 
@@ -207,14 +183,13 @@ dist/ を IIS の仮想ディレクトリへ配置。public/web.config で SPA �
 | 設定可能タブ | 	eam, groupChat | 共有チャネル対応（supportedChannelTypes: ["sharedChannels"]） |
 | 静的タブ | personal | 個人タブ |
 
-### Teamsタブでの認証フロー
+### Teams タブ認証
 
-Teams タブ起動時はまず追加ログインなしで Teams / Microsoft 365 の既存サインイン状態を使って SSO し、取れない場合のみ Teams 管理ポップアップで認証する:
+認証フローの詳細は [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) を参照してください。現在の方針は次の通りです。
 
-1. microsoftTeams.app.initialize() でコンテキスト確認
-2. Teams タブ内では MSAL の `ssoSilent()` で既存セッションからトークン取得
-3. 単体ブラウザ起動時のみ MSAL `loginRedirect()` で初回ログイン
-4. Teams 側で SSO 取得不可の場合のみ `microsoftTeams.authentication.authenticate()` でフォールバック認証
+1. 単体ブラウザ起動時は `loginRedirect()` で初回ログイン
+2. Teams タブ起動時は `ssoSilent()` を優先
+3. Teams 側で SSO を取得できない場合のみ `microsoftTeams.authentication.authenticate()` にフォールバック
 
 ---
 
