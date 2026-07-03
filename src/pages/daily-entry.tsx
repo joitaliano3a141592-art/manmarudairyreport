@@ -1276,7 +1276,7 @@ export default function DailyEntryPage() {
                 <TableBody>
                   {!isDefaultNextPlanTemplateRegistered && (
                     <TableRow>
-                      <TableCell className="whitespace-nowrap">明日</TableCell>
+                      <TableCell className="whitespace-nowrap">{tomorrow}</TableCell>
                       <TableCell className="whitespace-nowrap">社内</TableCell>
                       <TableCell className="whitespace-nowrap">朝会・日報</TableCell>
                       <TableCell className="whitespace-nowrap">―</TableCell>
