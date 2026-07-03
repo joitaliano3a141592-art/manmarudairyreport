@@ -62,6 +62,7 @@ const tomorrow = (() => {
 const EMPTY_LOOKUP_SELECT_VALUE = "__empty_lookup__";
 const EMPTY_ACHIEVEMENT_SELECT_VALUE = "__empty_achievement__";
 const ACHIEVEMENT_OPTIONS: Exclude<Achievement, null>[] = ["○", "△", "✕"];
+const DEFAULT_NEXT_PLAN_TEMPLATE_KEY = "next-plan-default-daily-standup-v1";
 
 type TeamsPublishTarget = {
   teamId: string;
@@ -189,6 +190,15 @@ function fromAchievementSelectValue(value: string): Achievement {
   return value === EMPTY_ACHIEVEMENT_SELECT_VALUE ? null : value as Exclude<Achievement, null>;
 }
 
+function appendPlanTemplateKeyToTitle(baseTitle: string, templateKey: string | null): string {
+  return templateKey ? `${baseTitle} [tpl:${templateKey}]` : baseTitle;
+}
+
+function extractPlanTemplateKeyFromTitle(title: string): string | null {
+  const match = title.match(/\[tpl:([a-z0-9-]+)\]\s*$/i);
+  return match?.[1] ?? null;
+}
+
 function applySystemSelection<T extends { systemId: string; workNumberId: string; isProject: boolean }>(prev: T, rawValue: string): T {
   const systemId = rawValue === EMPTY_LOOKUP_SELECT_VALUE ? "" : rawValue;
   return {
@@ -278,6 +288,7 @@ export default function DailyEntryPage() {
   const [publishing, setPublishing] = useState(false);
   const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
   const [inlinePlanEdit, setInlinePlanEdit] = useState<InlinePlanEditState | null>(null);
+  const [planTemplateKey, setPlanTemplateKey] = useState<string | null>(null);
 
   const currentUserName = currentUser.name.trim();
   const currentUserEmail = currentUser.email.trim();
@@ -401,6 +412,20 @@ export default function DailyEntryPage() {
     () => plans.reduce<string | null>((nearest, plan) => (!nearest || plan.planDate < nearest ? plan.planDate : nearest), null),
     [plans],
   );
+  const isDefaultNextPlanTemplateRegistered = useMemo(
+    () => plans.some((plan) => extractPlanTemplateKeyFromTitle(plan.title) === DEFAULT_NEXT_PLAN_TEMPLATE_KEY),
+    [plans],
+  );
+  const defaultNextPlanCandidatePreset = useMemo(() => {
+    const customer = customers.find((item) => item.name === "社内");
+    const system = systems.find((item) => item.name === "朝会・日報" && (!customer || item.customerId === customer.id));
+    const workType = workTypes.find((item) => item.name === "会議");
+    return {
+      customerId: customer?.id ?? "",
+      systemId: system?.id ?? "",
+      workTypeId: workType?.id ?? "",
+    };
+  }, [customers, systems, workTypes]);
   const publishPlans = useMemo(
     () => (nextPlanDate ? plans.filter((plan) => plan.planDate === nextPlanDate) : []),
     [nextPlanDate, plans],
@@ -681,6 +706,7 @@ export default function DailyEntryPage() {
   const closePlanModal = () => {
     setPlanModalOpen(false);
     setPlanEditingId(null);
+    setPlanTemplateKey(null);
     setPlanForm(emptyPlanForm());
     setPlanSubmitError("");
   };
@@ -765,7 +791,7 @@ export default function DailyEntryPage() {
     const systemLookupId = planForm.systemId ? Number(planForm.systemId) : null;
     const workNumberLookupId = workNumber ? Number(workNumber.id) : null;
     const fields = {
-      Title: `予定-${customer?.name ?? ""}`,
+      Title: appendPlanTemplateKeyToTitle(`予定-${customer?.name ?? ""}`, planTemplateKey),
       PlanDate: `${planForm.planDate}T00:00:00+09:00`,
       CustomerLookupId: Number(planForm.customerId),
       SystemLookupId: systemLookupId,
@@ -848,13 +874,32 @@ export default function DailyEntryPage() {
 
   const openNewPlanModal = () => {
     setPlanEditingId(null);
+    setPlanTemplateKey(null);
     setPlanForm(emptyPlanForm());
+    setPlanSubmitError("");
+    setPlanModalOpen(true);
+  };
+
+  const openDefaultNextPlanCandidateModal = () => {
+    setPlanEditingId(null);
+    setPlanTemplateKey(DEFAULT_NEXT_PLAN_TEMPLATE_KEY);
+    setPlanForm({
+      planDate: tomorrow,
+      customerId: defaultNextPlanCandidatePreset.customerId,
+      systemId: defaultNextPlanCandidatePreset.systemId,
+      workNumberId: "",
+      workTypeId: defaultNextPlanCandidatePreset.workTypeId,
+      workDescription: "",
+      plannedHours: "0.25",
+      isProject: false,
+    });
     setPlanSubmitError("");
     setPlanModalOpen(true);
   };
 
   const openEditPlanModal = (plan: WorkPlan) => {
     setPlanEditingId(plan.id);
+    setPlanTemplateKey(extractPlanTemplateKeyFromTitle(plan.title));
     setPlanForm({
       planDate: plan.planDate,
       customerId: plan.customerId,
@@ -1210,7 +1255,7 @@ export default function DailyEntryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {plans.length === 0 ? (
+            {plans.length === 0 && isDefaultNextPlanTemplateRegistered ? (
               <p className="text-sm text-muted-foreground">今後の作業予定がありません。</p>
             ) : (
               <div className="max-h-[28rem] overflow-auto">
@@ -1229,6 +1274,25 @@ export default function DailyEntryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {!isDefaultNextPlanTemplateRegistered && (
+                    <TableRow>
+                      <TableCell className="whitespace-nowrap">明日</TableCell>
+                      <TableCell className="whitespace-nowrap">社内</TableCell>
+                      <TableCell className="whitespace-nowrap">朝会・日報</TableCell>
+                      <TableCell className="whitespace-nowrap">―</TableCell>
+                      <TableCell className="whitespace-nowrap">会議</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatWorkHours(0.25)}h</TableCell>
+                      <TableCell className="text-center">―</TableCell>
+                      <TableCell className="max-w-[16rem]">―</TableCell>
+                      <TableCell className="w-[220px]">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <Button size="sm" onClick={openDefaultNextPlanCandidateModal} className="shrink-0 bg-sky-600 text-white hover:bg-sky-700">
+                            <Pencil className="mr-1 h-4 w-4" />編集
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {plans.map((plan) => {
                     const isEditing = inlinePlanEdit?.planId === plan.id;
                     const activeCustomerId = isEditing ? inlinePlanEdit.customerId : plan.customerId;
