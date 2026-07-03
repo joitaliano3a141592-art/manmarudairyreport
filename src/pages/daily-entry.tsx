@@ -985,10 +985,10 @@ export default function DailyEntryPage() {
 
         return normalizeInlineText(left.workDescription).localeCompare(normalizeInlineText(right.workDescription), "ja");
       };
-      const buildCustomerLines = (items: Array<{ customerId: string; customerName: string; workTypeName: string; workDescription: string }>) => {
+      const buildCustomerLines = (items: Array<{ customerId: string; customerName: string; systemName: string; workTypeName: string; workDescription: string }>) => {
         return [...items]
           .sort(comparePublishItems)
-          .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
+          .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(normalizeInlineText(item.systemName) || "未設定")}　${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
           .join("");
       };
       const reportSections = publishReportGroups.map(([reportDate, groupedReports]) => `
