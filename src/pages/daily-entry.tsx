@@ -1281,7 +1281,7 @@ export default function DailyEntryPage() {
                       <TableCell className="whitespace-nowrap">朝会・日報</TableCell>
                       <TableCell className="whitespace-nowrap">―</TableCell>
                       <TableCell className="whitespace-nowrap">会議</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{formatWorkHours(0.25)}h</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatWorkHours(0.5)}h</TableCell>
                       <TableCell className="text-center">―</TableCell>
                       <TableCell className="max-w-[16rem]">―</TableCell>
                       <TableCell className="w-[220px]">
