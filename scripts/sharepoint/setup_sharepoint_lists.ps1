@@ -190,6 +190,7 @@ $workDays = Ensure-List -Title "作業日"
 
 Write-Host "[STEP] Ensure columns: 顧客マスタ"
 # Title = 会社名
+Ensure-Field -ListTitle "顧客マスタ" -InternalName "IsDisabled" -DisplayName "無効" -Type "Boolean"
 
 Write-Host "[STEP] Ensure columns: システムマスタ"
 Ensure-LookupField -ListTitle "システムマスタ" -InternalName "Customer" -DisplayName "顧客" -LookupList $customers -Required $true
@@ -205,7 +206,7 @@ Ensure-Field -ListTitle "工事番号マスタ" -InternalName "IsDisabled" -Disp
 Set-FieldUniqueConstraint -ListTitle "工事番号マスタ" -InternalName "_x30b7__x30b9__x30c6__x30e0_ID" -EnforceUniqueValues $false
 
 Write-Host "[STEP] Ensure columns: 作業種別マスタ"
-Ensure-ChoiceField -ListTitle "作業種別マスタ" -InternalName "Category" -DisplayName "カテゴリ" -Choices @("開発", "保守", "運用", "会議", "その他")
+Remove-FieldIfExists -ListTitle "作業種別マスタ" -InternalName "Category"
 
 Write-Host "[STEP] Ensure columns: 作業報告"
 Ensure-Field -ListTitle "作業報告" -InternalName "ReportDate" -DisplayName "作業日" -Type "DateTime" -Required $true
@@ -263,9 +264,9 @@ if ($SeedDemoData) {
   }
 
   if ((Get-PnPListItem -List "作業種別マスタ" -PageSize 1).Count -eq 0) {
-    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "機能開発"; Category = "開発" } | Out-Null
-    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "テスト"; Category = "保守" } | Out-Null
-    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "定例会議"; Category = "会議" } | Out-Null
+    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "機能開発" } | Out-Null
+    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "テスト" } | Out-Null
+    Add-PnPListItem -List "作業種別マスタ" -Values @{ Title = "定例会議" } | Out-Null
   }
 
   $systemMap = Get-ItemMapByTitle -ListTitle "システムマスタ"

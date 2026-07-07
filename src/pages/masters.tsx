@@ -20,6 +20,8 @@ import type { Customer, System, WorkNumber, WorkType } from "@/types/sharepoint"
 type CustomerFormData = {
   name: string;
   customerNumber: number;
+  isDisabled: boolean;
+  isDirectSales: boolean;
 };
 
 type SystemFormData = {
@@ -33,12 +35,12 @@ type SystemFormData = {
     workNumber: string;
     workNumberName: string;
     isDisabled: boolean;
+    orderSourceCustomerId: string;
   }>;
 };
 
 type WorkTypeFormData = {
   name: string;
-  category: string;
   sortOrder: number;
 };
 
@@ -53,7 +55,7 @@ function isGraphItemNotFoundError(error: unknown): boolean {
 }
 
 export default function MastersPage() {
-  const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers();
+  const { data: customers = [], isLoading: custLoading, isError: custError, error: customersError } = useCustomers({ includeDisabled: true });
   const { data: systems = [], isLoading: sysLoading, isError: sysError, error: systemsError } = useSystems({ includeDisabled: true });
   const { data: workNumbers = [], isLoading: wnLoading, isError: wnError, error: workNumbersError } = useWorkNumbers();
   const { data: workTypes = [], isLoading: wtLoading, isError: wtError, error: workTypesError } = useWorkTypes();
@@ -124,9 +126,20 @@ export default function MastersPage() {
 
   const handleSaveCustomer = (data: CustomerFormData) => {
     if (editingCustomer) {
-      updateCustomer.mutate({ itemId: editingCustomer.id, name: data.name, customerNumber: data.customerNumber });
+      updateCustomer.mutate({
+        itemId: editingCustomer.id,
+        name: data.name,
+        customerNumber: data.customerNumber,
+        isDisabled: data.isDisabled,
+        isDirectSales: data.isDirectSales,
+      });
     } else {
-      addCustomer.mutate({ name: data.name, customerNumber: data.customerNumber });
+      addCustomer.mutate({
+        name: data.name,
+        customerNumber: data.customerNumber,
+        isDisabled: data.isDisabled,
+        isDirectSales: data.isDirectSales,
+      });
     }
     setCustomerDialog(false);
     setEditingCustomer(null);
@@ -154,6 +167,7 @@ export default function MastersPage() {
         workNumber: item.workNumber.trim(),
         workNumberName: item.workNumberName.trim(),
         isDisabled: item.isDisabled,
+        orderSourceCustomerId: item.orderSourceCustomerId,
       }))
       .filter((item) => item.workNumber || item.workNumberName);
 
@@ -205,6 +219,7 @@ export default function MastersPage() {
                 workNumberName: workNumber.workNumberName,
                 systemId,
                 isDisabled: workNumber.isDisabled,
+                orderSourceCustomerId: workNumber.orderSourceCustomerId ? Number(workNumber.orderSourceCustomerId) : null,
               },
             });
           } catch (error) {
@@ -216,6 +231,7 @@ export default function MastersPage() {
               workNumberName: workNumber.workNumberName,
               systemId,
               isDisabled: workNumber.isDisabled,
+              orderSourceCustomerId: workNumber.orderSourceCustomerId ? Number(workNumber.orderSourceCustomerId) : null,
             });
           }
         } else {
@@ -224,6 +240,7 @@ export default function MastersPage() {
             workNumberName: workNumber.workNumberName,
             systemId,
             isDisabled: workNumber.isDisabled,
+            orderSourceCustomerId: workNumber.orderSourceCustomerId ? Number(workNumber.orderSourceCustomerId) : null,
           });
         }
       }
@@ -248,10 +265,10 @@ export default function MastersPage() {
     if (editingWorkType) {
       updateWorkType.mutate({
         itemId: editingWorkType.id,
-        fields: { Title: data.name, Category: data.category, SortOrder: data.sortOrder },
+        fields: { Title: data.name, SortOrder: data.sortOrder },
       });
     } else {
-      addWorkType.mutate({ Title: data.name, Category: data.category, SortOrder: data.sortOrder });
+      addWorkType.mutate({ Title: data.name, SortOrder: data.sortOrder });
     }
     setWorkTypeDialog(false);
     setEditingWorkType(null);
@@ -338,6 +355,8 @@ export default function MastersPage() {
                     <TableRow>
                       <TableHead className="w-24">顧客番号</TableHead>
                       <TableHead>顧客名</TableHead>
+                      <TableHead className="w-24">直販</TableHead>
+                      <TableHead className="w-24">無効</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -346,6 +365,8 @@ export default function MastersPage() {
                       <TableRow key={customer.id} onDoubleClick={() => openEditCustomerDialog(customer)} className="cursor-pointer">
                         <TableCell className="text-center">{customer.customerNumber}</TableCell>
                         <TableCell>{customer.name}</TableCell>
+                        <TableCell>{customer.isDirectSales ? "✓" : ""}</TableCell>
+                        <TableCell>{customer.isDisabled ? "✓" : ""}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => openEditCustomerDialog(customer)}>編集</Button>
@@ -388,7 +409,7 @@ export default function MastersPage() {
                   <DialogTrigger asChild>
                     <Button onClick={() => { setEditingSystem(null); setEditingWorkNumbers([]); }}>新規追加</Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="h-[85vh] w-[50vw] max-w-[50vw] overflow-y-auto sm:max-w-[50vw]">
                     <DialogHeader>
                       <DialogTitle>{editingSystem ? "システム編集" : "システム追加"}</DialogTitle>
                     </DialogHeader>
@@ -505,7 +526,6 @@ export default function MastersPage() {
                     <TableRow>
                       <TableHead className="w-16">表示順</TableHead>
                       <TableHead>区分名</TableHead>
-                      <TableHead>カテゴリ</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -514,7 +534,6 @@ export default function MastersPage() {
                       <TableRow key={workType.id} onDoubleClick={() => openEditWorkTypeDialog(workType)} className="cursor-pointer">
                         <TableCell className="text-center">{workType.sortOrder}</TableCell>
                         <TableCell>{workType.name}</TableCell>
-                        <TableCell>{workType.category}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => openEditWorkTypeDialog(workType)}>編集</Button>
@@ -561,6 +580,7 @@ type SystemWorkNumberInput = {
   workNumber: string;
   workNumberName: string;
   isDisabled: boolean;
+  orderSourceCustomerId: string;
 };
 
 function createEmptySystemWorkNumber(): SystemWorkNumberInput {
@@ -568,6 +588,7 @@ function createEmptySystemWorkNumber(): SystemWorkNumberInput {
     workNumber: "",
     workNumberName: "",
     isDisabled: false,
+    orderSourceCustomerId: "",
   };
 }
 
@@ -595,9 +616,12 @@ function SystemForm({
       workNumber: workNumber.workNumber,
       workNumberName: workNumber.workNumberName,
       isDisabled: workNumber.isDisabled,
+      orderSourceCustomerId: workNumber.orderSourceCustomerId,
     })),
   });
   const [submitError, setSubmitError] = useState("");
+  const selectedCustomer = customers.find((customer) => customer.id === formData.customerId) ?? null;
+  const showOrderSource = selectedCustomer !== null && !selectedCustomer.isDirectSales;
 
   const updateWorkNumberRow = (index: number, nextRow: SystemWorkNumberInput) => {
     setFormData((prev) => ({
@@ -623,6 +647,7 @@ function SystemForm({
             workNumber: item.workNumber.trim(),
             workNumberName: item.workNumberName.trim(),
             isDisabled: item.isDisabled,
+            orderSourceCustomerId: item.orderSourceCustomerId,
           }))
           .filter((item) => item.workNumber || item.workNumberName);
 
@@ -675,7 +700,13 @@ function SystemForm({
               setSubmitError("");
               setFormData((prev) => ({
                 ...prev,
-                workNumbers: [...prev.workNumbers, createEmptySystemWorkNumber()],
+                workNumbers: [
+                  ...prev.workNumbers,
+                  {
+                    ...createEmptySystemWorkNumber(),
+                    orderSourceCustomerId: showOrderSource ? prev.customerId : "",
+                  },
+                ],
               }));
             }}
           >
@@ -689,7 +720,7 @@ function SystemForm({
         ) : (
           formData.workNumbers.map((workNumber, index) => (
             <div key={workNumber.id ?? `new-${index}`} className="rounded-md border p-3">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+              <div className={`grid gap-3 ${showOrderSource ? "md:grid-cols-[1fr_1fr_1fr_auto_auto]" : "md:grid-cols-[1fr_1fr_auto_auto]"} md:items-end`}>
                 <div>
                   <Label htmlFor={`workNumber-${index}`}>工事番号</Label>
                   <Input
@@ -708,6 +739,24 @@ function SystemForm({
                     placeholder="工事番号名を入力"
                   />
                 </div>
+                {showOrderSource && (
+                  <div>
+                    <Label htmlFor={`orderSource-${index}`}>発注元</Label>
+                    <select
+                      id={`orderSource-${index}`}
+                      className="w-full p-2 border rounded"
+                      value={workNumber.orderSourceCustomerId}
+                      onChange={(e) => updateWorkNumberRow(index, { ...workNumber, orderSourceCustomerId: e.target.value })}
+                    >
+                      <option value="">発注元なし</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex h-10 items-center gap-2">
                   <Checkbox
                     checked={workNumber.isDisabled}
@@ -743,8 +792,10 @@ function CustomerForm({
 }) {
   const [name, setName] = useState(customer?.name || "");
   const [customerNumber, setCustomerNumber] = useState<number>(customer?.customerNumber ?? 10);
+  const [isDisabled, setIsDisabled] = useState<boolean>(customer?.isDisabled ?? false);
+  const [isDirectSales, setIsDirectSales] = useState<boolean>(customer?.isDirectSales ?? false);
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, customerNumber }); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, customerNumber, isDisabled, isDirectSales }); }} className="space-y-4">
       <div>
         <Label htmlFor="name">顧客名</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -752,6 +803,16 @@ function CustomerForm({
       <div>
         <Label htmlFor="custCustomerNumber">顧客番号</Label>
         <Input id="custCustomerNumber" type="number" min={1} max={99999} value={customerNumber} onChange={(e) => setCustomerNumber(Number(e.target.value))} required />
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="flex h-10 items-center gap-2">
+          <Checkbox checked={isDirectSales} onCheckedChange={(checked) => setIsDirectSales(checked === true)} />
+          <span className="text-sm">直販</span>
+        </div>
+        <div className="flex h-10 items-center gap-2">
+          <Checkbox checked={isDisabled} onCheckedChange={(checked) => setIsDisabled(checked === true)} />
+          <span className="text-sm">無効（通常画面で非表示）</span>
+        </div>
       </div>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>キャンセル</Button>
@@ -772,7 +833,6 @@ function WorkTypeForm({
 }) {
   const [formData, setFormData] = useState({
     name: workType?.name || "",
-    category: workType?.category || "",
     sortOrder: workType?.sortOrder ?? 10,
   });
   return (
@@ -780,10 +840,6 @@ function WorkTypeForm({
       <div>
         <Label htmlFor="wtName">区分名</Label>
         <Input id="wtName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-      </div>
-      <div>
-        <Label htmlFor="wtCat">カテゴリ</Label>
-        <Input id="wtCat" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
       </div>
       <div>
         <Label htmlFor="wtSortOrder">表示順（小さいほど上位。99=最下位）</Label>

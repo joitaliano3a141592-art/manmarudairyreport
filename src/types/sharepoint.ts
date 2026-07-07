@@ -7,6 +7,9 @@
 export type SPCustomerFields = {
   Title: string;
   SortOrder?: number;
+  IsDisabled?: boolean;
+  _x7121__x52b9_?: boolean;
+  _x76f4__x8ca9_?: boolean;
 };
 
 export type SPSystemFields = {
@@ -22,11 +25,11 @@ export type SPWorkNumberFields = {
   WorkNumberName?: string;
   _x30b7__x30b9__x30c6__x30e0_ID?: number | string | null;
   IsDisabled?: boolean;
+  _x767a__x6ce8__x5143_LookupId?: number;
 };
 
 export type SPWorkTypeFields = {
   Title: string;
-  Category?: string;
   SortOrder?: number;
 };
 
@@ -79,6 +82,8 @@ export type Customer = {
   name: string;
   customerNumber: number;
   displayName: string;
+  isDisabled: boolean;
+  isDirectSales: boolean;
 };
 
 export type System = {
@@ -100,12 +105,12 @@ export type WorkNumber = {
   systemName: string;
   sortOrder: number;
   isDisabled: boolean;
+  orderSourceCustomerId: string;
 };
 
 export type WorkType = {
   id: string;
   name: string;
-  category: string;
   sortOrder: number;
 };
 

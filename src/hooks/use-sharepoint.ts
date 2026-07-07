@@ -124,6 +124,9 @@ import type {
 
 const WORK_NUMBER_SYSTEM_ID_FIELD = "_x30b7__x30b9__x30c6__x30e0_ID";
 const WORK_NUMBER_NAME_FIELD = "WorkNumberName";
+const WORK_NUMBER_ORDER_SOURCE_LOOKUP_ID_FIELD = "_x767a__x6ce8__x5143_LookupId";
+const CUSTOMER_DISABLED_FIELD = "_x7121__x52b9_";
+const CUSTOMER_DIRECT_SALES_FIELD = "_x76f4__x8ca9_";
 
 function toNullableInteger(value: unknown): number | null {
   if (value == null || value === "") return null;
@@ -151,9 +154,15 @@ function resolveAchievement(fields: SPReportFields): "○" | "△" | "✕" | nul
 
 // ==================== 顧客マスタ ====================
 
-export function useCustomers(): UseQueryResult<Customer[]> {
+type UseCustomersOptions = {
+  includeDisabled?: boolean;
+};
+
+export function useCustomers(options: UseCustomersOptions = {}): UseQueryResult<Customer[]> {
+  const includeDisabled = options.includeDisabled ?? true;
+
   return useQuery({
-    queryKey: ["sp", "customers"],
+    queryKey: ["sp", "customers", includeDisabled],
     queryFn: async () => {
       const items = await fetchListItems<SPCustomerFields>(SP_LISTS.customers);
       return items
@@ -162,7 +171,10 @@ export function useCustomers(): UseQueryResult<Customer[]> {
           name: item.fields.Title,
           customerNumber: item.fields.SortOrder ?? 10,
           displayName: formatCustomerDisplay(item.fields.SortOrder ?? 10, item.fields.Title),
+          isDisabled: item.fields[CUSTOMER_DISABLED_FIELD] === true || item.fields.IsDisabled === true,
+          isDirectSales: item.fields[CUSTOMER_DIRECT_SALES_FIELD] === true,
         }))
+        .filter((customer) => includeDisabled || !customer.isDisabled)
         .sort((a, b) => a.customerNumber - b.customerNumber || a.name.localeCompare(b.name, "ja"));
     },
   });
@@ -238,6 +250,7 @@ export function useWorkNumbers(options: UseWorkNumbersOptions = {}): UseQueryRes
             systemName: linkedSystem?.name ?? workNumber,
             sortOrder: linkedSystem?.sortOrder ?? 10,
             isDisabled: item.fields.IsDisabled === true,
+            orderSourceCustomerId: String(toNullableInteger(item.fields[WORK_NUMBER_ORDER_SOURCE_LOOKUP_ID_FIELD]) ?? ""),
           };
         })
         .filter((workNumber) => includeDisabled || !workNumber.isDisabled)
@@ -263,7 +276,6 @@ export function useWorkTypes(): UseQueryResult<WorkType[]> {
         .map((item) => ({
           id: item.id,
           name: item.fields.Title,
-          category: item.fields.Category ?? "",
           sortOrder: item.fields.SortOrder ?? 10,
         }))
         .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ja"));
@@ -520,7 +532,7 @@ export function useUpdateWorkDay() {
 export function useAddWorkNumber() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean }) => {
+    mutationFn: async (fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean; orderSourceCustomerId?: number | null }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工事番号マスタリストが未設定です。");
       }
@@ -529,6 +541,7 @@ export function useAddWorkNumber() {
         [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
         IsDisabled: fields.isDisabled === true,
+        [WORK_NUMBER_ORDER_SOURCE_LOOKUP_ID_FIELD]: fields.orderSourceCustomerId ?? null,
       });
     },
     onSuccess: () => {
@@ -549,7 +562,7 @@ export function useUpdateWorkNumber() {
       fields,
     }: {
       itemId: string;
-      fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean };
+      fields: { workNumber: string; workNumberName: string; systemId: number; isDisabled?: boolean; orderSourceCustomerId?: number | null };
     }) => {
       if (!SP_LISTS.workNumbers) {
         throw new Error("工事番号マスタリストが未設定です。");
@@ -559,6 +572,7 @@ export function useUpdateWorkNumber() {
         [WORK_NUMBER_NAME_FIELD]: fields.workNumberName,
         [WORK_NUMBER_SYSTEM_ID_FIELD]: fields.systemId,
         IsDisabled: fields.isDisabled === true,
+        [WORK_NUMBER_ORDER_SOURCE_LOOKUP_ID_FIELD]: fields.orderSourceCustomerId ?? null,
       });
     },
     onSuccess: () => {
@@ -712,8 +726,13 @@ export function useDeletePlan() {
 export function useAddCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, customerNumber }: { name: string; customerNumber: number }) => {
-      return createListItem(SP_LISTS.customers, { Title: name, SortOrder: customerNumber });
+    mutationFn: async ({ name, customerNumber, isDisabled, isDirectSales }: { name: string; customerNumber: number; isDisabled: boolean; isDirectSales: boolean }) => {
+      return createListItem(SP_LISTS.customers, {
+        Title: name,
+        SortOrder: customerNumber,
+        [CUSTOMER_DISABLED_FIELD]: isDisabled === true,
+        [CUSTOMER_DIRECT_SALES_FIELD]: isDirectSales === true,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
@@ -724,8 +743,13 @@ export function useAddCustomer() {
 export function useUpdateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ itemId, name, customerNumber }: { itemId: string; name: string; customerNumber: number }) => {
-      return updateListItem(SP_LISTS.customers, itemId, { Title: name, SortOrder: customerNumber });
+    mutationFn: async ({ itemId, name, customerNumber, isDisabled, isDirectSales }: { itemId: string; name: string; customerNumber: number; isDisabled: boolean; isDirectSales: boolean }) => {
+      return updateListItem(SP_LISTS.customers, itemId, {
+        Title: name,
+        SortOrder: customerNumber,
+        [CUSTOMER_DISABLED_FIELD]: isDisabled === true,
+        [CUSTOMER_DIRECT_SALES_FIELD]: isDirectSales === true,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sp", "customers"] });
@@ -805,7 +829,7 @@ export function useDeleteSystem() {
 export function useAddWorkType() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (fields: { Title: string; Category?: string; SortOrder?: number }) => {
+    mutationFn: async (fields: { Title: string; SortOrder?: number }) => {
       return createListItem(SP_LISTS.workTypes, fields);
     },
     onSuccess: () => {
