@@ -890,7 +890,7 @@ export default function DailyEntryPage() {
       workNumberId: "",
       workTypeId: defaultNextPlanCandidatePreset.workTypeId,
       workDescription: "",
-      plannedHours: "0.25",
+      plannedHours: "0.5",
       isProject: false,
     });
     setPlanSubmitError("");
