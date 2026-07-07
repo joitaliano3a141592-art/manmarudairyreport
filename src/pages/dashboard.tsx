@@ -38,12 +38,21 @@ type BarTooltipState = {
 };
 
 type PieGroupBy = "customer" | "workType" | "project";
+type DatePreset = "thisYear" | "lastMonth" | "thisMonth" | "lastWeek" | "thisWeek";
 
 function toLocalDateString(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function getStartOfWeekMonday(date: Date): Date {
+  const current = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = current.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  current.setDate(current.getDate() + diff);
+  return current;
 }
 
 function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
@@ -79,6 +88,7 @@ export default function DashboardPage() {
   const [pieTooltip, setPieTooltip] = useState<PieTooltipState | null>(null);
   const [barTooltip, setBarTooltip] = useState<BarTooltipState | null>(null);
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
+  const [activeDatePreset, setActiveDatePreset] = useState<DatePreset | null>("thisMonth");
 
   const { data: customers = [] } = useCustomers();
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
@@ -125,6 +135,40 @@ export default function DashboardPage() {
     const prefix = fallback.slice(0, separatorIndex).trim();
     const suffix = fallback.slice(separatorIndex + 1).trim();
     return /^\d+$/.test(prefix) && suffix ? suffix : fallback;
+  };
+
+  const setDatePreset = (preset: DatePreset) => {
+    const today = new Date();
+    let nextStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let nextEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    switch (preset) {
+      case "thisYear":
+        nextStart = new Date(today.getFullYear(), 0, 1);
+        break;
+      case "lastMonth":
+        nextStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        nextEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      case "thisMonth":
+        nextStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      case "lastWeek": {
+        const thisWeekStart = getStartOfWeekMonday(today);
+        nextStart = new Date(thisWeekStart);
+        nextStart.setDate(nextStart.getDate() - 7);
+        nextEnd = new Date(thisWeekStart);
+        nextEnd.setDate(nextEnd.getDate() - 1);
+        break;
+      }
+      case "thisWeek":
+        nextStart = getStartOfWeekMonday(today);
+        break;
+    }
+
+    setStartDate(toLocalDateString(nextStart));
+    setEndDate(toLocalDateString(nextEnd));
+    setActiveDatePreset(preset);
   };
 
   const uniqueUsers = useMemo(
@@ -506,9 +550,32 @@ export default function DashboardPage() {
                 <div className="space-y-1.5">
                   <div className="font-medium">日付範囲</div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <Input className="h-8 min-w-0" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <Input
+                      className="h-8 min-w-0"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setActiveDatePreset(null);
+                      }}
+                    />
                     <span className="text-sm text-muted-foreground">〜</span>
-                    <Input className="h-8 min-w-0" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                    <Input
+                      className="h-8 min-w-0"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setActiveDatePreset(null);
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant={activeDatePreset === "thisYear" ? "default" : "outline"} className="h-8" onClick={() => setDatePreset("thisYear")}>今年</Button>
+                    <Button type="button" size="sm" variant={activeDatePreset === "lastMonth" ? "default" : "outline"} className="h-8" onClick={() => setDatePreset("lastMonth")}>先月</Button>
+                    <Button type="button" size="sm" variant={activeDatePreset === "thisMonth" ? "default" : "outline"} className="h-8" onClick={() => setDatePreset("thisMonth")}>今月</Button>
+                    <Button type="button" size="sm" variant={activeDatePreset === "lastWeek" ? "default" : "outline"} className="h-8" onClick={() => setDatePreset("lastWeek")}>先週</Button>
+                    <Button type="button" size="sm" variant={activeDatePreset === "thisWeek" ? "default" : "outline"} className="h-8" onClick={() => setDatePreset("thisWeek")}>今週</Button>
                   </div>
                 </div>
                 <div className="space-y-1.5">
