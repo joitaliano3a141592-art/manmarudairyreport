@@ -159,7 +159,7 @@ type UseCustomersOptions = {
 };
 
 export function useCustomers(options: UseCustomersOptions = {}): UseQueryResult<Customer[]> {
-  const includeDisabled = options.includeDisabled ?? true;
+  const includeDisabled = options.includeDisabled ?? false;
 
   return useQuery({
     queryKey: ["sp", "customers", includeDisabled],

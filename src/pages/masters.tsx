@@ -471,7 +471,7 @@ export default function MastersPage() {
                           </div>
                         </TableCell>
                         <TableCell>{system.description}</TableCell>
-                        <TableCell className="text-center">{system.isDisabled ? "○" : "―"}</TableCell>
+                        <TableCell className="text-center">{system.isDisabled ? "✓" : "―"}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => openEditSystemDialog(system, relatedWorkNumbers)}>編集</Button>

@@ -1131,9 +1131,11 @@ export default function DailyEntryPage() {
                               <SelectValue placeholder="顧客" />
                             </SelectTrigger>
                             <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
-                              ))}
+                              {customers
+                                .filter((customer) => !customer.isDisabled || customer.id === inlineEdit.customerId)
+                                .map((customer) => (
+                                  <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         ) : resolveReportRowCustomerDisplayName(row)}</TableCell>
@@ -1317,9 +1319,11 @@ export default function DailyEntryPage() {
                               <SelectValue placeholder="顧客" />
                             </SelectTrigger>
                             <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
-                              ))}
+                              {customers
+                                .filter((customer) => !customer.isDisabled || customer.id === inlinePlanEdit.customerId)
+                                .map((customer) => (
+                                  <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         ) : resolvePlanCustomerDisplayName(plan)}</TableCell>
@@ -1465,9 +1469,11 @@ export default function DailyEntryPage() {
                   <SelectValue placeholder="顧客を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
-                  ))}
+                  {customers
+                    .filter((customer) => !customer.isDisabled || customer.id === reportForm.customerId)
+                    .map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1584,9 +1590,11 @@ export default function DailyEntryPage() {
                   <SelectValue placeholder="顧客を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
-                  ))}
+                  {customers
+                    .filter((customer) => !customer.isDisabled || customer.id === planForm.customerId)
+                    .map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

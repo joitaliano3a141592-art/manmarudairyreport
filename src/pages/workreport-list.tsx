@@ -399,9 +399,11 @@ export default function WorkReportListPage() {
                   <SelectValue placeholder="顧客を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
-                  ))}
+                  {customers
+                    .filter((customer) => !customer.isDisabled || customer.id === reportForm.customerId)
+                    .map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>{customer.displayName}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
