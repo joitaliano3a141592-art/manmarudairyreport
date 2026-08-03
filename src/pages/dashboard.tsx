@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DataErrorState } from "@/components/data-error-state";
-import { Download, ChevronDown, ChevronUp, Medal } from "lucide-react";
+import { Download, ChevronDown, ChevronUp, Medal, ExternalLink } from "lucide-react";
 import { useCustomers, useReports, useWorkNumbers } from "@/hooks/use-sharepoint";
 import type { WorkReport } from "@/types/sharepoint";
 import { formatWorkHours } from "@/lib/utils";
@@ -75,7 +75,91 @@ function buildPieSlicePath(startAngle: number, endAngle: number) {
   ].join(" ");
 }
 
+function getWikipediaDayTitle(date: Date) {
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function getWikipediaPageUrl(date: Date) {
+  return `https://ja.wikipedia.org/wiki/${encodeURIComponent(getWikipediaDayTitle(date))}`;
+}
+
+function getWikipediaSectionListApiUrl(date: Date) {
+  const title = getWikipediaDayTitle(date);
+  return `https://ja.wikipedia.org/w/api.php?action=parse&format=json&prop=sections&redirects=1&origin=*&page=${encodeURIComponent(title)}`;
+}
+
+function getWikipediaSectionTextApiUrl(date: Date, sectionIndex: string) {
+  const title = getWikipediaDayTitle(date);
+  return `https://ja.wikipedia.org/w/api.php?action=parse&format=json&prop=text&redirects=1&origin=*&page=${encodeURIComponent(title)}&section=${encodeURIComponent(sectionIndex)}`;
+}
+
+function buildWikipediaAiOverview(dateTitle: string, summary: string | null) {
+  if (!summary) {
+    return `${dateTitle}の出来事を要約できませんでした。詳しい内容については、${dateTitle} - Wikipedia をご覧ください。`;
+  }
+
+  const cleaned = summary.replace(/\s+/g, " ").trim();
+  return `${cleaned}\n\n詳しい内容については、${dateTitle} - Wikipedia をご覧ください。`;
+}
+
+function normalizeSectionTitle(title: string) {
+  return title.replace(/\s+/g, "").replace(/（.*?）/g, "");
+}
+
+function normalizeLabelText(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\s*[（(].*?[)）]\s*$/, "")
+    .trim();
+}
+
+function extractSectionBullets(sectionHtml: string) {
+  const parser = new DOMParser();
+  const document = parser.parseFromString(sectionHtml, "text/html");
+  return Array.from(document.querySelectorAll("li"))
+    .map((item) => item.textContent?.replace(/\s+/g, " ").trim() ?? "")
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function selectJapaneseCommemorativeLabel(items: string[]) {
+  const preferredRaw = items.find((item) => {
+    return (item.includes("日本の旗") || item.includes("日本")) && !item.includes("英語版");
+  });
+  if (preferredRaw) {
+    return normalizeLabelText(preferredRaw);
+  }
+
+  const commemorativeRaw = items.find((item) => /の日/.test(item) && !item.includes("英語版"));
+  if (commemorativeRaw) {
+    return normalizeLabelText(commemorativeRaw);
+  }
+
+  const normalizedItems = items.map(normalizeLabelText).filter(Boolean);
+  return normalizedItems[0] ?? null;
+}
+
+function extractEventSummaryFromSectionHtml(sectionHtml: string) {
+  const items = extractSectionBullets(sectionHtml);
+
+  if (items.length > 0) {
+    return {
+      highlight: items[0],
+      summary: `主な出来事として、${items.join("、")}などがあります。`,
+    };
+  }
+
+  const text = document.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  return text
+    ? {
+        highlight: null,
+        summary: text,
+      }
+    : null;
+}
+
 export default function DashboardPage() {
+  const today = useMemo(() => new Date(), []);
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -89,6 +173,10 @@ export default function DashboardPage() {
   const [barTooltip, setBarTooltip] = useState<BarTooltipState | null>(null);
   const [pieGroupBy, setPieGroupBy] = useState<PieGroupBy>("customer");
   const [activeDatePreset, setActiveDatePreset] = useState<DatePreset | null>("thisMonth");
+  const [wikipediaSummary, setWikipediaSummary] = useState<string | null>(null);
+  const [wikipediaHighlight, setWikipediaHighlight] = useState<string | null>(null);
+  const [wikipediaLoading, setWikipediaLoading] = useState(true);
+  const [wikipediaError, setWikipediaError] = useState<string | null>(null);
 
   const { data: customers = [] } = useCustomers();
   const { data: reports = [], isLoading, isError, error } = useReports(startDate, endDate);
@@ -106,6 +194,13 @@ export default function DashboardPage() {
   const customerNameMap = useMemo(
     () => new Map(customers.map((customer) => [customer.id, customer.name])),
     [customers],
+  );
+  const wikipediaDayTitle = useMemo(() => getWikipediaDayTitle(today), [today]);
+  const wikipediaPageUrl = useMemo(() => getWikipediaPageUrl(today), [today]);
+  const wikipediaSectionListApiUrl = useMemo(() => getWikipediaSectionListApiUrl(today), [today]);
+  const wikipediaAiOverview = useMemo(
+    () => buildWikipediaAiOverview(wikipediaDayTitle, wikipediaSummary),
+    [wikipediaDayTitle, wikipediaSummary],
   );
   const workNumberNameMap = useMemo(
     () => new Map(workNumbers.map((workNumber) => [workNumber.id, workNumber.displayName])),
@@ -136,6 +231,88 @@ export default function DashboardPage() {
     const suffix = fallback.slice(separatorIndex + 1).trim();
     return /^\d+$/.test(prefix) && suffix ? suffix : fallback;
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadWikipediaSummary = async () => {
+      setWikipediaLoading(true);
+      setWikipediaError(null);
+      try {
+        const sectionsResponse = await fetch(wikipediaSectionListApiUrl, { signal: controller.signal });
+        if (!sectionsResponse.ok) {
+          throw new Error(`Wikipedia API request failed with ${sectionsResponse.status}`);
+        }
+
+        const sectionsData = (await sectionsResponse.json()) as {
+          parse?: {
+            sections?: Array<{ index: string; line: string }>;
+          };
+        };
+
+        const eventSection = sectionsData.parse?.sections?.find((section) => {
+          const title = normalizeSectionTitle(section.line);
+          return title.includes("できごと") || title.includes("出来事") || title.includes("主な出来事");
+        });
+        const commemorativeSection = sectionsData.parse?.sections?.find((section) => {
+          const title = normalizeSectionTitle(section.line);
+          return title.includes("記念日") || title.includes("年中行事");
+        });
+
+        if (!eventSection) {
+          throw new Error("Event section not found");
+        }
+
+        let nextHighlight: string | null = null;
+        if (commemorativeSection) {
+          const commemorativeResponse = await fetch(
+            getWikipediaSectionTextApiUrl(today, commemorativeSection.index),
+            { signal: controller.signal },
+          );
+          if (commemorativeResponse.ok) {
+            const commemorativeData = (await commemorativeResponse.json()) as {
+              parse?: {
+                text?: { "*": string };
+              };
+            };
+            const commemorativeHtml = commemorativeData.parse?.text?.["*"] ?? "";
+            nextHighlight = selectJapaneseCommemorativeLabel(extractSectionBullets(commemorativeHtml));
+          }
+        }
+
+        const sectionResponse = await fetch(getWikipediaSectionTextApiUrl(today, eventSection.index), {
+          signal: controller.signal,
+        });
+        if (!sectionResponse.ok) {
+          throw new Error(`Wikipedia section request failed with ${sectionResponse.status}`);
+        }
+
+        const sectionData = (await sectionResponse.json()) as {
+          parse?: {
+            text?: { "*": string };
+          };
+        };
+
+        const sectionHtml = sectionData.parse?.text?.["*"] ?? "";
+        const result = extractEventSummaryFromSectionHtml(sectionHtml);
+        setWikipediaSummary(result?.summary ?? null);
+        setWikipediaHighlight(nextHighlight ?? result?.highlight ?? null);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setWikipediaError(error instanceof Error ? error.message : "Wikipedia API request failed");
+          setWikipediaSummary(null);
+          setWikipediaHighlight(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setWikipediaLoading(false);
+        }
+      }
+    };
+
+    void loadWikipediaSummary();
+    return () => controller.abort();
+  }, [today, wikipediaSectionListApiUrl]);
 
   const setDatePreset = (preset: DatePreset) => {
     const today = new Date();
@@ -642,7 +819,7 @@ export default function DashboardPage() {
       </Card>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card className="flex flex-col lg:h-[36rem]">
+        <Card className="flex flex-col lg:h-[40rem]">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>{activePieTitle}</CardTitle>
@@ -743,11 +920,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
+        <Card className="flex flex-col lg:h-[40rem]">
           <CardHeader>
             <CardTitle>システム ユーザー別作業時間</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="flex-1 overflow-y-auto space-y-3">
             {systemStackData.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground">フィルタ結果にデータがありません</div>
             ) : (
@@ -853,17 +1030,38 @@ export default function DashboardPage() {
                       })}
                     </div>
                   </div>
-                  <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
-                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Worst 5</div>
-                    <div className="space-y-1.5">
-                      {systemTopBottomLists.worst.map((item) => (
-                        <div key={`worst-${item.system}`} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="min-w-0 flex-1 truncate">{item.system}</span>
-                          <span className="shrink-0 font-medium">{formatWorkHours(item.total)}h</span>
+                  <a
+                    href={wikipediaPageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block h-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <Card className="flex h-full flex-col overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-accent/10 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md dark:from-primary/15 dark:via-card dark:to-accent/15">
+                      <CardContent className="flex h-full flex-col space-y-4 pt-0">
+                        <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {wikipediaDayTitle}
+                          </div>
+                          {wikipediaHighlight && (
+                            <div className="rounded-full border border-border/70 bg-background/70 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                              {wikipediaHighlight}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                        <div className="h-36 overflow-y-auto rounded-xl border border-border/70 bg-muted/40 p-4 shadow-sm">
+                          <div className="mt-2 text-sm leading-6 text-foreground">
+                            {wikipediaLoading
+                              ? "Wikipedia から読み込み中..."
+                              : wikipediaError || wikipediaAiOverview}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                          <span>クリックで Wikipedia を開く</span>
+                          <ExternalLink className="h-4 w-4" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
                 </div>
               </div>
             )}
