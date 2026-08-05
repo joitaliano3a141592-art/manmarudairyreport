@@ -538,17 +538,20 @@ export default function DailyEntryPage() {
     });
   }, [reports, resolveLinkedSystemId, todayPlans]);
   const publishReportGroups = useMemo(() => {
-    const groups = new Map<string, typeof reports>();
-    for (const report of reports) {
-      const existing = groups.get(report.reportDate);
+    const groups = new Map<string, ReportTableRow[]>();
+    for (const row of reportTableRows) {
+      if (row.source !== "report") {
+        continue;
+      }
+      const existing = groups.get(row.reportDate);
       if (existing) {
-        existing.push(report);
+        existing.push(row);
       } else {
-        groups.set(report.reportDate, [report]);
+        groups.set(row.reportDate, [row]);
       }
     }
     return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
-  }, [reports]);
+  }, [reportTableRows]);
 
   if (custError || sysError || wtError || reportsErrorState || todayPlansErrorState || plansErrorState || workDaysErrorState) {
     return (
@@ -956,6 +959,20 @@ export default function DailyEntryPage() {
         const normalizedWorkDescription = normalizeInlineText(workDescription);
         return [normalizedWorkTypeName, normalizedWorkDescription].filter(Boolean).join(" ");
       };
+      const buildReportPublishLine = (report: {
+        customerId: string;
+        customerName: string;
+        systemName: string;
+        workTypeName: string;
+        workDescription: string;
+        workHours: number;
+        displayType: "予定" | "予定外";
+      }) => (
+        `<p>(${escapeHtml(report.displayType)})【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
+        + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")}　`
+        + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")}　`
+        + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h</p>`
+      );
       const resolveTeamsCustomerName = (customerId: string, customerName: string) => (
         customerNameMap.get(customerId)
         || stripCustomerNumberPrefix(customerName)
@@ -990,9 +1007,23 @@ export default function DailyEntryPage() {
           .map((item) => `<p>【${escapeHtml(resolveTeamsCustomerName(item.customerId, item.customerName))}】：${escapeHtml(normalizeInlineText(item.systemName) || "未設定")}　${escapeHtml(buildWorkSummary(item.workTypeName, item.workDescription) || "（内容未設定）")}</p>`)
           .join("");
       };
+      const totalReportWorkHours = reports.reduce((sum, report) => sum + report.workHours, 0);
       const reportSections = publishReportGroups.map(([reportDate, groupedReports]) => `
     <p>■ ${formatMonthDay(reportDate)}</p>
-    ${buildCustomerLines(groupedReports) || "<p>（なし）</p>"}`).join("<br/>");
+    ${groupedReports
+      .sort(comparePublishItems)
+      .map((report) => {
+        return buildReportPublishLine({
+          customerId: report.customerId,
+          customerName: report.customerName,
+          systemName: report.systemName,
+          workTypeName: report.workTypeName,
+          workDescription: report.workDescription,
+          workHours: report.workHours,
+          displayType: report.displayType,
+        });
+      })
+      .join("") || "<p>（なし）</p>"}`).join("<br/>");
       const nextPlanSection = nextPlanDate
         ? `
     <p>■ 次回の作業予定（${formatMonthDay(nextPlanDate)}）</p>
@@ -1008,6 +1039,7 @@ export default function DailyEntryPage() {
 
       const html = `
         <p><span style="font-size:1.2em;font-weight:bold;">${formatMonthDay(today)}</span></p>
+    <p>■ 合計作業時間：${escapeHtml(formatWorkHours(totalReportWorkHours))}h</p>
     ${publishReportGroups.length > 0 ? reportSections : "<p>■ 作業実績</p><p>（なし）</p>"}
     <br/>
     ${nextPlanSection}
