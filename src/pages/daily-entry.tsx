@@ -968,7 +968,7 @@ export default function DailyEntryPage() {
         workHours: number;
         displayType: "予定" | "予定外";
       }) => (
-        `<p>【${escapeHtml(report.displayType)}】${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}：`
+        `<p>(${escapeHtml(report.displayType)})【${escapeHtml(resolveTeamsCustomerName(report.customerId, report.customerName))}】：`
         + `${escapeHtml(normalizeInlineText(report.systemName) || "未設定")}　`
         + `${escapeHtml(buildWorkSummary(report.workTypeName, report.workDescription) || "（内容未設定）")}　`
         + `実績 ${escapeHtml(formatWorkHours(report.workHours))}h</p>`
