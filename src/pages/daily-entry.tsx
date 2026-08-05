@@ -449,7 +449,6 @@ export default function DailyEntryPage() {
       resolveLinkedSystemId(item.systemId, item.workNumberId),
       item.workTypeId,
       options?.ignoreWorkNumber ? "" : item.workNumberId,
-      normalizeInlineText(item.workDescription ?? ""),
     ]);
     const planQueueByKey = new Map<string, WorkPlan[]>();
     const enqueuePlan = (key: string, plan: WorkPlan) => {
